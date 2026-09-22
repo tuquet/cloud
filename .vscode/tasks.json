@@ -10,7 +10,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "login"
       ],
@@ -33,7 +33,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "link"
       ],
@@ -56,7 +56,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "db",
         "push"
@@ -84,7 +84,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "db",
         "pull"
@@ -108,7 +108,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "gen",
         "types",
@@ -134,7 +134,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "supabase",
         "functions",
         "deploy"
@@ -203,7 +203,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "git",
         "push"
       ],
@@ -226,7 +226,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/ensure_proxy.ps1",
+        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
         "git",
         "pull"
       ],
@@ -249,7 +249,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/test_network.ps1"
+        "${workspaceFolder}/scripts/network/test_network.ps1"
       ],
       "presentation": {
         "echo": true,
@@ -270,7 +270,7 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/stop_proxy.ps1"
+        "${workspaceFolder}/scripts/network/stop_proxy.ps1"
       ],
       "presentation": {
         "echo": true,

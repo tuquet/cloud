@@ -5,7 +5,7 @@
 - **Windows Startup Automation (`lotte_services.vbs`):**
   - Both Cloudflare Bridge (`127.0.0.1:2222`) and SSH SOCKS5 Proxy (`127.0.0.1:1080` with auto-reconnect) are started on Windows boot via `lotte_services.vbs`.
 - **Self-Healing Fallback Guardrails:**
-  - If ports ever get closed or you want to execute a command with proxy, run: `.\scripts\ensure_proxy.ps1 <command>` (e.g. `.\scripts\ensure_proxy.ps1 supabase db push`).
+  - If ports ever get closed or you want to execute a command with proxy, run: `.\scripts\network\ensure_proxy.ps1 <command>` (e.g. `.\scripts\network\ensure_proxy.ps1 supabase db push`).
 
 ## 2. Supabase CLI Execution Rules
 - Before running any Supabase CLI command that requires remote database communication (e.g., `supabase db push`, `supabase db pull`, `supabase link`), ALWAYS ensure the SOCKS5 proxy environment variable is active in the session:
@@ -26,7 +26,7 @@
     ```powershell
     git config --local core.sshCommand "ssh -o 'ProxyCommand=connect -S 127.0.0.1:1080 %h %p'"
     ```
-- Run `scripts/configure_git_proxy.ps1` to automatically configure repository-level Git proxy settings.
+- Run `scripts/network/configure_git_proxy.ps1` to automatically configure repository-level Git proxy settings.
 
 ## 4. Scripting & Execution Standards
 - **Strict ASCII Invariance:** All PowerShell and batch scripts in this repository MUST be strictly ASCII-encoded (no Vietnamese diacritics in code, comments, or output strings) to avoid Windows PowerShell 5.1 ANSI parsing issues.

@@ -8,9 +8,11 @@ Hệ thống thiết kế cơ sở dữ liệu mẫu phục vụ kiến trúc **
 
 - 📊 **[Sơ đồ thực thể liên kết (ERD chi tiết)](docs/erd_diagram.md)**: Sơ đồ Mermaid đầy đủ, từ điển trường, ma trận quan hệ và ràng buộc khóa ngoại.
 - 🔬 **[Tài liệu nghiên cứu kiến trúc chuyên sâu](docs/supabase_multitenant_rbac_research.md)**: Phân tích so sánh các mô hình Multi-tenancy, giải quyết lỗi đệ quy RLS, kỹ thuật tối ưu hóa chỉ mục và Custom JWT Token Hook.
+- 📐 **[Tài liệu phân tích OpenAPI Specification](docs/openapi_export_analysis.md)**: Đánh giá RAM hệ thống, cơ chế tự động sinh OpenAPI Specs và sinh Client SDK.
+- 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: File OpenAPI 3.0.3 spec chuẩn mã hóa cho toàn bộ các endpoint Multi-tenant RBAC.
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
-- 💾 **[File SQL Migration hoàn chỉnh](supabase/migrations/20260922000001_multitenant_rbac_schema.sql)**: Mã nguồn PostgreSQL chạy được ngay trên Supabase (Tables, Triggers, RLS Policies, Indexes, Seed Data).
+- 💾 **[File SQL Migration Cấu Trúc RBAC & RLS](supabase/migrations/20260922000001_multitenant_rbac_schema.sql)**: Định nghĩa toàn bộ Enum, Bảng, Chỉ mục, Hàm `SECURITY DEFINER`, Triggers, Chính sách RLS và Dữ liệu Seed mẫu.
 
 ---
 

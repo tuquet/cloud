@@ -1,10 +1,10 @@
 # ==============================================================================
-# Script: ensure_proxy.ps1 (KISS & YAGNI)
+# Script: scripts/network/ensure_proxy.ps1
 # Purpose: Ensures Proxy (2222 & 1080) is online, sets proxy env, and optionally
 #          executes any passed command.
-# Usage:   .\scripts\ensure_proxy.ps1
-#          .\scripts\ensure_proxy.ps1 git push
-#          .\scripts\ensure_proxy.ps1 supabase db push
+# Usage:   .\scripts\network\ensure_proxy.ps1
+#          .\scripts\network\ensure_proxy.ps1 git push
+#          .\scripts\network\ensure_proxy.ps1 supabase db push
 # Encoding: Strict ASCII
 # ==============================================================================
 

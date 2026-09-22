@@ -1,5 +1,5 @@
 # ==============================================================================
-# Script: configure_git_proxy.ps1
+# Script: scripts/network/configure_git_proxy.ps1
 # Purpose: Configure local Git repository to route pushes through SOCKS5 proxy
 # Target Proxy: socks5://127.0.0.1:1080
 # Encoding: Strict ASCII
@@ -12,23 +12,19 @@ Write-Host "  CONFIGURING LOCAL GIT REPOSITORY PROXY (127.0.0.1:1080)" -Foregrou
 Write-Host "=================================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# 1. Verify if we are inside a Git repository
 $gitStatus = git rev-parse --is-inside-work-tree 2>&1
 if ($LASTEXITCODE -ne 0) {
     Write-Host "[!] Not a git repository. Initializing local git repository..." -ForegroundColor Yellow
     git init
 }
 
-# 2. Configure HTTP and HTTPS proxy for local repository
 Write-Host "[+] Configuring local http.proxy and https.proxy..." -ForegroundColor Green
 git config --local http.proxy "socks5://127.0.0.1:1080"
 git config --local https.proxy "socks5://127.0.0.1:1080"
 
-# 3. Configure SSH command to route through connect.exe if using SSH remote
 Write-Host "[+] Configuring local core.sshCommand for SSH remotes..." -ForegroundColor Green
 git config --local core.sshCommand "ssh -o 'ProxyCommand=connect -S 127.0.0.1:1080 %h %p'"
 
-# 4. Display current settings
 Write-Host ""
 Write-Host "[OK] Current local Git proxy settings:" -ForegroundColor Cyan
 Write-Host "http.proxy     : $(git config --local --get http.proxy)" -ForegroundColor White
