@@ -5,8 +5,7 @@
 - **Windows Startup Automation (`lotte_services.vbs`):**
   - Both Cloudflare Bridge (`127.0.0.1:2222`) and SSH SOCKS5 Proxy (`127.0.0.1:1080` with auto-reconnect) are started on Windows boot via `lotte_services.vbs`.
 - **Self-Healing Fallback Guardrails:**
-  - If ports ever get closed, use `scripts/ensure_proxy.ps1` to detect and resurrect them automatically.
-  - Or use the universal runner: `.\scripts\run_with_proxy.ps1 <command>` to execute any network command seamlessly.
+  - If ports ever get closed or you want to execute a command with proxy, run: `.\scripts\ensure_proxy.ps1 <command>` (e.g. `.\scripts\ensure_proxy.ps1 supabase db push`).
 
 ## 2. Supabase CLI Execution Rules
 - Before running any Supabase CLI command that requires remote database communication (e.g., `supabase db push`, `supabase db pull`, `supabase link`), ALWAYS ensure the SOCKS5 proxy environment variable is active in the session:
