@@ -13,6 +13,11 @@ Hệ thống thiết kế cơ sở dữ liệu mẫu phục vụ kiến trúc **
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
 - 💾 **[File SQL Migration Cấu Trúc RBAC & RLS](supabase/migrations/20260922000001_multitenant_rbac_schema.sql)**: Định nghĩa toàn bộ Enum, Bảng, Chỉ mục, Hàm `SECURITY DEFINER`, Triggers, Chính sách RLS và Dữ liệu Seed mẫu.
+- 🧩 **Thư Viện Module Mở Rộng Tùy Chọn (`supabase/snippets/modules/`)**:
+  - 📁 **[Module 1 - Media Storage & Assets](supabase/snippets/modules/01_media_storage_assets.sql)**: Quản lý file/media & Supabase Storage RLS phân lập theo Tenant.
+  - 💎 **[Module 2 - Subscriptions & Quota Metering](supabase/snippets/modules/02_subscriptions_entitlements.sql)**: Phân hạng gói cước & Chặn hạn ngạch tài nguyên (`projects`, `members`).
+  - ⚡ **[Module 3 - Asynchronous Outbox & Webhooks](supabase/snippets/modules/03_outbox_webhooks_queue.sql)**: Hàng chờ sự kiện bất đồng bộ & Bắn Webhook ra bên thứ 3.
+  - 🗑️ **[Module 4 - Soft Delete & Data Retention](supabase/snippets/modules/04_soft_delete_pattern.sql)**: Cơ chế Xóa mềm & Khôi phục dữ liệu chuẩn hóa.
 
 ---
 
@@ -192,3 +197,17 @@ supabase db push
 1. Trong Supabase Dashboard, chuyển tới **Authentication > Hooks**.
 2. Tìm mục **Custom Access Token (JWT)**.
 3. Chọn hàm `public.custom_access_token_hook` và lưu lại.
+
+---
+
+## 5. Thư Viện Module Mở Rộng SQL (Modular Extension Library)
+
+Dự án cung cấp sẵn bộ 4 Module SQL mở rộng dạng **Plug-and-Play** tại thư mục [supabase/snippets/modules/](supabase/snippets/modules/). Mỗi module là 1 file SQL độc lập, có thể chạy trực tiếp trên **Supabase SQL Editor** hoặc thêm vào quy trình Migration khi dự án phát triển tính năng mới:
+
+| Module | Đường Dẫn File | Mô Tả Chức Năng |
+| :--- | :--- | :--- |
+| **01. Media Storage & Assets** | [01_media_storage_assets.sql](supabase/snippets/modules/01_media_storage_assets.sql) | Tạo bảng `media_assets`, cấu hình Supabase Storage Bucket `tenant-assets` và RLS Storage đường dẫn `tenant_id/*`. |
+| **02. Subscriptions & Quota** | [02_subscriptions_entitlements.sql](supabase/snippets/modules/02_subscriptions_entitlements.sql) | Tạo các bảng `subscription_plans`, `tenant_subscriptions`, `tenant_usage_meters` và hàm trigger tự động kiểm tra/chặn vượt Quota `projects` theo gói cước. |
+| **03. Outbox & Webhooks** | [03_outbox_webhooks_queue.sql](supabase/snippets/modules/03_outbox_webhooks_queue.sql) | Tạo bảng `outbox_events`, `webhook_subscriptions` và Trigger tự động bắt sự kiện khi tạo/xóa `projects` hoặc mời thành viên (`tenant_invitations`). |
+| **04. Soft Delete Pattern** | [04_soft_delete_pattern.sql](supabase/snippets/modules/04_soft_delete_pattern.sql) | Chuẩn hóa cơ chế Soft Delete (`deleted_at`), hàm `soft_delete_project()`, `restore_project()` và RLS lọc tự động bản ghi bị xóa tạm. |
+

@@ -1,4 +1,4 @@
-# Project Agent Behavioral Rules: omni-creator-ecosystem
+# Project Agent Behavioral Rules: tuquet-creator
 
 ## 1. Network Constraints & Self-Healing Proxy Guardrails
 - **Restricted Network Environment:** This workstation has strict firewall rules that block outbound connections on non-standard ports (e.g., PostgreSQL ports `5432`, `6543`, Git SSH port `22`, and certain direct Git push traffic).

@@ -65,7 +65,7 @@ Mở giao diện Supabase Studio tại:
 
 ## 4. Tự Động Sinh Client SDK Từ OpenAPI Spec (Auto-Generated SDKs)
 
-Một khi đã có file `openapi_spec_rbac.json` (như file chúng tôi đã tạo tại [`docs/openapi_spec_rbac.json`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/docs/openapi_spec_rbac.json)), bạn có thể tự động sinh ra Client SDK cho mọi ngôn ngữ lập trình:
+Một khi đã có file `openapi_spec_rbac.json` (như file chúng tôi đã tạo tại [`docs/openapi_spec_rbac.json`](file:///c:/Users/ndtu6/Repository/tuquet-creator/docs/openapi_spec_rbac.json)), bạn có thể tự động sinh ra Client SDK cho mọi ngôn ngữ lập trình:
 
 ### A. Sinh TypeScript Types chuẩn Supabase:
 ```powershell
@@ -87,4 +87,4 @@ npx @openapitools/openapi-generator-cli generate \
 ## 5. File OpenAPI Specification Mẫu Đã Tạo Nằm Ở Đâu?
 
 Mẫu OpenAPI Specification v3 chuẩn cho toàn bộ 9 bảng Multi-tenant RBAC của hệ thống đã được xuất và lưu sẵn tại:  
-📄 **[`docs/openapi_spec_rbac.json`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/docs/openapi_spec_rbac.json)**
+📄 **[`docs/openapi_spec_rbac.json`](file:///c:/Users/ndtu6/Repository/tuquet-creator/docs/openapi_spec_rbac.json)**

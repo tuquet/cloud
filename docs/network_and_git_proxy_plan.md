@@ -100,7 +100,7 @@ Git for Windows có sẵn công cụ trung chuyển proxy tên là `connect.exe`
 Nếu mạng local chặn ngắt quãng cả SSH proxy:
 1. Bạn có thể add thêm 1 remote trỏ thẳng vào thư mục trên VPS qua SSH:
    ```powershell
-   git remote add vps-mirror ssh://root@127.0.0.1:2222/var/repo/omni-creator-ecosystem.git
+   git remote add vps-mirror ssh://root@127.0.0.1:2222/var/repo/tuquet-creator.git
    ```
 2. Push từ local lên VPS: `git push vps-mirror main`.
 3. Trên VPS thiết lập một Git Hook (`post-receive`) tự động `git push origin main` sang GitHub.
@@ -109,15 +109,15 @@ Nếu mạng local chặn ngắt quãng cả SSH proxy:
 
 ## 4. Danh Sách Script Hỗ Trợ Tự Động Hóa Trong Dự Án
 
-Chúng tôi đã đóng gói gọn gàng các kịch bản tiện ích tại thư mục [`scripts/network/`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/) với cơ chế **Self-Healing (Tự phục hồi, KHÔNG phụ thuộc vào việc VBS có chạy trước hay không)**:
+Chúng tôi đã đóng gói gọn gàng các kịch bản tiện ích tại thư mục [`scripts/network/`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/) với cơ chế **Self-Healing (Tự phục hồi, KHÔNG phụ thuộc vào việc VBS có chạy trước hay không)**:
 
-1. **[`scripts/network/ensure_proxy.ps1`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/ensure_proxy.ps1)** & **[`scripts/network/ensure_proxy.bat`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/ensure_proxy.bat)**:
+1. **[`scripts/network/ensure_proxy.ps1`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/ensure_proxy.ps1)** & **[`scripts/network/ensure_proxy.bat`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/ensure_proxy.bat)**:
    - **Tự động hoàn toàn**: Tự kiểm tra cổng 2222 (Cloudflare) và cổng 1080 (SOCKS5). Tự bật ngầm nếu chưa chạy, và tùy chọn thực thi ngay câu lệnh truyền vào.
-2. **[`scripts/network/configure_git_proxy.ps1`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/configure_git_proxy.ps1)**:
+2. **[`scripts/network/configure_git_proxy.ps1`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/configure_git_proxy.ps1)**:
    - Tự động cấu hình Git trong repository này sử dụng proxy cục bộ.
-3. **[`scripts/network/stop_proxy.ps1`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/stop_proxy.ps1)**:
+3. **[`scripts/network/stop_proxy.ps1`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/stop_proxy.ps1)**:
    - Tắt sạch các tiến trình ngầm `cloudflared` và `ssh` khi bạn không muốn dùng proxy nữa.
-4. **[`scripts/network/test_network.ps1`](file:///c:/Users/ndtu6/Repository/omni-creator-ecosystem/scripts/network/test_network.ps1)**:
+4. **[`scripts/network/test_network.ps1`](file:///c:/Users/ndtu6/Repository/tuquet-creator/scripts/network/test_network.ps1)**:
    - Chẩn đoán tình trạng mạng và độ phản hồi của các cổng proxy.
 
 ---

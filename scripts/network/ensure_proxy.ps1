@@ -36,7 +36,7 @@ if (-not (Test-PortOpen "127.0.0.1" 2222)) {
 # 2. Ensure SSH SOCKS5 Proxy (Port 1080)
 if (-not (Test-PortOpen "127.0.0.1" 1080)) {
     Write-Host "[*] Starting SSH SOCKS5 Proxy (1080)..." -ForegroundColor Yellow
-    Start-Process "ssh" -ArgumentList "-N -D 1080 127.0.0.1" -WindowStyle Hidden
+    Start-Process "ssh" -ArgumentList "-o StrictHostKeyChecking=no -p 2222 -N -D 1080 root@127.0.0.1" -WindowStyle Hidden
     Start-Sleep -Seconds 2
 }
 
