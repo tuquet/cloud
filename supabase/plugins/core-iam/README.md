@@ -1,28 +1,28 @@
-# 🛡️ Base Component: Multi-Tenant IAM & RBAC Engine (`core-iam`)
+# 🛡️ Base Kernel: Multi-Tenant IAM & RBAC Engine (`core-iam`)
 
-> **Phân hệ Nền tảng Bất biến (Immutable System Kernel)**  
-> Cung cấp dịch vụ Định danh tập trung (Identity), Ranh giới Đa tổ chức (Multi-Tenant Boundary), Phân quyền dựa trên vai trò (RBAC), Nhật ký an ninh tuần tự (Audit Trail), và Động cơ điều phối vòng đời Plugin (`system_plugins`).  
-> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa thực thể chuẩn và quy tắc chống ảo giác tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
+> **Immutable Platform Kernel**  
+> Provides centralized identity management, root multi-tenant boundary isolation, NIST role-based access control (RBAC), sequential security audit logging, and the Master Plugin Registry (`system_plugins`).  
+> 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md) for strict naming invariants and forbidden terms.
 
 ---
 
-## 1. Thông Số Kiến Trúc (Architecture Specs)
+## 1. Architectural Specifications
 
-| Thuộc Tính | Chi Tiết Kỹ Thuật |
+| Property | Technical Specification |
 |---|---|
 | **Plugin ID** | `core-iam` |
-| **Phân Loại** | **Base Kernel / System Core** (`is_system = true`, cấm gỡ bỏ) |
+| **Classification** | **Base Kernel / System Core** (`is_system = true`, uninstallation locked) |
 | **PostgreSQL Schema** | `public` |
-| **Phiên Bản** | `1.0.0` |
-| **Phụ Thuộc (Dependencies)** | Không (`[]` - Tầng 0 cơ sở) |
-| **Khởi Tạo Tự Động** | `supabase/migrations/20260920000001_base_platform_core.sql` |
-| **File Kiểm Toán Sức Khỏe** | `supabase/plugins/core-iam/inspect.sql` |
+| **Version** | `1.0.0` |
+| **Dependencies** | None (`[]` - Tier 0 Foundation) |
+| **Baseline Initialization** | `supabase/migrations/20260920000001_base_platform_core.sql` |
+| **Health Inspection Script**| `supabase/plugins/core-iam/inspect.sql` |
 
 ---
 
-## 2. Danh Mục Bảng Dữ Liệu Cốt Lõi (Core Tables)
+## 2. Core Tables Directory
 
-Phân hệ `core-iam` thiết lập 10 bảng nền tảng được bảo vệ bằng RLS:
+The `core-iam` component establishes 10 foundational tables protected by Row-Level Security (RLS):
 
 ```mermaid
 erDiagram
@@ -38,68 +38,68 @@ erDiagram
     tenants ||--o{ audit_logs : "records"
 ```
 
-1. **`public.profiles`**: Hồ sơ người dùng mở rộng 1:1 với `auth.users`, tự động đồng bộ qua trigger `on_auth_user_created`.
-2. **`public.tenants`**: Ranh giới tổ chức / workspace. Mọi bảng dữ liệu trong hệ thống đều liên kết với `tenants.id`.
-3. **`public.roles`**: Quản lý cả System Roles (`tenant_id IS NULL`) và Custom Tenant Roles (`tenant_id IS NOT NULL`). Tối ưu bằng 2 Partial Unique Indexes.
-4. **`public.permissions`**: Từ điển quyền hạn nguyên tử định dạng `module:action` (vd: `tenants:update`, `members:invite`).
-5. **`public.role_permissions`**: Ma trận ánh xạ nhiều-nhiều giữa Vai trò và Quyền hạn.
-6. **`public.tenant_members`**: Liên kết Người dùng với Tổ chức (`active` / `suspended`).
-7. **`public.member_roles`**: Gán vai trò cho thành viên trong tổ chức.
-8. **`public.tenant_invitations`**: Quản lý lời mời tham gia tổ chức bằng mã bảo mật `token_hash`.
-9. **`public.audit_logs`**: Nhật ký kiểm toán an ninh với `BIGINT GENERATED ALWAYS AS IDENTITY` và kiểu địa chỉ `INET` cho IP, chống vỡ trang B-tree.
-10. **`public.system_plugins`**: Bảng đăng ký mẹ (Master Registry) điều phối và theo dõi trạng thái cài đặt của toàn bộ các plugin.
+1. **`public.profiles`**: Public user profiles synchronized 1:1 from `auth.users` via database trigger `on_auth_user_created`.
+2. **`public.tenants`**: Root organization and multi-tenancy isolation boundary. All downstream business tables reference `tenants.id`.
+3. **`public.roles`**: Manages both Global System Roles (`tenant_id IS NULL`) and Custom Tenant Roles (`tenant_id IS NOT NULL`). Optimized via partial unique indexes.
+4. **`public.permissions`**: Atomic capability dictionary formatted as `<module>:<resource>:<action>` (e.g. `tenants:update`, `members:invite`).
+5. **`public.role_permissions`**: Many-to-many bridge mapping roles to granted atomic permissions.
+6. **`public.tenant_members`**: Membership link binding Users to Tenants with active/suspended states.
+7. **`public.member_roles`**: Multi-role assignments granting one or more roles to a tenant member.
+8. **`public.tenant_invitations`**: Invitation workflow protected by cryptographic `token_hash` and expiration timestamps.
+9. **`public.audit_logs`**: Append-only security audit trail utilizing `BIGINT GENERATED ALWAYS AS IDENTITY` and `INET` client IP addresses to prevent B-tree page splits.
+10. **`public.system_plugins`**: Master Plugin Registry coordinating lifecycle status, dependencies, and schema registrations.
 
 ---
 
-## 3. Các Hàm Trợ Năng An Ninh (Security Definer Helpers)
+## 3. Security Definer Authorization Helpers
 
-Để tránh **RLS Infinite Recursion** (đệ quy vô hạn khi bảng tự query chính nó trong chính sách bảo mật) và ngăn chặn **CWE-426 (Search Path Hijacking)**, toàn bộ logic được bọc trong các hàm `SECURITY DEFINER` với `SET search_path = ''`:
+To prevent **RLS Infinite Recursion** and protect against **CWE-426 (Search Path Hijacking)**, all authorization routines are marked `SECURITY DEFINER` with `SET search_path = ''`:
 
-* `public.get_user_tenant_ids() RETURNS SETOF UUID`: Trả về danh sách Tenant IDs mà `auth.uid()` hiện đang có trạng thái `active`.
-* `public.is_tenant_member(_tenant_id UUID) RETURNS BOOLEAN`: Kiểm tra xem người dùng hiện tại có thuộc tổ chức hay không.
-* `public.has_tenant_permission(_tenant_id UUID, _permission_id VARCHAR) RETURNS BOOLEAN`: Kiểm tra xem người dùng có quyền cụ thể trong tổ chức hay không thông qua các vai trò được gán.
-* `public.is_tenant_admin(_tenant_id UUID) RETURNS BOOLEAN`: Kiểm tra quyền quản trị (`owner` hoặc `admin`).
-* `public.custom_access_token_hook(event JSONB) RETURNS JSONB`: Hook tích hợp với Supabase Auth, tự động nhúng mảng `tenants` và `roles` vào JWT Claims với phòng vệ `LIMIT 25` (<8KB header).
+* `public.get_user_tenant_ids() RETURNS SETOF UUID`: Returns tenant IDs where `auth.uid()` holds an `active` membership.
+* `public.is_tenant_member(_tenant_id UUID) RETURNS BOOLEAN`: Fast check for tenant membership.
+* `public.has_tenant_permission(_tenant_id UUID, _permission_id VARCHAR) RETURNS BOOLEAN`: Evaluates whether the current user holds a specific permission within the tenant via granted roles.
+* `public.is_tenant_admin(_tenant_id UUID) RETURNS BOOLEAN`: Checks for administrative role (`owner` or `admin`).
+* `public.custom_access_token_hook(event JSONB) RETURNS JSONB`: Supabase Auth hook baking `tenant_id`, `roles`, and atomic `permissions` (`LIMIT 25`) directly into JWT claims for **$O(1)$** RLS policy evaluation.
 
 ---
 
-## 4. Từ Điển Quyền Hạn Hệ Thống (Permissions Dictionary)
+## 4. Permissions Dictionary
 
-| Permission ID | Module | Mô Tả Nghiệp Vụ | Owner | Admin | Member | Viewer |
+| Permission ID | Module | Business Capability | Owner | Admin | Member | Viewer |
 |---|---|---|:---:|:---:|:---:|:---:|
-| `tenants:read` | `tenants` | Xem thông tin tổ chức | ✅ | ✅ | ✅ | ✅ |
-| `tenants:update` | `tenants` | Cập nhật cấu hình tổ chức | ✅ | ✅ | ❌ | ❌ |
-| `tenants:delete` | `tenants` | Xóa hoàn toàn tổ chức | ✅ | ❌ | ❌ | ❌ |
-| `members:read` | `members` | Xem danh sách thành viên | ✅ | ✅ | ✅ | ✅ |
-| `members:invite` | `members` | Mời thành viên mới | ✅ | ✅ | ❌ | ❌ |
-| `members:update` | `members` | Thay đổi trạng thái thành viên | ✅ | ✅ | ❌ | ❌ |
-| `members:manage` | `members` | Gán và thu hồi vai trò thành viên | ✅ | ✅ | ❌ | ❌ |
-| `members:delete` | `members` | Xóa thành viên khỏi tổ chức | ✅ | ✅ | ❌ | ❌ |
-| `roles:read` | `roles` | Xem danh mục vai trò & quyền | ✅ | ✅ | ✅ | ✅ |
-| `roles:manage` | `roles` | Tạo/sửa vai trò tùy chỉnh | ✅ | ✅ | ❌ | ❌ |
-| `billing:read` | `billing` | Xem thông tin thanh toán/hạn ngạch | ✅ | ✅ | ❌ | ❌ |
-| `billing:manage` | `billing` | Nâng cấp gói cước | ✅ | ✅ | ❌ | ❌ |
-| `audit:read` | `audit` | Xem nhật ký kiểm toán hệ thống | ✅ | ✅ | ❌ | ❌ |
-| `plugins:read` | `system` | Xem danh mục plugin đã cài đặt | ✅ | ✅ | ✅ | ❌ |
-| `plugins:manage` | `system` | Cài đặt/gỡ bỏ plugin hệ thống | ✅ | ❌ | ❌ | ❌ |
+| `tenants:read` | `tenants` | Read tenant configuration | ✅ | ✅ | ✅ | ✅ |
+| `tenants:update` | `tenants` | Update tenant settings | ✅ | ✅ | ❌ | ❌ |
+| `tenants:delete` | `tenants` | Delete tenant | ✅ | ❌ | ❌ | ❌ |
+| `members:read` | `members` | List tenant members | ✅ | ✅ | ✅ | ✅ |
+| `members:invite` | `members` | Send member invitations | ✅ | ✅ | ❌ | ❌ |
+| `members:update` | `members` | Modify membership status | ✅ | ✅ | ❌ | ❌ |
+| `members:manage` | `members` | Assign and revoke member roles | ✅ | ✅ | ❌ | ❌ |
+| `members:delete` | `members` | Remove member from tenant | ✅ | ✅ | ❌ | ❌ |
+| `roles:read` | `roles` | List available roles & permissions | ✅ | ✅ | ✅ | ✅ |
+| `roles:manage` | `roles` | Create/edit custom tenant roles | ✅ | ✅ | ❌ | ❌ |
+| `billing:read` | `billing` | View billing and subscription info | ✅ | ✅ | ❌ | ❌ |
+| `billing:manage` | `billing` | Upgrade or modify plan subscriptions | ✅ | ✅ | ❌ | ❌ |
+| `audit:read` | `audit` | Inspect security audit trail | ✅ | ✅ | ❌ | ❌ |
+| `plugins:read` | `system` | Inspect registered plugins | ✅ | ✅ | ✅ | ❌ |
+| `plugins:manage` | `system` | Register and manage plugins | ✅ | ❌ | ❌ | ❌ |
 
 ---
 
-## 5. Động Cơ Vòng Đời Plugin (Plugin Registry RPCs)
+## 5. Plugin Registry Lifecycle RPCs
 
-Bảng `public.system_plugins` cung cấp 3 hàm RPC chuyên dụng:
+The `public.system_plugins` subsystem provides 3 dedicated RPC functions:
 
-1. **`public.register_plugin(...)`**: Đăng ký hoặc cập nhật thông tin phiên bản, schema và quyền hạn của plugin.
-2. **`public.unregister_plugin(p_id)`**: Gỡ bỏ plugin khỏi danh mục. Tự động kiểm tra:
-   - Nếu `is_system = true` $\rightarrow$ Ném lỗi `Cannot unregister core system plugin`.
-   - Nếu có plugin khác đang phụ thuộc vào nó $\rightarrow$ Ném lỗi `Cannot unregister: Plugin X depends on it`.
-3. **`public.get_installed_plugins()`**: Trả về danh sách tất cả các plugin đang hoạt động, phân loại rõ ràng giữa Core và Extension.
+1. **`public.register_plugin(...)`**: Registers or updates plugin metadata, schema, and dependency declarations.
+2. **`public.unregister_plugin(p_id)`**: Unregisters a plugin with safety guards:
+   - If `is_system = true` $\rightarrow$ Raises exception `Cannot unregister core system plugin`.
+   - If another installed plugin depends on it $\rightarrow$ Raises exception `Cannot unregister: Plugin X depends on it`.
+3. **`public.get_installed_plugins()`**: Returns all active plugins categorized by Kernel and Extensions.
 
 ---
 
-## 6. Hướng Dẫn Kiểm Toán Toàn Vẹn (Health Inspection)
+## 6. Health & Integrity Inspection
 
-Chạy tệp [`inspect.sql`](inspect.sql) trên Supabase SQL Editor hoặc CLI để kiểm tra trạng thái hoạt động:
+Execute [`inspect.sql`](inspect.sql) via the Supabase CLI or SQL Editor to verify operational health:
 
 ```bash
 supabase db query --local -f supabase/plugins/core-iam/inspect.sql

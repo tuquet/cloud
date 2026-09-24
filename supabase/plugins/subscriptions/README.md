@@ -1,26 +1,26 @@
 # 💎 Enterprise Plugin: Subscriptions & Quota Metering (`subscriptions`)
 
-> **Hệ Thống Quản Lý Thuê Bao SaaS & Kiểm Soát Định Mức Tài Nguyên (SaaS Billing & Quota Engine)**  
-> Cung cấp cơ chế phân tầng gói cước SaaS đa cấp độ (`billing.plans`), quản lý trạng thái đăng ký thuê bao của từng Tổ chức (`billing.subscriptions`), đồng hồ đo lường hạn ngạch động (`billing.usage_meters`), và các hàm nguyên tử kiểm tra / ghi nhận định mức sử dụng.  
-> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa chuẩn về Plan, Subscription và Quota Meter tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
+> **Multi-Tenant SaaS Billing Engine & Dynamic Resource Metering**  
+> Provides tiered SaaS subscription plans (`billing.plans`), organization-level subscription state tracking (`billing.subscriptions`), dynamic resource meters (`billing.usage_meters`), and atomic RPC functions for quota verification and usage recording.  
+> 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md) for strict naming invariants.
 
 ---
 
-## 1. Thông Số Kiến Trúc (Architecture Specs)
+## 1. Architectural Specifications
 
-| Thuộc Tính | Chi Tiết Kỹ Thuật |
+| Property | Technical Specification |
 |---|---|
 | **Plugin ID** | `subscriptions` |
-| **Phân Loại** | **On-Demand Business Plugin** |
-| **PostgreSQL Schema** | `billing` (Phân lập hoàn toàn khỏi `public`) |
-| **Phiên Bản** | `1.0.0` |
-| **Phụ Thuộc (Dependencies)** | `core-iam` |
-| **Kịch Bản Cài Đặt** | [`install.sql`](install.sql) |
-| **Kịch Bản Gỡ Bỏ** | [`uninstall.sql`](uninstall.sql) |
+| **Classification** | **On-Demand Business Plugin** |
+| **PostgreSQL Schema** | `billing` (Fully isolated from `public`) |
+| **Version** | `1.0.0` |
+| **Dependencies** | `core-iam` |
+| **Installation Script** | [`install.sql`](install.sql) |
+| **Uninstallation Script** | [`uninstall.sql`](uninstall.sql) |
 
 ---
 
-## 2. Danh Mục Bảng Dữ Liệu Schema `billing`
+## 2. Table Directory: Schema `billing`
 
 ```mermaid
 erDiagram
@@ -30,76 +30,76 @@ erDiagram
 ```
 
 ### 1. `billing.plans`
-Định nghĩa các bậc gói cước dịch vụ và hạn ngạch tài nguyên tối đa:
-* `id` (`TEXT PRIMARY KEY`): Mã gói cước (`free`, `pro`, `enterprise`).
-* `name`, `description`: Tên hiển thị và mô tả lợi ích gói cước.
-* `max_members` (`INT`): Giới hạn số lượng thành viên tối đa trong tổ chức.
-* `max_storage_mb` (`BIGINT`): Giới hạn dung lượng lưu trữ tệp (Megabytes).
-* `max_monthly_runs` (`INT`): Giới hạn số lượt chạy kịch bản tự động hóa mỗi tháng.
-* `price_monthly_usd` (`NUMERIC(10, 2)`): Đơn giá thuê bao hàng tháng.
-* `is_active` (`BOOLEAN`): Trạng thái mở bán gói cước.
+Defines service tiers and maximum resource quotas:
+* `id` (`TEXT PRIMARY KEY`): Plan tier identifier (`free`, `pro`, `enterprise`).
+* `name`, `description`: Display name and marketing description.
+* `max_members` (`INT`): Maximum allowed team members per tenant.
+* `max_storage_mb` (`BIGINT`): Storage quota limit in Megabytes.
+* `max_monthly_runs` (`INT`): Monthly automation run limit.
+* `price_monthly_usd` (`NUMERIC(10, 2)`): Monthly subscription cost in USD.
+* `is_active` (`BOOLEAN`): Availability status.
 
-#### Các Gói Mặc Định Đã Seed Sẵn:
-| Gói | Thành Viên (`max_members`) | Lưu Trữ (`max_storage_mb`) | Lượt Chạy (`max_monthly_runs`) | Giá / Tháng |
+#### Default Seeded Plans:
+| Plan Tier | Team Members (`max_members`) | Storage Quota (`max_storage_mb`) | Monthly Runs (`max_monthly_runs`) | Price / Month |
 |---|:---:|:---:|:---:|:---:|
 | **Free Starter** (`free`) | 2 | 500 MB | 1,000 | $0.00 |
 | **Team Pro** (`pro`) | 10 | 10,240 MB (10GB) | 50,000 | $29.00 |
 | **Enterprise Fleet** (`enterprise`) | 100 | 102,400 MB (100GB) | 1,000,000 | $199.00 |
 
 ### 2. `billing.subscriptions`
-Trạng thái thuê bao hiện tại của từng Tenant:
-* `tenant_id` (`UUID UNIQUE REFERENCES public.tenants`): Mỗi tổ chức sở hữu 1 trạng thái thuê bao duy nhất.
-* `plan_id` (`TEXT REFERENCES billing.plans`): Gói cước đang áp dụng.
+Active subscription state per Tenant:
+* `tenant_id` (`UUID UNIQUE REFERENCES public.tenants`): Each tenant holds exactly one active subscription record.
+* `plan_id` (`TEXT REFERENCES billing.plans`): Active plan tier.
 * `status`: Enum (`free_tier`, `trialing`, `active`, `past_due`, `canceled`, `unpaid`).
-* `stripe_customer_id`, `stripe_subscription_id`: Mã khách hàng và thuê bao đối soát với cổng thanh toán Stripe.
-* `current_period_start`, `current_period_end`: Chu kỳ tính cước hiện tại.
+* `stripe_customer_id`, `stripe_subscription_id`: External payment processor identifiers.
+* `current_period_start`, `current_period_end`: Active billing cycle boundaries.
 
 ### 3. `billing.usage_meters`
-Bảng đồng hồ đo lường mức độ tiêu thụ thực tế theo thời gian thực:
-* Khóa kép duy nhất: `(tenant_id, metric_name)` (vd: `storage_mb`, `monthly_runs`, `api_calls`).
-* `current_value` (`BIGINT`): Số lượng đã sử dụng trong chu kỳ.
-* `reset_at` (`TIMESTAMPTZ`): Thời điểm tự động đặt lại đồng hồ về 0 (đầu tháng tiếp theo).
+Real-time resource consumption counters:
+* Composite unique key: `(tenant_id, metric_name)` (e.g., `storage_mb`, `monthly_runs`, `api_calls`).
+* `current_value` (`BIGINT`): Accumulated consumption in the active billing period.
+* `reset_at` (`TIMESTAMPTZ`): Periodic reset timestamp (start of the next billing cycle).
 
 ---
 
-## 3. Các Hàm Nghiệp Vụ Cốt Lõi (Core Billing RPCs)
+## 3. Core Billing RPC Functions
 
 ### `billing.check_tenant_quota(_tenant_id, _metric_name, _increment)`
-Kiểm tra xem tổ chức có đủ hạn ngạch để thực hiện thêm tác vụ hay không:
+Evaluates whether a tenant possesses sufficient quota before initiating an action:
 ```sql
--- Ví dụ: Kiểm tra xem Tenant có thể chạy thêm 10 tác vụ automa không
+-- Check if Tenant can execute 10 automation tasks
 SELECT billing.check_tenant_quota('b000...-0001'::uuid, 'monthly_runs', 10);
--- Trả về: TRUE (Đủ hạn ngạch) hoặc FALSE (Đã chạm trần)
+-- Returns: TRUE (Quota available) or FALSE (Limit reached)
 ```
 
 ### `billing.record_usage(_tenant_id, _metric_name, _increment)`
-Cộng dồn số lượng sử dụng vào đồng hồ đo lường của tổ chức một cách nguyên tử (Atomic Upsert):
+Atomically upserts and increments a tenant's usage counter:
 ```sql
--- Ví dụ: Ghi nhận 5 tác vụ vừa chạy xong
+-- Record 5 completed tasks
 SELECT billing.record_usage('b000...-0001'::uuid, 'monthly_runs', 5);
--- Trả về: Giá trị mới sau khi cộng dồn (ví dụ: 105)
+-- Returns: Updated usage value
 ```
 
 ---
 
-## 4. Từ Điển Quyền Hạn (Permissions)
+## 4. Permissions Dictionary
 
-| Permission ID | Module | Mô Tả Nghiệp Vụ | Owner | Admin | Member |
+| Permission ID | Module | Business Capability | Owner | Admin | Member |
 |---|---|---|:---:|:---:|:---:|
-| `subscriptions:read` | `billing` | Xem gói cước hiện tại và lịch sử thanh toán | ✅ | ✅ | ✅ |
-| `subscriptions:manage` | `billing` | Nâng cấp, hạ cấp hoặc hủy đăng ký thuê bao | ✅ | ✅ | ❌ |
-| `quota:read` | `billing` | Xem đồng hồ đo lường mức tiêu thụ tài nguyên | ✅ | ✅ | ✅ |
+| `subscriptions:read` | `billing` | View active plan, limits, and billing history | ✅ | ✅ | ✅ |
+| `subscriptions:manage` | `billing` | Upgrade, downgrade, or cancel subscriptions | ✅ | ✅ | ❌ |
+| `quota:read` | `billing` | Inspect real-time consumption meters | ✅ | ✅ | ✅ |
 
 ---
 
-## 5. Ví Dụ Sử Dụng Với Client SDK
+## 5. Client Consumption Example (Supabase JS SDK)
 
 ```typescript
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient('https://<project-ref>.supabase.co', '<anon-key>');
 
-// 1. Kiểm tra thông tin gói cước và hạn ngạch của Tenant
+// 1. Fetch Tenant's active subscription and plan limits
 const { data: sub } = await supabase
   .schema('billing')
   .from('subscriptions')
@@ -110,7 +110,7 @@ const { data: sub } = await supabase
   `)
   .single();
 
-// 2. Tra cứu đồng hồ tiêu thụ tài nguyên
+// 2. Fetch usage meters
 const { data: meters } = await supabase
   .schema('billing')
   .from('usage_meters')
@@ -119,15 +119,15 @@ const { data: meters } = await supabase
 
 ---
 
-## 6. Quy Trình Vòng Đời (Lifecycle)
+## 6. Lifecycle Management
 
-### Cài Đặt (Installation)
+### Installation
 ```powershell
 supabase db query --local -f supabase/plugins/subscriptions/install.sql
 ```
 
-### Gỡ Bỏ (Uninstallation)
+### Uninstallation
 ```powershell
 supabase db query --local -f supabase/plugins/subscriptions/uninstall.sql
 ```
-Lệnh thực thi `DROP SCHEMA IF EXISTS billing CASCADE;`, xóa sạch các bảng thuê bao, hàm kiểm tra hạn ngạch và hủy đăng ký khỏi `system_plugins`.
+Executes `DROP SCHEMA IF EXISTS billing CASCADE;`, cleaning up subscription tables, meters, RPC functions, and unregistering from `system_plugins`.

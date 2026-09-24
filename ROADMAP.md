@@ -1,163 +1,130 @@
-# 🗺️ Tuquet Platform Master Roadmap
+# 🗺️ Tuquet Cloud Roadmap
 
-> **Hệ sinh thái:** Tuquet Ecosystem  
-> **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-cloud` | `tuquet-scoop-bucket`  
-> **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Enterprise Multi-Tenant SaaS Engine).
+> **Product**: Tuquet Cloud — Enterprise Multi-Tenant SaaS Engine & Modular Schema Plugin Framework for Supabase (PostgreSQL 15+)  
+> **Mission**: Build the world's most robust, developer-friendly, production-ready multi-tenant backend architecture for Supabase, featuring $O(1)$ JWT authorization, modular schema isolation, and automated database plugin lifecycle.
 
 ---
 
-## 🏛️ 1. Bản Đồ Phân Tầng Kiến Trúc
+## 🏛️ 1. Architecture Overview
 
 ```mermaid
 flowchart TD
-    subgraph LIB["1. tuquet-lib (Foundation & Design System)"]
-        UI["@tuquet/vue-ui (36+ Shadcn Primitives)"]
-        TABLE["@tuquet/vue-table (Remote Data Table)"]
-        LUNAR["@tuquet/lunar (Vietnamese Calendar)"]
-        TOOLING["Shared Tooling (ESLint, TSConfig, Storybook)"]
+    subgraph CORE["Base Platform Kernel (Schema: public)"]
+        AUTH["Supabase Auth (auth.users)"]
+        IAM["Core IAM & Profiles (public.profiles)"]
+        TENANTS["Multi-Tenant Boundary (public.tenants)"]
+        RBAC["NIST RBAC (roles, permissions, member_roles)"]
+        JWT["Custom JWT Token Hook (O(1) Claims Engine)"]
+        AUDIT["Audit Trail (BIGINT IDENTITY, INET)"]
+        REGISTRY["Master Plugin Registry (system_plugins)"]
     end
 
-    subgraph AUTOMA["2. tuquet-automa (Client Runtime & Studio)"]
-        CORE["apps/core (Rust Axum Daemon + CDP Orchestrator)"]
-        WEBE["apps/webe (Vue 3 Studio Canvas + Chrome MV3 Ext)"]
-        LOCAL_DB["SQLite Local DB (Offline-first & Encrypted Vault)"]
+    subgraph PLUGINS["Dynamic Schema Plugins"]
+        MEDIA["Media Storage (schema: media)"]
+        BILLING["SaaS Billing & Quotas (schema: billing)"]
+        EVENTS["Transactional Outbox (schema: events)"]
+        AUTOMA["Automation Fleet Bridge (schema: automa)"]
+        CUSTOM["Future Plugins (CRM, AI, Notifications)"]
     end
 
-    subgraph CLOUD["3. tuquet-cloud (Central Cloud BaaS Hub)"]
-        SUPABASE["Supabase PostgreSQL (Multi-tenant RBAC)"]
-        JWT["Custom JWT Token Hook (O(1) RLS Check)"]
-        MODULES["Modules (Quota Metering, Storage, Webhooks Outbox)"]
-        OPENAPI["OpenAPI 3.0 Specs & Cloud REST API"]
+    subgraph CLIENTS["Consumer SDKs & External Consumers"]
+        TS_SDK["TypeScript Client SDK (@tuquet/cloud-sdk)"]
+        REST["PostgREST Auto-Generated REST APIs"]
+        WEBHOOKS["External Webhook Subscribers"]
     end
 
-    LIB -->|"npm packages (UI / Utilities)"| AUTOMA
-    LIB -.->|"UI Design System"| CLOUD
-    AUTOMA <-->|"Sync Workflows, Fleet & Telemetry"| CLOUD
+    AUTH --> IAM --> TENANTS --> RBAC
+    TENANTS --> JWT
+    TENANTS ==> PLUGINS
+    REGISTRY -.-> PLUGINS
+    PLUGINS --> CLIENTS
 ```
 
 ---
 
-## 📅 2. Tổng Quan Lộ Trình 3 Giai Đoạn
+## 📅 2. Roadmap Phases Summary
 
-| Giai Đoạn | Tên Giai Đoạn | Trọng Tâm | Trạng Thái |
+| Phase | Phase Name | Strategic Focus | Status |
 | :--- | :--- | :--- | :---: |
-| **Giai đoạn 1** | **Core Base & Foundation Hardening** | Chuẩn hóa toàn bộ nền móng: UI Primitives, Remote Table, Rust Engine Core, Schema RBAC trên Supabase, Chuẩn hóa danh pháp. | 🔥 **TRỌNG TÂM HIỆN TẠI** |
-| **Giai đoạn 2** | **Cloud Integration & SaaS Sync** | Kết nối `automa` lên `tuquet-cloud` qua Supabase Adapter; ra mắt Web Dashboard quản trị SaaS; mở rộng components. | ⏳ Sắp thực hiện |
-| **Giai đoạn 3** | **AI Agentic Automation & Distributed Grid** | AI Vision Autonomous Agent, CDP Selector tự phục hồi; điều phối hạm đội bot phân tán; thanh toán theo mức sử dụng. | 🔮 Tương lai |
+| **Phase 1** | **Base Kernel & Plugin Engine Core** | Base Platform Core IAM, $O(1)$ JWT Claims Hook, Master Plugin Registry, 4 Enterprise Plugins, Canonical Terminology. | 🔥 **CURRENT FOCUS (100% Complete)** |
+| **Phase 2** | **Testing Suite, Outbox Worker & SDK Pipeline** | Automated pgTAP / Docker RLS test suite, Outbox Worker Edge Function, Plugin Scaffolding CLI, Auto-generated TypeScript SDK. | ⏳ **UP NEXT** |
+| **Phase 3** | **Enterprise Scale & High Availability** | Declarative Table Partitioning by `tenant_id`, Supavisor pooler tuning, Supabase Branching CI/CD, PITR backup automation. | 🔮 **PLANNED** |
 
 ---
 
-## 🎯 3. CHI TIẾT GIAI ĐOẠN 1: CORE BASE & FOUNDATION (TRỌNG TÂM)
+## 🎯 3. Phase 1: Base Kernel & Plugin Engine Core (Completed)
 
-> **Mục tiêu then chốt:** Hoàn thiện 100% "những viên gạch nền móng" không tì vết trước khi xây dựng tầng tính năng đám mây và AI. Đảm bảo mọi bài test vượt qua, build sạch sẽ, bảo mật chặt chẽ và nhất quán xuyên suốt các repo.
+> **Objective**: Establish an unshakeable, production-ready PostgreSQL foundation with zero RLS recursion, hardened security, and a drop-in modular plugin architecture.
 
-### 📦 Workstream 1.1: `tuquet-lib` (Thư Viện Dùng Chung & Design System)
-*Trách nhiệm: Đảm bảo độ tin cậy tuyệt đối, zero styling debt, và tính tái sử dụng cao.*
-
-- [x] **Monorepo Architecture:** Cấu hình Turborepo + pnpm workspace, `tsup` Dual ESM/CJS build pipeline, `publint` kiểm định exports.
-- [x] **`@tuquet/vue-ui`:**
-  - [x] Tích hợp 36+ components chuẩn Shadcn-Vue trên Reka UI & Tailwind CSS.
-  - [x] Tích hợp Sonner Toaster và Design Tokens hỗ trợ đa giao diện (`tokens.css`).
-  - [x] Thiết lập quy chuẩn bất biến: Không can thiệp sửa trực tiếp style gốc của vue-ui, duy trì đồng bộ 1:1 với upstream registry.
-- [x] **`@tuquet/vue-table`:**
-  - [x] Tích hợp TanStack Table v8, Virtual Scroll, URL Sync, AbortController.
-  - [x] Hỗ trợ xuất dữ liệu đa định dạng: XLSX, CSV, TSV.
-  - [x] Bộ kiểm thử 138/138 tests passed (21 test files).
-- [x] **`@tuquet/lunar`:** Thuật toán thiên văn Lịch Âm - Dương, Can Chi, 24 Tiết Khí (17/17 tests passed).
-- [x] **Showcase & CI/CD:** Storybook online (`storybook.flowup.io.vn`), Changesets release tự động lên npm registry qua GitHub Actions.
-- [ ] **[Next Tasks - Hardening]**:
-  - [ ] Kiểm thử độ tương thích giao diện trên màn hình nhỏ và hỗ trợ phím tắt điều hướng bảng.
-  - [ ] Bổ sung Storybook stories cho toàn bộ các trường hợp biên của Dynamic Filters.
-
----
-
-### ⚡ Workstream 1.2: `tuquet-automa` (Động Cơ Thực Thi Cục Bộ & Studio)
-*Trách nhiệm: Cỗ máy thực thi tại máy trạm ổn định, hiệu năng cao, cách ly trình duyệt triệt để.*
-
-- [x] **Kiến Trúc & SRS:**
-  - [x] Bản đồ tư duy 7 nguyên tắc bất biến (7 Golden Invariants).
-  - [x] Hệ thống đặc tả Ma trận 2 chiều (`docs/srs/`): Horizontal Standards (Buttons, Selects, Stores, UI) & Vertical Menus (Studio, Browsers, Campaign, Storage, History, Settings).
-- [x] **Lưu Trữ Cục Bộ & Két Sắt Mã Hóa:**
-  - [x] SQLite database-first: Quản lý tập trung mọi thực thể, loại bỏ anti-pattern quét file JSON.
-  - [x] Két sắt mật mã: `HMAC-SHA256 + AES-256-CBC`, giải mã RAM-only trong microsecond thực thi, zero leak ra đĩa/log.
-- [x] **Quản Trị Trình Duyệt (Chromium Isolation):**
-  - [x] Tải và quản lý binary Chromium độc lập theo kiến trúc Playwright (không quét hay chiếm quyền trình duyệt cá nhân của máy).
-- [x] **Phân Phối Ứng Dụng:** Đóng gói Scoop bucket (`automa.json`) và pre-built binary GitHub Releases.
-- [x] **Rust Core Toolchain:** Cấu hình và kích hoạt thành công toolchain GNU (`stable-x86_64-pc-windows-gnu`) cùng Scoop MinGW GCC, `cargo check` biên dịch thành công 100% `apps/core` (Finished dev profile in 2m 18s).
-- [ ] **[Next Tasks - Core Base Focus]**:
-  - [ ] **Local Daemon End-to-End Test:** Chạy kiểm thử tương tác thực tế giữa Axum Daemon (`127.0.0.1:8765`), Scalar API Server (`:8767`), và Web Studio Canvas (`apps/webe`).
-  - [ ] **Shadcn Consumption Alignment:** Đảm bảo `apps/webe` tiêu thụ trực tiếp các linh kiện từ `@tuquet/vue-ui` và `@tuquet/vue-table` thay vì định nghĩa trùng lặp.
+- [x] **Base Platform Core Migration (`20260920000001_base_platform_core.sql`):**
+  - [x] 10 core tables in `public` schema (`profiles`, `tenants`, `roles`, `permissions`, `role_permissions`, `tenant_members`, `member_roles`, `tenant_invitations`, `audit_logs`, `system_plugins`).
+  - [x] System Roles (`is_system = true`, `tenant_id IS NULL`) vs Custom Tenant Roles (`tenant_id = UUID`).
+  - [x] Composite indexes starting with `tenant_id` for multi-tenant query optimization.
+- [x] **$O(1)$ JWT Access Token Hook & Zero-Recursion RLS:**
+  - [x] `public.custom_access_token_hook` bakes active `tenant_id`, `roles`, and atomic `permissions` (`LIMIT 25`) into JWT `app_metadata`.
+  - [x] Authorization helpers (`has_permission`, `is_tenant_member`, `is_tenant_admin`) marked `SECURITY DEFINER` and `STABLE`.
+- [x] **CWE-426 Protection (Search Path Hijacking):**
+  - [x] 100% of functions, procedures, and triggers enforce `SET search_path = ''` with fully-qualified schema names.
+- [x] **Master Plugin Registry & Lifecycle Pipeline:**
+  - [x] `public.system_plugins` tracks active plugins with `is_system` protection.
+  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `automa`).
+- [x] **4 First-Party Enterprise Plugins:**
+  - [x] `storage` (Schema: `media`): Metadata catalog & dual-layer Supabase Storage RLS.
+  - [x] `subscriptions` (Schema: `billing`): SaaS plans, subscriptions, and usage meters.
+  - [x] `webhooks` (Schema: `events`): Transactional Outbox pattern & delivery audit logs.
+  - [x] `automa` (Schema: `automa`): Workflows, runner fleet, campaign runs, and telemetry logs.
+- [x] **Documentation & Anti-Hallucination Standards:**
+  - [x] Canonical Terminology Dictionary (`docs/terminology_dictionary.md`).
+  - [x] Technical Architecture & Extension Contract (`docs/architecture.md`).
+  - [x] Project Agent Behavioral Rules (`AGENTS.md`).
 
 ---
 
-### ☁️ Workstream 1.3: `tuquet-cloud` (Nền Tảng Multi-Tenant RBAC Cloud & BaaS Hub)
-*Trách nhiệm: Quản trị bảo mật phân quyền đa tổ chức, mô hình hóa dữ liệu chuẩn hóa trên Supabase.*
+## 🚀 4. Phase 2: Testing Suite, Outbox Worker & SDK Pipeline (Up Next)
 
-- [x] **Định Danh Chuẩn Hóa:** Đổi tên repository và định vị chuẩn xác thành `tuquet-cloud` — đóng vai trò là Central Cloud BaaS Hub của toàn bộ hệ sinh thái.
-- [x] **Schema Thiết Kế Multi-Tenant RBAC:**
-  - [x] Hoàn thiện schema PostgreSQL (`tenants`, `profiles`, `roles`, `permissions`, `member_roles`, `tenant_invitations`, `audit_logs`).
-  - [x] Phân biệt rõ ràng System Role (`tenant_id IS NULL`) và Custom Tenant Role (`tenant_id = UUID`).
-- [x] **Bảo Mật & Hiệu Năng RLS:**
-  - [x] Ngăn chặn triệt để RLS Infinite Recursion bằng các hàm `SECURITY DEFINER` (`is_tenant_member`, `has_tenant_permission`, `is_tenant_admin`).
-  - [x] Tích hợp Supabase Custom Access Token (JWT) Hook nhúng `tenant_id` và roles vào Claims để kiểm tra quyền với độ phức tạp $O(1)$.
-  - [x] Đánh Composite Index bắt đầu bằng `tenant_id` trên mọi bảng nghiệp vụ nhằm triệt tiêu nguy cơ rò rỉ chéo dữ liệu và sẵn sàng cho Table Partitioning.
-- [x] **Kiến Trúc Module Hóa Phân Hệ & Plugins Theo Nhu Cầu (`supabase/plugins/`):**
-  - [x] Base Core tối giản & hợp nhất: `supabase/migrations/` chỉ chứa duy nhất schema nền tảng (`20260920000001_base_platform_core.sql`) bao gồm IAM, RBAC, Claims JWT Hook, Audit Trail và Master Plugin Registry.
-  - [x] 100% tính năng mở rộng được đóng gói dạng Enterprise Plugins độc lập (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
-    - [x] `core-iam/`: Thành phần cốt lõi bất biến (`is_system = true`, cấm unregister).
-    - [x] `automa/`: Cầu nối điều phối hạm đội tự động hóa phân tán (schema `automa`).
-    - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập (schema `media`).
-    - [x] `subscriptions/`: Gói cước SaaS và quản lý hạn ngạch tài nguyên (schema `billing`).
-    - [x] `webhooks/`: Hàng đợi sự kiện Transactional Outbox & Webhooks dispatch (schema `events`).
-- [x] **Seed Data & Kiến Trúc Chuẩn Hóa (KISS & YAGNI):**
-  - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu tự thích ứng (idempotent conditional checks), chạy sạch sẽ trên Base Core lẫn khi đã cài Plugins.
-  - [x] `docs/architecture.md`: Tài liệu kiến trúc chuẩn hóa duy nhất kết hợp ERD 5 phân vùng, từ điển khóa ngoại, cơ chế bảo mật O(1) RLS và PostgREST OpenAPI Introspection.
-  - [x] Tinh giản triệt để: Loại bỏ các file rác/stale JSON và HTML duplicate để loại bỏ hoàn toàn nợ tài liệu.
-- [ ] **[Next Tasks - Core Base Focus]**:
-  - [ ] Chạy kiểm thử tự động toàn bộ SQL Migration trên local Supabase Docker instance (`supabase start` && `supabase db reset`).
-  - [ ] Tạo script tự động sinh TypeScript Client SDK trực tiếp qua `supabase gen types typescript`.
+> **Objective**: Implement automated database test runners, background event delivery edge functions, developer scaffolding tools, and typed client SDK pipelines.
+
+1. **Automated Database Integration Testing (Local Supabase / Docker):**
+   - Implement automated pgTAP and SQL verification test suites (`tests/db/`).
+   - Validate 100% of RLS policies across multi-tenant personas (Owner, Admin, Member, Suspended, Cross-Tenant Intruder).
+   - Test plugin installation and uninstallation idempotency.
+2. **Background Outbox Worker (Supabase Edge Function / Deno):**
+   - Develop `supabase/functions/outbox-worker` to poll `events.outbox` where `status = 'pending'`.
+   - Dispatch HTTP POST webhooks with HMAC-SHA256 signature verification headers.
+   - Record response status codes, latencies, and implement Exponential Backoff retries.
+3. **Plugin Authoring Scaffolding CLI:**
+   - Create a lightweight CLI tool (`pnpm run create:plugin <id> <schema>`) to generate standard plugin boilerplate (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`).
+4. **Automated TypeScript SDK Generation Pipeline:**
+   - Integrate `@hey-api/openapi-ts` with PostgREST dynamic introspection.
+   - Export strongly-typed TypeScript client package (`@tuquet/cloud-sdk`) for frontend and client runtime consumption.
+5. **Atomic Quota Enforcement Triggers:**
+   - Connect `billing.usage_meters` triggers with domain tables (e.g. block uploads when `storage_mb` exceeds plan quota).
 
 ---
 
-### 🌐 Workstream 1.4: Tối Giản Môi Trường Phát Triển & Chuẩn Hóa Danh Pháp (KISS & YAGNI)
-*Trách nhiệm: Giữ repo sạch sẽ tuyệt đối, không đưa cấu hình mạng/proxy máy trạm cá nhân vào kho mã nguồn.*
+## 🔮 5. Phase 3: Enterprise Scale, Partitioning & High Availability
 
-- [x] **Zero Host Hacks in Repo:** Loại bỏ 100% các script và cấu hình proxy máy trạm cá nhân khỏi repository, tuân thủ nguyên tắc mã nguồn trung lập với môi trường.
-- [x] **Terminology Dictionary & Anti-Hallucination:** Ban hành `docs/terminology_dictionary.md` và ràng buộc trong `AGENTS.md` triệt tiêu ảo giác thuật ngữ.
-- [x] **Chuẩn Hóa VS Code Workspace:**
-  - [x] Cấu hình `"search.useIgnoreFiles": false` và danh sách loại trừ artifact trong `.vscode/settings.json`.
-  - [x] Rút gọn `.vscode/tasks.json` thành các tác vụ native chuẩn (`supabase db reset`, `apply plugins`, `supabase gen types`).
+> **Objective**: Scale Tuquet Cloud to hundreds of millions of records, automate continuous database deployment, and ensure high availability.
 
----
-
-## 🚀 4. Kế Hoạch Giai Đoạn 2 (Cloud Integration & SaaS Sync)
-
-1. **Supabase Remote Adapter trên `tuquet-automa`:**
-   - Xây dựng tầng kết nối đám mây song song với SQLite cục bộ.
-   - Hỗ trợ người dùng đồng bộ workflows, campaign templates, và lịch sử thực thi lên tài khoản tổ chức trên mây `tuquet-cloud`.
-2. **Web Dashboard Quản Trị SaaS (`tuquet-dashboard` app):**
-   - Xây dựng giao diện web cho Tenant Owners quản lý tổ chức, phân quyền thành viên, cấp phát khóa kích hoạt bot và giám sát quota thông qua `tuquet-cloud`.
-3. **Mở Rộng UI Components trên `tuquet-lib`:**
-   - Bổ sung Analytics Charts, Agent Flow Node components, và Command Palette (`Cmd+K`).
+1. **Declarative Table Partitioning by `tenant_id`:**
+   - Implement PostgreSQL Declarative Table Partitioning (HASH or LIST) for high-growth append-only tables:
+     - `public.audit_logs`
+     - `events.outbox` and `events.deliveries`
+     - `automa.execution_logs`
+2. **Supabase Database Branching & CI/CD Migrations:**
+   - Setup GitHub Actions pipeline with Supabase CLI database branching for preview environments.
+   - Automated schema linter and migration verification on pull requests.
+3. **Connection Pooling & Supavisor Optimization:**
+   - Configure Supavisor in Transaction Mode for high-concurrency serverless client spikes.
+   - Tune connection limits, statement timeouts, and query work memory (`work_mem`).
+4. **Point-In-Time Recovery (PITR) & Disaster Recovery Runbooks:**
+   - Standardize automated backup verification and failover documentation.
 
 ---
 
-## 🔮 5. Kế Hoạch Giai Đoạn 3 (AI Agent & Distributed Grid)
+## 📜 6. Backend Engineering Invariants
 
-1. **AI Vision & Self-Healing Automation (`tuquet-automa`):**
-   - Tích hợp mô hình AI đa phương thức để tự phục hồi Selector khi giao diện mục tiêu thay đổi.
-   - Giải quyết tự động các bài toán tương tác phức tạp (CAPTCHA, OTP, dynamic multi-step canvas).
-2. **Distributed Runner Grid (`tuquet-cloud`):**
-   - Quản trị hạm đội hàng trăm bot runner `automa` phân tán trên toàn cầu thông qua WebSocket/Supabase Realtime.
-   - Tích hợp cổng thanh toán SaaS (Stripe/MoMo) và tính cước theo mức sử dụng thực tế (Pay-as-you-go).
-3. **Headless Cross-Platform UI (`tuquet-lib`):**
-   - Đóng gói ứng dụng máy trạm Desktop (Tauri) và Web Extension đa trình duyệt với độ bao phủ test $\ge 90\%$.
-
----
-
-## 📜 6. Quy Tắc Bất Biến Khi Phát Triển (Development Invariants)
-
-1. **Strict ASCII Invariance:** Toàn bộ script PowerShell, biến môi trường, và file cấu hình CLI chỉ sử dụng ký tự ASCII để tương thích an toàn tuyệt đối với Windows PowerShell 5.1.
-2. **Scoop-First Tooling:** Quản lý môi trường và công cụ (`nodejs`, `pnpm`, `rustup`, `supabase`, `mingw`) ưu tiên hàng đầu qua Scoop.
-3. **No Direct UI Style Mutation:** Không chỉnh sửa trực tiếp style của component nguyên tử trong `@tuquet/vue-ui`. Mọi tùy biến giao diện phải xử lý qua Design Tokens (`tokens.css`).
-4. **Zero-Leak Credentials:** Mọi khóa bí mật, token, passkey chỉ giải mã trên bộ nhớ RAM trong thời gian thực thi, không bao giờ ghi xuống đĩa hoặc in ra log.
+1. **Strict ASCII Invariance:** All PowerShell and automation scripts MUST use strict ASCII encoding to guarantee Windows PowerShell 5.1 compatibility.
+2. **Database-First & Zero Monolithic Clutter:** All application state is managed in PostgreSQL with schema separation. The `public` schema is reserved strictly for Core IAM.
+3. **Zero RLS Recursion:** Never evaluate circular subqueries inside RLS policies. Always leverage JWT claims synthesized by the Custom Access Token Hook.
+4. **CWE-426 Sanitization:** Every SQL function and procedure MUST declare `SET search_path = ''`.

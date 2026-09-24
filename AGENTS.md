@@ -16,10 +16,11 @@ All AI agents operating in this repository MUST strictly adhere to [**`docs/term
 - **Event Dispatch**: Use **`Transactional Outbox`** (`events.outbox`) and **`Webhooks`** (`events.subscriptions`, `events.deliveries`). Hallucinating external message brokers (Kafka, RabbitMQ, Redis BullMQ) is strictly FORBIDDEN.
 
 ## 2. PostgreSQL & Supabase Architecture Invariants
-- **Base Kernel & Plugin Isolation**: Schema `public` is reserved strictly for Base Platform Core IAM. All on-demand features MUST reside in their dedicated isolated schemas (`media`, `billing`, `events`, `automa`).
-- **O(1) RLS via Custom Access Token Hook**: Security policies MUST leverage claims (`tenant_id`, `roles`, `permissions`) injected into the JWT by `public.custom_access_token_hook`.
+- **Base Kernel & Plugin Isolation**: Schema `public` is reserved strictly for the Base Platform Core IAM. All on-demand features MUST reside in their dedicated isolated schemas (`media`, `billing`, `events`, `automa`).
+- **FORBIDDEN Monolithic Coupling**: Agents MUST NEVER inject plugin tables into the `public` schema or draw monolithic static ERD diagrams that combine plugin tables with the Core Kernel ERD. All plugin-specific ERDs MUST reside exclusively inside their own `supabase/plugins/<plugin_id>/README.md`.
+- **O(1) RLS via Custom Access Token Hook**: Security policies MUST leverage claims (`tenant_id`, `roles`, `permissions`) injected into the JWT by `public.custom_access_token_hook`. Never write circular subqueries on `tenant_members` in RLS policies.
 - **No-Recursion Pattern**: All security query helpers MUST be marked `SECURITY DEFINER` and `STABLE`.
-- **CWE-426 Protection**: Every SQL function and trigger MUST declare `SET search_path = ''` and use fully-qualified object names (`public.profiles`, `auth.users`).
+- **CWE-426 Protection**: Every SQL function, procedure, and trigger MUST declare `SET search_path = ''` and use fully-qualified object names (`public.profiles`, `auth.users`).
 
 ## 3. Scripting & Execution Standards
 - **Strict ASCII Invariance:** All PowerShell and batch scripts in this repository MUST be strictly ASCII-encoded (no Vietnamese diacritics in code, comments, or output strings) to avoid Windows PowerShell 5.1 ANSI parsing issues.

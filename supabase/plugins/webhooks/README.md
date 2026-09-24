@@ -1,47 +1,47 @@
 # ⚡ Enterprise Plugin: Transactional Outbox & Webhooks (`webhooks`)
 
-> **Hạ Tầng Hàng Đợi Sự Kiện Bất Đồng Bộ & Phát Sóng Webhook Độ Tin Cậy Cao (Event Bus & Webhook Dispatcher)**  
-> Cung cấp cơ chế **Transactional Outbox Pattern** (`events.outbox`), quản lý danh mục đích nhận Webhook bên ngoài (`events.subscriptions`), và lưu trữ nhật ký đối soát lượt gọi HTTP (`events.deliveries`). Đảm bảo độ tin cậy At-Least-Once Delivery mà không làm tắc nghẽn luồng xử lý database.  
-> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa chuẩn về Transactional Outbox Pattern tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
+> **Reliable Asynchronous Event Bus & Webhook Dispatcher**  
+> Implements the **Transactional Outbox Pattern** (`events.outbox`), manages external webhook subscription endpoints (`events.subscriptions`), and audits HTTP dispatch execution logs (`events.deliveries`). Guarantees at-least-once event delivery without blocking synchronous database transactions.  
+> 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md) for strict naming invariants.
 
 ---
 
-## 1. Thông Số Kiến Trúc (Architecture Specs)
+## 1. Architectural Specifications
 
-| Thuộc Tính | Chi Tiết Kỹ Thuật |
+| Property | Technical Specification |
 |---|---|
 | **Plugin ID** | `webhooks` |
-| **Phân Loại** | **On-Demand Infrastructure Plugin** |
-| **PostgreSQL Schema** | `events` (Phân lập hoàn toàn khỏi `public`) |
-| **Kiến Trúc Mẫu** | **Transactional Outbox Pattern** |
-| **Phiên Bản** | `1.0.0` |
-| **Phụ Thuộc (Dependencies)** | `core-iam` |
-| **Kịch Bản Cài Đặt** | [`install.sql`](install.sql) |
-| **Kịch Bản Gỡ Bỏ** | [`uninstall.sql`](uninstall.sql) |
+| **Classification** | **On-Demand Infrastructure Plugin** |
+| **PostgreSQL Schema** | `events` (Fully isolated from `public`) |
+| **Design Pattern** | **Transactional Outbox Pattern** |
+| **Version** | `1.0.0` |
+| **Dependencies** | `core-iam` |
+| **Installation Script** | [`install.sql`](install.sql) |
+| **Uninstallation Script** | [`uninstall.sql`](uninstall.sql) |
 
 ---
 
-## 2. Vì Sao Cần Transactional Outbox Pattern?
+## 2. Why the Transactional Outbox Pattern?
 
-Trong kiến trúc phân tán, **không bao giờ được gửi HTTP Request trực tiếp bên trong Database Trigger**. Nếu server đích bị timeout hoặc sập mạng, toàn bộ giao dịch database của người dùng sẽ bị rollback theo:
+In distributed systems, **never execute synchronous HTTP requests inside database triggers**. If an external webhook receiver times out or fails, the user's primary database transaction rolls back:
 
 ```
-[❌ Cách tiếp cận SAI]:
-DB Transaction Start ──> Ghi dữ liệu ──> GỌI HTTP WEBHOOK (Timeout 30s!) ──> DB Rollback thất bại!
+[❌ Anti-Pattern: Synchronous HTTP in DB Trigger]:
+DB Transaction Begin ──> Write Data ──> HTTP Webhook Request (30s Timeout!) ──> Transaction Rolls Back!
 
-[✅ Chuẩn mực TRANSACTIONAL OUTBOX]:
-DB Transaction Start ──> Ghi dữ liệu ──> Ghi sự kiện vào events.outbox ──> Commit cực nhanh (1ms)!
+[✅ Best Practice: Transactional Outbox Pattern]:
+DB Transaction Begin ──> Write Data ──> Write Event to events.outbox ──> Commit Instantly (1ms)!
                                                 │
-                                                ▼ (Bất đồng bộ)
+                                                ▼ (Asynchronous)
                                     Background Worker / Edge Function
                                                 │
-                                                ▼ (Thử lại tự động nếu lỗi)
-                                       Gửi HTTP đến Webhook Endpoints
+                                                ▼ (Retries on Failure with Backoff)
+                                       Dispatches HTTP to Webhook Endpoints
 ```
 
 ---
 
-## 3. Danh Mục Bảng Dữ Liệu Schema `events`
+## 3. Table Directory: Schema `events`
 
 ```mermaid
 erDiagram
@@ -52,35 +52,35 @@ erDiagram
 ```
 
 ### 1. `events.outbox`
-Hàng đợi sự kiện chờ phát sóng. Tối ưu bằng Partial Index `WHERE status = 'pending'`:
-* `id` (`UUID PRIMARY KEY`): Mã sự kiện độc nhất.
-* `tenant_id` (`UUID REFERENCES public.tenants`): Định danh tổ chức phát sinh sự kiện.
-* `event_type` (`TEXT`): Tên định danh sự kiện (vd: `member.joined`, `workflow.published`, `campaign.completed`).
-* `payload` (`JSONB`): Toàn bộ dữ liệu chi tiết của sự kiện.
+The queue of events awaiting asynchronous broadcast. Optimized via partial index `WHERE status = 'pending'`:
+* `id` (`UUID PRIMARY KEY`): Unique event identifier.
+* `tenant_id` (`UUID REFERENCES public.tenants`): Originating tenant identifier.
+* `event_type` (`TEXT`): Event topic (e.g. `member.joined`, `workflow.published`, `campaign.completed`).
+* `payload` (`JSONB`): Event payload data.
 * `status`: Enum (`pending`, `processing`, `delivered`, `failed`).
-* `retry_count` (`INT`): Số lần đã thử phát sóng lại.
-* `error_message` (`TEXT`): Thông báo lỗi nếu gửi thất bại.
+* `retry_count` (`INT`): Number of dispatch attempts.
+* `error_message` (`TEXT`): Failure diagnostics when dispatch fails.
 
 ### 2. `events.subscriptions`
-Danh sách các URL webhook đích được cấu hình nhận tin:
-* `target_url` (`TEXT`): Địa chỉ endpoint nhận webhook (vd: `https://api.mycrm.com/webhook`).
-* `secret` (`TEXT`): Khóa bí mật dùng để ký chữ ký HMAC-SHA256 trong HTTP Header `X-Tuquet-Signature`.
-* `event_types` (`TEXT[]`): Mảng các sự kiện quan tâm (vd: `['member.*']`, hoặc `['*']` để nhận tất cả).
-* `is_active` (`BOOLEAN`): Bật/tắt điểm nhận webhook.
+External webhook endpoints registered per tenant:
+* `target_url` (`TEXT`): Destination endpoint URL (e.g. `https://api.mycrm.com/webhook`).
+* `secret` (`TEXT`): Secret key used to generate the HMAC-SHA256 signature in the `X-Tuquet-Signature` header.
+* `event_types` (`TEXT[]`): Subscribed topic patterns (e.g. `['member.*']` or `['*']`).
+* `is_active` (`BOOLEAN`): Subscription active toggle.
 
 ### 3. `events.deliveries`
-Nhật ký kiểm toán đối soát từng lượt bắn HTTP webhook:
-* `subscription_id`, `event_id`: Liên kết giữa nguồn sự kiện và đích nhận.
-* `status_code` (`INT`): Mã phản hồi HTTP (vd: `200`, `500`, `404`).
-* `response_body` (`TEXT`): Nội dung phản hồi từ endpoint nhận tin.
-* `duration_ms` (`INT`): Độ trễ mạng tính bằng mili-giây.
-* `attempt` (`INT`): Lần thử thứ mấy (1, 2, 3,...).
+Audit log recording every webhook dispatch attempt:
+* `subscription_id`, `event_id`: Correlation foreign keys.
+* `status_code` (`INT`): Target HTTP response status code (e.g. `200`, `500`, `404`).
+* `response_body` (`TEXT`): Response payload returned by the receiver.
+* `duration_ms` (`INT`): Round-trip network latency in milliseconds.
+* `attempt` (`INT`): Attempt sequence number.
 
 ---
 
-## 4. Hàm Phát Sự Kiện Nghiệp Vụ (Emit Event RPC)
+## 4. Emitting Events (RPC Function)
 
-Bất kỳ stored procedure, trigger hoặc backend service nào cũng có thể bắn sự kiện vào hàng đợi một cách an toàn thông qua hàm:
+Any stored procedure, database trigger, or backend service can emit events into the outbox atomically:
 
 ```sql
 SELECT events.emit_event(
@@ -90,29 +90,29 @@ SELECT events.emit_event(
 );
 ```
 
-### Sự Kiện Tự Động Sẵn Có Từ Base Core:
-* `member.joined`: Tự động kích hoạt khi có thành viên mới gia nhập tổ chức.
-* `member.removed`: Tự động kích hoạt khi thành viên bị xóa khỏi tổ chức.
+### Core Built-in Events:
+* `member.joined`: Automatically emitted when a new user joins a tenant.
+* `member.removed`: Automatically emitted when a user is removed from a tenant.
 
 ---
 
-## 5. Từ Điển Quyền Hạn (Permissions)
+## 5. Permissions Dictionary
 
-| Permission ID | Module | Mô Tả Nghiệp Vụ | Owner | Admin | Member |
+| Permission ID | Module | Business Capability | Owner | Admin | Member |
 |---|---|---|:---:|:---:|:---:|
-| `webhooks:manage` | `integrations` | Tạo, sửa, xóa các điểm nhận webhook | ✅ | ✅ | ❌ |
-| `outbox:read` | `integrations` | Tra cứu luồng sự kiện và lịch sử phát sóng | ✅ | ✅ | ❌ |
+| `webhooks:manage` | `integrations` | Configure, edit, and delete webhook subscriptions | ✅ | ✅ | ❌ |
+| `outbox:read` | `integrations` | Inspect event streams and delivery history | ✅ | ✅ | ❌ |
 
 ---
 
-## 6. Cách Tiêu Thụ API Qua Supabase Client
+## 6. Client Consumption Example (Supabase JS SDK)
 
 ```typescript
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient('https://<project-ref>.supabase.co', '<anon-key>');
 
-// Đăng ký một Webhook Endpoint mới để nhận thông báo
+// Register a new Webhook Endpoint to receive notifications
 const { data: sub, error } = await supabase
   .schema('events')
   .from('subscriptions')
@@ -128,15 +128,15 @@ const { data: sub, error } = await supabase
 
 ---
 
-## 7. Quy Trình Vòng Đời (Lifecycle)
+## 7. Lifecycle Management
 
-### Cài Đặt (Installation)
+### Installation
 ```powershell
 supabase db query --local -f supabase/plugins/webhooks/install.sql
 ```
 
-### Gỡ Bỏ (Uninstallation)
+### Uninstallation
 ```powershell
 supabase db query --local -f supabase/plugins/webhooks/uninstall.sql
 ```
-Lệnh thực thi `DROP SCHEMA IF EXISTS events CASCADE;`, hủy đăng ký khỏi `system_plugins` và thu hồi quyền `integrations` khỏi Core IAM sạch sẽ 100%.
+Executes `DROP SCHEMA IF EXISTS events CASCADE;`, unregisters from `system_plugins`, and cleans up permissions from the Core IAM registry.

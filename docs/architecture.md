@@ -1,49 +1,54 @@
-# Tuquet Cloud Architecture & Data Model
+# Tuquet Cloud Architecture & Technical Specification
 
-> **KISS & YAGNI Compliant**: Tài liệu kiến trúc chuẩn hóa duy nhất của `tuquet-cloud`. Tổng hợp toàn diện sơ đồ ERD, mô hình dữ liệu đa tổ chức (Multi-Tenant RBAC), kiến trúc Plugins phân tán và cơ chế API PostgREST thời gian thực.  
-> 📖 **Từ Điển Danh Pháp Chuẩn Hóa**: Vui lòng tham chiếu [**Từ Điển Thuật Ngữ & Chống Ảo Giác (docs/terminology_dictionary.md)**](./terminology_dictionary.md) để đảm bảo tính nhất quán danh pháp trên toàn hệ sinh thái.
+> **KISS & YAGNI Compliant**: Authoritative technical specification for `tuquet-cloud`. Details the Micro-Kernel architecture, Base Core IAM data model, dynamic PostgreSQL Schema Plugin extension contract, zero-recursion $O(1)$ Row-Level Security (RLS), and dynamic PostgREST API introspection.  
+> 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](./terminology_dictionary.md) for strict naming invariants and forbidden terms.
 
 ---
 
-## 1. Tổng Quan Kiến Trúc Đa Tầng (Multi-Tier Architecture)
+## 1. High-Level Architecture: Micro-Kernel & Schema Plugins
 
-Tuquet Cloud được thiết kế theo mô hình **Row-Level Tenancy (Shared Database, Shared Schema)** kết hợp **Schema-based Plugins** trên nền tảng Supabase / PostgreSQL.
+Tuquet Cloud implements a **Row-Level Tenancy (Shared Database, Shared Schema)** pattern for the core identity layer combined with a **Pluggable Schema Isolation** architecture for business domains on **Supabase / PostgreSQL 15+**.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 1. IDENTITY & USER DOMAIN                                              │
-│    [auth.users] (Supabase Auth) ◄───(Trigger 1:1)───► [public.profiles]│
-└────────────────────────────────────────────────────────────────────────┘
-                                    │
-                                    │ User tham gia vào Tenant
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
-│ 2. BASE PLATFORM CORE (Schema: public)                                 │
-│    ├── tenants               (Ranh giới cô lập tổ chức / workspace)   │
-│    ├── tenant_members        (Quan hệ thành viên & trạng thái)        │
-│    ├── roles                 (Vai trò hệ thống & Custom Tenant Roles) │
-│    ├── permissions           (Bảng quyền nguyên tử)                   │
-│    ├── role_permissions      (Map quyền cho vai trò)                  │
-│    ├── member_roles          (Gán nhiều vai trò cho thành viên)       │
-│    ├── tenant_invitations    (Thư mời tham gia qua Token Hash)        │
-│    ├── audit_logs            (Nhật ký hoạt động bảo mật - Bigint ID)  │
-│    └── system_plugins        (Master Registry - Cờ is_system bảo vệ)  │
+│ 1. IDENTITY LAYER (Managed by Supabase Auth)                           │
+│    [auth.users] (Authentication, credentials, JWT token issue)         │
 └──────────────────────────────────┬─────────────────────────────────────┘
-                                   │
-                                   │ Mở rộng theo nhu cầu (On-Demand Plugins)
+                                   │ 1:1 Trigger Sync
                                    ▼
 ┌────────────────────────────────────────────────────────────────────────┐
-│ 3. ENTERPRISE PLUGINS ECOSYSTEM (Dedicated Isolated Schemas)           │
-│   ├── [schema: media]   Storage & Media Assets (Presigned URL & RLS)   │
-│   ├── [schema: billing] Subscriptions, Plans & Resource Metering       │
-│   ├── [schema: events]  Transactional Outbox & Webhooks Distribution   │
-│   └── [schema: automa]  Automa Cloud Bridge (Fleet, Workflows, Logs)   │
+│ 2. BASE PLATFORM KERNEL (Schema: public - Immutable)                  │
+│    ├── profiles              (Public user metadata linked to auth)     │
+│    ├── tenants               (Root multi-tenancy isolation boundary)   │
+│    ├── tenant_members        (User-to-Tenant membership & state)       │
+│    ├── roles                 (System Roles & Custom Tenant Roles)      │
+│    ├── permissions           (Atomic capabilities: module:res:action)  │
+│    ├── role_permissions      (Many-to-many role-to-permission mapping) │
+│    ├── member_roles          (Role assignments per tenant member)      │
+│    ├── tenant_invitations    (Secure token-hash invitation workflow)   │
+│    ├── audit_logs            (Bigint sequence, INET IP audit trail)    │
+│    └── system_plugins        (Master Plugin Registry & is_system lock) │
+└──────────────────────────────────┬─────────────────────────────────────┘
+                                   │
+                                   │ Dynamic Extension Contracts
+                                   ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│ 3. DYNAMIC ON-DEMAND PLUGINS (Dedicated Isolated PostgreSQL Schemas)   │
+│    ├── [schema: media]   Storage & Media Assets (Presigned URL & RLS)  │
+│    ├── [schema: billing] Subscriptions, Plans & Resource Metering      │
+│    ├── [schema: events]  Transactional Outbox & Webhooks Distribution  │
+│    ├── [schema: automa]  Automa Cloud Bridge (Fleet, Workflows, Logs)  │
+│    └── [schema: custom]  Future 3rd-party plugins (CRM, AI, Notify)   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 2. Sơ Đồ Thực Thể Liên Kết (Full System ERD)
+## 2. Base Platform Kernel (Schema: `public`)
+
+The Base Platform Kernel is the **immutable core** of Tuquet Cloud. It manages identity extension, multi-tenancy boundary isolation, NIST RBAC role hierarchies, access token claim synthesis, and plugin registration.
+
+### 2.1. Kernel Entity-Relationship Diagram (Kernel ERD)
 
 ```mermaid
 %%{init: {
@@ -62,22 +67,16 @@ Tuquet Cloud được thiết kế theo mô hình **Row-Level Tenancy (Shared Da
   }
 }}%%
 erDiagram
-    %% ==========================================
-    %% 1. IDENTITY & PROFILES
-    %% ==========================================
-    AUTH_USERS ||--|| PROFILES : "1:1 đồng bộ qua Trigger"
+    AUTH_USERS ||--|| PROFILES : "1:1 trigger sync"
     PROFILES ||--o{ TENANTS : "created_by (audit)"
     PROFILES ||--o{ TENANT_MEMBERS : "user_id"
     PROFILES ||--o{ TENANT_INVITATIONS : "invited_by"
     PROFILES ||--o{ AUDIT_LOGS : "actor_id"
 
-    %% ==========================================
-    %% 2. BASE CORE IAM (Schema: public)
-    %% ==========================================
     TENANTS ||--o{ TENANT_MEMBERS : "tenant_id (1:N)"
-    TENANTS ||--o{ ROLES : "tenant_id (nullable cho system roles)"
+    TENANTS ||--o{ ROLES : "tenant_id (custom tenant roles)"
     TENANTS ||--o{ TENANT_INVITATIONS : "tenant_id (1:N)"
-    TENANTS ||--o{ AUDIT_LOGS : "tenant_id (1:N partitionable)"
+    TENANTS ||--o{ AUDIT_LOGS : "tenant_id (partitionable)"
 
     ROLES ||--o{ ROLE_PERMISSIONS : "role_id"
     PERMISSIONS ||--o{ ROLE_PERMISSIONS : "permission_id"
@@ -85,181 +84,181 @@ erDiagram
     TENANT_MEMBERS ||--o{ MEMBER_ROLES : "member_id"
     ROLES ||--o{ MEMBER_ROLES : "role_id"
     TENANTS ||--o{ MEMBER_ROLES : "tenant_id (composite index)"
-    ROLES ||--o{ TENANT_INVITATIONS : "role_id (vai trò được mời)"
+    ROLES ||--o{ TENANT_INVITATIONS : "role_id (assigned on accept)"
 
     SYSTEM_PLUGINS {
-        text id PK "Plugin identifier (automa, storage, subscriptions, webhooks)"
-        text name "Display name"
-        text version "SemVer version"
-        boolean is_installed "Trạng thái cài đặt"
-        boolean is_system "Cờ bảo vệ bất biến (true = không thể gỡ)"
-        text schema_name "Postgres Schema đích"
-        text[] dependencies "Mảng phụ thuộc topo"
-        timestamptz installed_at "Thời điểm kích hoạt"
+        text id PK "Plugin identifier (automa, storage, billing, events)"
+        text name "Display Name"
+        text version "SemVer Version"
+        boolean is_installed "Active status"
+        boolean is_system "Immutable kernel guard flag"
+        text schema_name "Target PostgreSQL schema"
+        text[] dependencies "Topological dependency array"
+        timestamptz installed_at "Installation timestamp"
     }
 
-    %% ==========================================
-    %% 3. PLUGIN STORAGE (Schema: media)
-    %% ==========================================
-    TENANTS ||--o{ MEDIA_ASSETS : "tenant_id (cô lập media)"
-    MEDIA_ASSETS {
-        uuid id PK "Asset UUID"
-        uuid tenant_id FK "Thuộc tenant nào"
-        string file_path "Đường dẫn Supabase Storage"
-        string bucket_name "tenant-assets"
-        bigint file_size_bytes "Dung lượng file"
-        string mime_type "Content-Type"
-        uuid uploaded_by FK "Profile ID"
+    AUTH_USERS {
+        uuid id PK "Supabase auth UUID"
+        string email "Login email"
+        timestamptz created_at "Creation timestamp"
     }
 
-    %% ==========================================
-    %% 4. PLUGIN SUBSCRIPTIONS (Schema: billing)
-    %% ==========================================
-    TENANTS ||--|| TENANT_SUBSCRIPTIONS : "tenant_id (1:1 gói thuê bao)"
-    SUBSCRIPTION_PLANS ||--o{ TENANT_SUBSCRIPTIONS : "plan_id"
-    TENANTS ||--o{ TENANT_USAGE_METERS : "tenant_id"
-
-    SUBSCRIPTION_PLANS {
-        string id PK "free | pro | enterprise"
-        string name "Tên gói cước"
-        int max_members "Giới hạn số thành viên"
-        int max_workflows "Giới hạn số quy trình"
-        bigint max_storage_mb "Giới hạn dung lượng lưu trữ (MB)"
-    }
-    TENANT_SUBSCRIPTIONS {
-        uuid id PK "Subscription ID"
-        uuid tenant_id FK "Tenant ID"
-        string plan_id FK "Plan tham chiếu"
-        enum status "free_tier | trialing | active | canceled"
-        timestamptz current_period_end "Hạn dùng"
-    }
-    TENANT_USAGE_METERS {
-        uuid id PK "Meter ID"
-        uuid tenant_id FK "Tenant ID"
-        string metric_name "storage_bytes, workflows_count"
-        bigint current_value "Mức dùng hiện tại"
+    PROFILES {
+        uuid id PK,FK "1:1 with auth.users.id"
+        string email "Contact email"
+        string full_name "Display name"
+        string avatar_url "Profile avatar"
+        timestamptz updated_at "Last updated"
     }
 
-    %% ==========================================
-    %% 5. PLUGIN WEBHOOKS (Schema: events)
-    %% ==========================================
-    TENANTS ||--o{ OUTBOX_EVENTS : "tenant_id"
-    TENANTS ||--o{ WEBHOOK_SUBSCRIPTIONS : "tenant_id"
-    WEBHOOK_SUBSCRIPTIONS ||--o{ WEBHOOK_DELIVERIES : "webhook_id"
-    OUTBOX_EVENTS ||--o{ WEBHOOK_DELIVERIES : "event_id"
-
-    OUTBOX_EVENTS {
-        uuid id PK "Event UUID"
-        uuid tenant_id FK "Tenant ID"
-        string event_type "tenant.created, automa.campaign.finished"
-        jsonb payload "Dữ liệu sự kiện JSON"
-        enum status "pending | processing | delivered | failed"
-    }
-    WEBHOOK_SUBSCRIPTIONS {
-        uuid id PK "Webhook UUID"
-        uuid tenant_id FK "Tenant ID"
-        string target_url "URL nhận webhook ngoài"
-        string secret_hash "Mã bí mật xác thực chữ ký"
-        boolean is_active "Trạng thái kích hoạt"
-    }
-    WEBHOOK_DELIVERIES {
-        uuid id PK "Delivery UUID"
-        uuid webhook_id FK "Webhook ID"
-        uuid event_id FK "Event ID"
-        int response_status "HTTP status code"
-        text response_body "Nội dung phản hồi"
+    TENANTS {
+        uuid id PK "Tenant UUID"
+        string slug UK "Vanity URL slug"
+        string name "Tenant/Company name"
+        enum status "active | suspended | archived"
+        jsonb metadata "Configuration and metadata"
+        uuid created_by FK "Creator profile ID"
+        timestamptz created_at "Creation timestamp"
     }
 
-    %% ==========================================
-    %% 6. PLUGIN AUTOMA BRIDGE (Schema: automa)
-    %% ==========================================
-    TENANTS ||--o{ AUTOMA_WORKFLOWS : "tenant_id"
-    TENANTS ||--o{ AUTOMA_RUNNERS : "tenant_id"
-    TENANTS ||--o{ AUTOMA_CAMPAIGN_RUNS : "tenant_id"
-    TENANTS ||--o{ AUTOMA_EXECUTION_LOGS : "tenant_id"
-    TENANTS ||--o{ AUTOMA_SCHEDULES : "tenant_id"
+    TENANT_MEMBERS {
+        uuid id PK "Member association UUID"
+        uuid tenant_id FK "Tenant foreign key"
+        uuid user_id FK "Profile foreign key"
+        enum status "active | suspended"
+        timestamptz joined_at "Join timestamp"
+    }
 
-    AUTOMA_WORKFLOWS ||--o{ AUTOMA_CAMPAIGN_RUNS : "workflow_id"
-    AUTOMA_RUNNERS ||--o{ AUTOMA_CAMPAIGN_RUNS : "runner_id"
-    AUTOMA_CAMPAIGN_RUNS ||--o{ AUTOMA_EXECUTION_LOGS : "campaign_run_id"
-    AUTOMA_RUNNERS ||--o{ AUTOMA_EXECUTION_LOGS : "runner_id"
-    AUTOMA_WORKFLOWS ||--o{ AUTOMA_SCHEDULES : "workflow_id"
+    ROLES {
+        uuid id PK "Role UUID"
+        uuid tenant_id FK "NULL for System Role, UUID for Custom Role"
+        string name "Machine name (owner, admin, member, viewer)"
+        string display_name "Human label"
+        boolean is_system "True for immutable core roles"
+    }
 
-    AUTOMA_WORKFLOWS {
-        uuid id PK "Workflow ID"
-        uuid tenant_id FK "Tenant ID"
-        string name "Tên quy trình"
-        jsonb graph "VueFlow Visual Flow Graph JSON"
-        int version "Phiên bản quy trình"
+    PERMISSIONS {
+        string id PK "Atomic capability: module:resource:action"
+        string module "Domain module name"
+        string description "Capability description"
     }
-    AUTOMA_RUNNERS {
-        uuid id PK "Runner Node ID"
-        uuid tenant_id FK "Tenant ID"
-        string hostname "Tên máy trạm thực thi"
-        string status "online | busy | offline"
-        timestamptz last_heartbeat "Nhịp tim cuối"
+
+    ROLE_PERMISSIONS {
+        uuid role_id PK,FK "Role reference"
+        string permission_id PK,FK "Permission reference"
+        timestamptz granted_at "Grant timestamp"
     }
-    AUTOMA_CAMPAIGN_RUNS {
-        uuid id PK "Campaign Run UUID"
-        uuid tenant_id FK "Tenant ID"
-        uuid workflow_id FK "Workflow tham chiếu"
-        uuid runner_id FK "Máy trạm thực thi"
-        enum status "pending | running | completed | failed"
+
+    MEMBER_ROLES {
+        uuid member_id PK,FK "Tenant member reference"
+        uuid role_id PK,FK "Role reference"
+        uuid tenant_id FK "Tenant ID for index optimization"
+        timestamptz assigned_at "Assignment timestamp"
     }
-    AUTOMA_EXECUTION_LOGS {
-        bigint id PK "Identity Sequence Log ID"
+
+    TENANT_INVITATIONS {
+        uuid id PK "Invitation UUID"
+        uuid tenant_id FK "Target tenant"
+        string email "Invited email"
+        uuid role_id FK "Pre-assigned role"
+        string token_hash UK "Cryptographic invite token hash"
+        enum status "pending | accepted | revoked | expired"
+        timestamptz expires_at "Expiration timestamp"
+    }
+
+    AUDIT_LOGS {
+        bigint id PK "Identity sequence log ID"
         uuid tenant_id FK "Tenant ID"
-        uuid campaign_run_id FK "Phiên chạy"
-        string level "INFO | WARN | ERROR"
-        text message "Log entry"
+        uuid actor_id FK "Actor profile ID"
+        string action "Action identifier"
+        string entity_type "Target entity name"
+        string entity_id "Target entity ID"
+        inet ip_address "Client IP address"
         timestamptz created_at "Timestamp"
-    }
-    AUTOMA_SCHEDULES {
-        uuid id PK "Schedule ID"
-        uuid tenant_id FK "Tenant ID"
-        uuid workflow_id FK "Workflow tham chiếu"
-        string cron_expression "Biểu thức cron"
-        boolean is_active "Trạng thái kích hoạt"
     }
 ```
 
 ---
 
-## 3. Quy Tắc Toàn Vẹn Khóa & Cascade Mappings
+## 3. Plugin Extension Architecture (The Universal Contract)
 
-| Bảng Cha | Bảng Con | Khóa Ngoại (FK) | Quan Hệ | Hành Động ON DELETE |
-| :--- | :--- | :--- | :--- | :--- |
-| `auth.users` | `public.profiles` | `id -> auth.users.id` | **1 : 1** | `CASCADE`: User bị xóa ở Auth thì Profile bị xóa tương ứng. |
-| `public.profiles` | `public.tenants` | `created_by -> profiles.id` | **1 : N** | `SET NULL`: Giữ lại Tenant nếu người tạo ban đầu rời tổ chức. |
-| `public.tenants` | `public.tenant_members` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Xóa Tenant xóa sạch danh sách thành viên. |
-| `public.profiles` | `public.tenant_members` | `user_id -> profiles.id` | **1 : N** | `CASCADE`: Xóa User xóa tư cách thành viên ở mọi Tenant. |
-| `public.tenants` | `public.roles` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Xóa Custom Role của Tenant. Role hệ thống có `tenant_id IS NULL`. |
-| `public.roles` | `public.role_permissions` | `role_id -> roles.id` | **1 : N** | `CASCADE`: Xóa Role tự động thu hồi toàn bộ phân quyền tương ứng. |
-| `public.permissions` | `public.role_permissions` | `permission_id -> permissions.id` | **1 : N** | `CASCADE`: Thay đổi mã quyền tự động đồng bộ bảng ánh xạ. |
-| `public.tenant_members` | `public.member_roles` | `member_id -> tenant_members.id` | **1 : N** | `CASCADE`: Xóa thành viên xóa toàn bộ vai trò được gán. |
-| `public.roles` | `public.member_roles` | `role_id -> roles.id` | **1 : N** | `RESTRICT`: Chặn xóa Role nếu đang có thành viên nắm giữ vai trò. |
-| `public.tenants` | `public.tenant_invitations` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Xóa Tenant hủy bỏ tất cả lời mời chưa chấp nhận. |
-| `public.tenants` | `public.audit_logs` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Nhật ký gắn liền với vòng đời Tenant. |
-| `public.system_plugins` | (Không có) | N/A | **Registry** | Master Registry; plugin có cờ `is_system = true` bị cấm gỡ bỏ. |
-| `public.tenants` | `media.assets` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Metadata media gắn chặt theo Tenant. |
-| `public.tenants` | `billing.subscriptions` | `tenant_id -> tenants.id` | **1 : 1** | `CASCADE`: Mỗi Tenant có 1 thuê bao thanh toán duy nhất. |
-| `public.tenants` | `automa.workflows` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Quy trình automation gắn liền với Tenant. |
-| `public.tenants` | `automa.runners` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Cụm máy trạm thuộc quyền sở hữu của Tenant. |
-| `automa.workflows` | `automa.campaign_runs` | `workflow_id -> workflows.id` | **1 : N** | `SET NULL`: Giữ lại lịch sử chạy nếu workflow bị xóa. |
-| `automa.campaign_runs` | `automa.execution_logs` | `campaign_run_id -> campaign_runs.id` | **1 : N** | `CASCADE`: Xóa phiên chạy dọn sạch log tương ứng. |
+In Tuquet Cloud, **the Core never couples to plugins**. Plugins are dynamic, modular packages living in their own isolated PostgreSQL schemas (`media`, `billing`, `events`, `automa`, or custom 3rd-party domains).
+
+Every dynamic plugin connects to the platform via **4 Universal Extension Points**:
+
+```mermaid
+flowchart TD
+    subgraph KERNEL["BASE PLATFORM KERNEL (Schema: public)"]
+        TENANTS["public.tenants\n(Root Isolation Boundary)"]
+        PROFILES["public.profiles\n(User Identity Anchor)"]
+        REGISTRY["public.system_plugins\n(Plugin Lifecycle Hub)"]
+        AUTHZ["JWT Claims Hook\n(O(1) Authorization Engine)"]
+    end
+
+    subgraph CONTRACT["4 UNIVERSAL ATTACHMENT CONTRACTS"]
+        direction TB
+        C1["1. Tenancy Anchor:\ntenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE"]
+        C2["2. Identity Anchor:\ncreated_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL"]
+        C3["3. Lifecycle Registration:\nINSERT INTO public.system_plugins (id, schema_name, dependencies)"]
+        C4["4. Permission Namespace:\nPermissions formatted as <plugin_id>:<resource>:<action>"]
+    end
+
+    KERNEL ==> CONTRACT
+
+    subgraph PLUGINS["DYNAMIC ON-DEMAND PLUGINS (Dedicated Isolated Schemas)"]
+        STORAGE["📦 Plugin: storage\nSchema: media\nTables: assets\nDocs: supabase/plugins/storage/"]
+        BILLING["💎 Plugin: subscriptions\nSchema: billing\nTables: plans, subs, meters\nDocs: supabase/plugins/subscriptions/"]
+        EVENTS["⚡ Plugin: webhooks\nSchema: events\nTables: outbox, deliveries\nDocs: supabase/plugins/webhooks/"]
+        AUTOMA["🤖 Plugin: automa\nSchema: automa\nTables: workflows, runners, runs\nDocs: supabase/plugins/automa/"]
+        CUSTOM["🔮 Custom Future Plugin\nSchema: custom_*\n(e.g., CRM, Notifications, AI Agents)"]
+    end
+
+    CONTRACT -.-> STORAGE
+    CONTRACT -.-> BILLING
+    CONTRACT -.-> EVENTS
+    CONTRACT -.-> AUTOMA
+    CONTRACT -.-> CUSTOM
+```
+
+### 3.1. The 4 Extension Rules
+
+1. **Rule 1: Tenancy Boundary (`tenant_id`)**:
+   - Every domain table in a plugin MUST include `tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE`.
+   - Every table MUST enforce Row-Level Security (RLS) scoped by `tenant_id`.
+2. **Rule 2: Identity Anchor (`created_by` / `user_id`)**:
+   - When referencing user identity, plugins MUST reference `public.profiles(id)` with `ON DELETE SET NULL` or `ON DELETE CASCADE`. Plugins MUST NEVER reference internal `auth.users` directly.
+3. **Rule 3: Schema Isolation**:
+   - Every plugin MUST own its distinct PostgreSQL schema (e.g. `CREATE SCHEMA IF NOT EXISTS media;`). Plugins MUST NEVER inject new domain tables into the `public` schema.
+4. **Rule 4: Master Registry Registration**:
+   - The plugin's `install.sql` MUST register itself into `public.system_plugins`.
+   - The plugin's `uninstall.sql` MUST unregister itself and drop its isolated schema cleanly.
+
+> 💡 **Detailed Plugin ERDs**: Each plugin documents its internal schema, tables, and relationships inside its own dedicated directory:
+> - Storage ERD: [`supabase/plugins/storage/README.md`](../supabase/plugins/storage/README.md)
+> - Subscriptions ERD: [`supabase/plugins/subscriptions/README.md`](../supabase/plugins/subscriptions/README.md)
+> - Webhooks ERD: [`supabase/plugins/webhooks/README.md`](../supabase/plugins/webhooks/README.md)
+> - Automa ERD: [`supabase/plugins/automa/README.md`](../supabase/plugins/automa/README.md)
 
 ---
 
-## 4. Mô Hình Bảo Mật Tuyệt Đối (Zero-Trust Security & RLS)
+## 4. Zero-Trust Security & Performance Model
 
-### 4.1. Custom Access Token Hook ($O(1)$ RLS Tra Cứu)
-Thay vì để PostgreSQL quét lặp qua các bảng `tenant_members`, `member_roles`, `role_permissions` trên từng hàng (gây lỗi RLS Infinite Recursion và nghẽn CPU), hàm `auth.custom_access_token_hook`:
-- Tự động lấy `tenant_id` đang kích hoạt.
-- Gộp mảng các vai trò (`roles: string[]`) và mảng các quyền nguyên tử (`permissions: string[]`, tối đa **25 quyền** tránh phình to JWT header) tiêm trực tiếp vào `app_metadata` của JWT.
-- Khi truy vấn, PostgreSQL chỉ cần đọc `(auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid` với độ phức tạp **$O(1)$**.
+### 4.1. Custom Access Token Hook ($O(1)$ RLS Lookups)
+In naive multi-tenant Supabase implementations, RLS policies execute circular subqueries on `tenant_members` and `role_permissions` for every single queried row. This causes **RLS Infinite Recursion** and pegging CPU to 100%.
 
-### 4.2. Khắc Phục Triệt Để Đệ Quy RLS (No-Recursion Pattern)
-Mọi hàm kiểm tra quyền bảo mật đều được gắn cờ `SECURITY DEFINER` và `STABLE`:
+Tuquet Cloud solves this at the protocol level:
+1. `public.custom_access_token_hook` runs when Supabase Auth issues a JWT.
+2. It fetches the user's active `tenant_id`, aggregated role names (`roles`), and atomic capabilities (`permissions`, capped at **25 items** to prevent JWT header bloat).
+3. These claims are baked directly into `auth.jwt() -> 'app_metadata'`.
+4. RLS policies evaluate in **$\sim 1\mu s$** via direct JSON path lookup:
+   ```sql
+   CREATE POLICY "tenant_isolation_policy" ON media.assets
+   FOR ALL TO authenticated
+   USING (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
+   ```
+
+### 4.2. No-Recursion Security Definer Functions
+All authorization helper functions are declared `SECURITY DEFINER` and `STABLE`:
 ```sql
 CREATE OR REPLACE FUNCTION public.has_permission(requested_permission text)
 RETURNS boolean
@@ -274,32 +273,93 @@ END;
 $$;
 ```
 
-### 4.3. Phòng Vệ CWE-426 (Search Path Hijacking)
-100% các hàm Function và Trigger trong hệ thống đều khai báo tường minh:
+### 4.3. CWE-426 Protection (Search Path Hijacking)
+100% of functions, procedures, and triggers declare:
 ```sql
 SET search_path = ''
 ```
-Mọi lời gọi bảng và hàm nội bộ bắt buộc phải dùng tên đủ (Fully Qualified Names: `public.profiles`, `auth.users`, `extensions.uuid_generate_v4()`), triệt tiêu hoàn toàn nguy cơ khai thác mã độc qua đường dẫn tìm kiếm schema giả mạo.
+Every object lookup within SQL routines uses fully-qualified names (`public.profiles`, `public.tenants`, `extensions.gen_random_uuid()`), eliminating schema search-path hijacking vulnerabilities.
 
 ---
 
-## 5. PostgREST API Introspection Thời Gian Thực
+## 5. Plugin Authoring Specification (How to Create a New Plugin)
 
-Theo triết lý **KISS & YAGNI**, Tuquet Cloud **không lưu trữ file OpenAPI JSON tĩnh trong kho mã nguồn**. Supabase PostgREST Engine tự động soi chiếu schema cơ sở dữ liệu thời gian thực và cung cấp API specification chuẩn OpenAPI v3.
+To develop a new dynamic plugin for Tuquet Cloud, create a directory under `supabase/plugins/<plugin_id>/` containing exactly 4 standard files:
 
-### 5.1. Xuất OpenAPI Spec Động Khi Cần
-Khi cần xuất OpenAPI Specification để kiểm tra hoặc sinh TypeScript SDK:
-
-```powershell
-# Từ Supabase Local (Port 54321)
-curl.exe -s -H "Accept: application/openapi+json" http://127.0.0.1:54321/rest/v1/ -o openapi.json
-
-# Từ Supabase Cloud
-curl.exe -s -H "apikey: <your-anon-key>" -H "Accept: application/openapi+json" https://<project-ref>.supabase.co/rest/v1/ -o openapi.json
+```
+supabase/plugins/<plugin_id>/
+├── plugin.json       # Manifest metadata, dependencies, exposed permissions
+├── install.sql       # DDL: Schema creation, tables, RLS policies, registry entry
+├── uninstall.sql     # DDL: Drop schema, remove registry entry (idempotent)
+└── README.md         # Domain documentation, entity list, and usage guide
 ```
 
-### 5.2. Sinh TypeScript Client SDK Tự Động
-```powershell
-# Sinh trực tiếp types từ Supabase CLI
+### 5.1. `plugin.json` Manifest Schema
+```json
+{
+  "id": "my_plugin",
+  "name": "My Plugin Display Name",
+  "version": "1.0.0",
+  "schema": "my_schema",
+  "description": "Clear explanation of plugin capabilities",
+  "dependencies": ["core-iam"],
+  "tables": [
+    "my_schema.items"
+  ],
+  "permissions": [
+    "my_plugin:items:read",
+    "my_plugin:items:manage"
+  ]
+}
+```
+
+### 5.2. `install.sql` Standard Template
+```sql
+-- 1. Create isolated schema
+CREATE SCHEMA IF NOT EXISTS my_schema;
+
+-- 2. Create domain tables anchored to tenant_id
+CREATE TABLE IF NOT EXISTS my_schema.items (
+    id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- 3. Enable RLS
+ALTER TABLE my_schema.items ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "items_tenant_isolation" ON my_schema.items
+FOR ALL TO authenticated
+USING (tenant_id = (auth.jwt() -> 'app_metadata' ->> 'tenant_id')::uuid);
+
+-- 4. Register into system_plugins
+INSERT INTO public.system_plugins (id, name, version, is_installed, is_system, schema_name, dependencies)
+VALUES ('my_plugin', 'My Plugin', '1.0.0', true, false, 'my_schema', ARRAY['core-iam'])
+ON CONFLICT (id) DO UPDATE SET
+    version = EXCLUDED.version,
+    is_installed = true,
+    installed_at = now();
+```
+
+---
+
+## 6. Dynamic PostgREST OpenAPI Introspection & SDK Generation
+
+Under the **KISS & YAGNI** principles, Tuquet Cloud **does not store static, dead OpenAPI JSON snapshots in version control**. Supabase PostgREST dynamically inspects the database catalog and exposes real-time OpenAPI v3 specifications.
+
+### 6.1. Fetch Live OpenAPI Specification On-Demand
+```bash
+# Local Supabase instance (Port 54321)
+curl.exe -s -H "Accept: application/openapi+json" http://127.0.0.1:54321/rest/v1/ -o openapi.json
+
+# Cloud Supabase instance
+curl.exe -s -H "apikey: <anon-key>" -H "Accept: application/openapi+json" https://<project-ref>.supabase.co/rest/v1/ -o openapi.json
+```
+
+### 6.2. Generate Strongly-Typed TypeScript Client SDK
+```bash
+# Generate types directly from the local running database
 supabase gen types typescript --local > types/supabase.ts
 ```
