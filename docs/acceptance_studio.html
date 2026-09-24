@@ -434,29 +434,7 @@
           </div>
         </div>
 
-        <!-- ================================================================ -->
-        <!-- TAB: PLUGIN SOFT DELETE -->
-        <!-- ================================================================ -->
-        <div v-if="activeTab === 'soft_delete'" class="space-y-6">
-          <div v-if="!plugins.soft_delete" class="p-8 text-center border border-dashed border-slate-800 rounded-xl bg-surface-900/20">
-            <div class="text-3xl mb-2">🗑️</div>
-            <div class="text-sm font-semibold text-slate-200">Plugin 'soft_delete' Chưa Được Cài Đặt</div>
-            <p class="text-xs text-slate-400 mt-1 max-w-md mx-auto">
-              Cơ chế Thùng rác (Recycle bin) và Data retention có thể cài đặt độc lập.
-            </p>
-            <button @click="togglePlugin('soft_delete', true)" class="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-medium">
-              ➕ Cài Đặt Plugin Soft Delete
-            </button>
-          </div>
-          <div v-else class="space-y-4">
-            <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
-              <span>🗑️</span> Soft Delete & Recycle Bin Pattern
-            </h2>
-            <div class="p-4 rounded-xl border border-slate-800 bg-surface-900/40 text-xs text-slate-300">
-              Trường <code class="text-sky-400 font-mono">deleted_at</code> đã được bổ sung vào bảng dự án, tự động lọc khỏi Member view và hiển thị trong Trash cho Admin.
-            </div>
-          </div>
-        </div>
+
 
       </main>
     </div>
@@ -487,11 +465,9 @@
         // Plugins State
         const plugins = ref({
           'core-iam': true,
-          'demo-projects': true,
           storage: true,
           subscriptions: true,
           webhooks: false,
-          soft_delete: false,
           automa: true
         });
 
@@ -511,13 +487,13 @@
             manifest: 'supabase/plugins/core-iam/plugin.json'
           },
           {
-            key: 'demo-projects',
-            name: 'Demo Projects Resource',
-            icon: '💼',
-            schema: 'public',
-            desc: 'Showcase tài nguyên nghiệp vụ mẫu kết nối với tenant boundary của Core IAM.',
-            tables: ['public.projects'],
-            manifest: 'supabase/plugins/demo-projects/plugin.json'
+            key: 'automa',
+            name: 'Automa Cloud Bridge',
+            icon: '🤖',
+            schema: 'automa',
+            desc: 'Cầu nối điều phối hạm đội tự động hóa phân tán kết nối với tuquet-automa.',
+            tables: ['automa.workflows', 'automa.runners', 'automa.campaign_runs', 'automa.execution_logs', 'automa.schedules'],
+            manifest: 'supabase/plugins/automa/plugin.json'
           },
           {
             key: 'storage',
@@ -533,7 +509,7 @@
             name: 'Subscriptions & Quota Metering',
             icon: '💎',
             schema: 'billing',
-            desc: 'Phân hạng gói cước SaaS (Free, Pro, Enterprise) và trigger chặn vượt hạn ngạch.',
+            desc: 'Phân hạng gói cước SaaS (Free, Pro, Enterprise) và kiểm soát hạn ngạch tài nguyên.',
             tables: ['billing.plans', 'billing.subscriptions', 'billing.usage_meters'],
             manifest: 'supabase/plugins/subscriptions/plugin.json'
           },
@@ -545,33 +521,14 @@
             desc: 'Transactional Outbox pattern & phát sóng Webhook HTTP cho hệ thống bên ngoài.',
             tables: ['events.outbox', 'events.subscriptions', 'events.deliveries'],
             manifest: 'supabase/plugins/webhooks/plugin.json'
-          },
-          {
-            key: 'soft_delete',
-            name: 'Soft Delete & Data Retention',
-            icon: '🗑️',
-            schema: 'public',
-            desc: 'Thùng rác tái chế, lọc tự động RLS cho bản ghi bị xóa và hàm khôi phục dữ liệu.',
-            tables: ['public.projects (deleted_at)', 'soft_delete_project()'],
-            manifest: 'supabase/plugins/soft_delete/plugin.json'
-          },
-          {
-            key: 'automa',
-            name: 'Automa Cloud Bridge',
-            icon: '🤖',
-            schema: 'automa',
-            desc: 'Cầu nối điều phối hạm đội tự động hóa phân tán kết nối với tuquet-automa.',
-            tables: ['automa.workflows', 'automa.runners', 'automa.campaign_runs', 'automa.execution_logs', 'automa.schedules'],
-            manifest: 'supabase/plugins/automa/plugin.json'
           }
         ];
 
         const pluginTabs = [
+          { id: 'plugin-automa', name: 'Automa Fleet', icon: '🤖', pluginKey: 'automa' },
           { id: 'storage', name: 'Media Storage', icon: '📁', pluginKey: 'storage' },
           { id: 'quota', name: 'Subscriptions', icon: '💎', pluginKey: 'subscriptions' },
-          { id: 'webhooks', name: 'Webhooks Queue', icon: '⚡', pluginKey: 'webhooks' },
-          { id: 'soft_delete', name: 'Soft Delete', icon: '🗑️', pluginKey: 'soft_delete' },
-          { id: 'plugin-automa', name: 'Automa Fleet', icon: '🤖', pluginKey: 'automa' }
+          { id: 'webhooks', name: 'Webhooks Queue', icon: '⚡', pluginKey: 'webhooks' }
         ];
 
         // Personas

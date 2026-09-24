@@ -14,14 +14,12 @@
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
 - 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260920000001_base_platform_core.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook, Audit Trail và Master Plugin Registry.
-- 🔌 **[Thư Viện Phân Hệ & Plugins (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng được đóng gói dạng Component & Plugin chuẩn mực (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
+- 🔌 **[Thư Viện Phân Hệ & Plugins (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng mở rộng được đóng gói dạng Module độc lập (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
   - 🛡️ **[System Core: Multi-Tenant IAM & RBAC](supabase/plugins/core-iam/)**: Thành phần cốt lõi bất biến (`is_system = true`).
-  - 💼 **[Plugin: Demo Projects Resource](supabase/plugins/demo-projects/)**: Nghiệp vụ dự án mẫu phân lập theo Tenant.
-  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file & Storage Bucket RLS phân lập theo Tenant (schema `media`).
-  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Chặn hạn ngạch tài nguyên (schema `billing`).
-  - ⚡ **[Plugin 3: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện & Bắn Webhook (schema `events`).
-  - 🗑️ **[Plugin 4: Soft Delete & Data Retention](supabase/plugins/soft_delete/)**: Thùng rác & Khôi phục dữ liệu.
-  - 🤖 **[Plugin 5: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán (schema `automa`).
+  - 🤖 **[Plugin 1: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán kết nối với `tuquet-automa` (schema `automa`).
+  - 📁 **[Plugin 2: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file metadata & Storage Bucket RLS phân lập theo Tenant (schema `media`).
+  - 💎 **[Plugin 3: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Kiểm soát hạn ngạch tài nguyên (schema `billing`).
+  - ⚡ **[Plugin 4: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện Transactional Outbox & Bắn Webhook HTTP (schema `events`).
 - 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ Plugins.
 
 ---
@@ -222,14 +220,15 @@ supabase db push
 
 ---
 
-## 5. Thư Viện Module Mở Rộng SQL (Modular Extension Library)
+## 5. Thư Viện Plugin Chuyên Biệt (Enterprise Plugin Catalog)
 
-Dự án cung cấp sẵn bộ 4 Module SQL mở rộng dạng **Plug-and-Play** tại thư mục [supabase/snippets/modules/](supabase/snippets/modules/). Mỗi module là 1 file SQL độc lập, có thể chạy trực tiếp trên **Supabase SQL Editor** hoặc thêm vào quy trình Migration khi dự án phát triển tính năng mới:
+Toàn bộ các phân hệ mở rộng của `tuquet-cloud` được đóng gói độc lập theo cấu trúc Plugin chuẩn mực tại thư mục [supabase/plugins/](supabase/plugins/), với schema chuyên biệt và vòng đời cài đặt/gỡ bỏ nguyên tử:
 
-| Module | Đường Dẫn File | Mô Tả Chức Năng |
-| :--- | :--- | :--- |
-| **01. Media Storage & Assets** | [01_media_storage_assets.sql](supabase/snippets/modules/01_media_storage_assets.sql) | Tạo bảng `media_assets`, cấu hình Supabase Storage Bucket `tenant-assets` và RLS Storage đường dẫn `tenant_id/*`. |
-| **02. Subscriptions & Quota** | [02_subscriptions_entitlements.sql](supabase/snippets/modules/02_subscriptions_entitlements.sql) | Tạo các bảng `subscription_plans`, `tenant_subscriptions`, `tenant_usage_meters` và hàm trigger tự động kiểm tra/chặn vượt Quota `projects` theo gói cước. |
-| **03. Outbox & Webhooks** | [03_outbox_webhooks_queue.sql](supabase/snippets/modules/03_outbox_webhooks_queue.sql) | Tạo bảng `outbox_events`, `webhook_subscriptions` và Trigger tự động bắt sự kiện khi tạo/xóa `projects` hoặc mời thành viên (`tenant_invitations`). |
-| **04. Soft Delete Pattern** | [04_soft_delete_pattern.sql](supabase/snippets/modules/04_soft_delete_pattern.sql) | Chuẩn hóa cơ chế Soft Delete (`deleted_at`), hàm `soft_delete_project()`, `restore_project()` và RLS lọc tự động bản ghi bị xóa tạm. |
+| Plugin ID | Tên Module & Schema | Đường Dẫn Thư Mục | Mô Tả & Khả Năng Nghiệp Vụ |
+| :--- | :--- | :--- | :--- |
+| **`automa`** | Automa Cloud Bridge (`automa`) | [supabase/plugins/automa/](supabase/plugins/automa/) | Điều phối hạm đội tự động hóa, lưu trữ kịch bản Workflow, Runners, Campaign Runs và Schedules. |
+| **`storage`** | Media Storage Assets (`media`) | [supabase/plugins/storage/](supabase/plugins/storage/) | Quản lý metadata tập tin (`media.assets`), tích hợp Storage Bucket `tenant-assets` và RLS đa tổ chức. |
+| **`subscriptions`** | Subscriptions & Quota (`billing`) | [supabase/plugins/subscriptions/](supabase/plugins/subscriptions/) | Quản lý gói cước SaaS đa cấp độ, trạng thái thuê bao của từng Tenant, và đo lường hạn ngạch sử dụng. |
+| **`webhooks`** | Outbox & Webhooks (`events`) | [supabase/plugins/webhooks/](supabase/plugins/webhooks/) | Hàng đợi sự kiện Transactional Outbox và dịch vụ phát sóng Webhook HTTP độ tin cậy cao cho bên thứ ba. |
+
 

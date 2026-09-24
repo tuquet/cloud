@@ -103,14 +103,12 @@ flowchart TD
   - [x] Đánh Composite Index bắt đầu bằng `tenant_id` trên mọi bảng nghiệp vụ nhằm triệt tiêu nguy cơ rò rỉ chéo dữ liệu và sẵn sàng cho Table Partitioning.
 - [x] **Kiến Trúc Module Hóa Phân Hệ & Plugins Theo Nhu Cầu (`supabase/plugins/`):**
   - [x] Base Core tối giản & hợp nhất: `supabase/migrations/` chỉ chứa duy nhất schema nền tảng (`20260920000001_base_platform_core.sql`) bao gồm IAM, RBAC, Claims JWT Hook, Audit Trail và Master Plugin Registry.
-  - [x] 100% tính năng được đóng gói dạng Component & Plugin độc lập (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
+  - [x] 100% tính năng mở rộng được đóng gói dạng Enterprise Plugins độc lập (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
     - [x] `core-iam/`: Thành phần cốt lõi bất biến (`is_system = true`, cấm unregister).
-    - [x] `demo-projects/`: Bảng nghiệp vụ dự án mẫu (`projects`) phân lập theo Tenant.
-    - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập (schema `media`).
-    - [x] `subscriptions/`: Gói cước SaaS và tự động chặn vượt Quota `projects` (schema `billing`).
-    - [x] `webhooks/`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch (schema `events`).
-    - [x] `soft_delete/`: Cơ chế xóa mềm (`deleted_at`) và phục hồi dữ liệu.
     - [x] `automa/`: Cầu nối điều phối hạm đội tự động hóa phân tán (schema `automa`).
+    - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập (schema `media`).
+    - [x] `subscriptions/`: Gói cước SaaS và quản lý hạn ngạch tài nguyên (schema `billing`).
+    - [x] `webhooks/`: Hàng đợi sự kiện Transactional Outbox & Webhooks dispatch (schema `events`).
 - [x] **Seed Data, ERD Studio & Dynamic Acceptance Studio:**
   - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu tự thích ứng (idempotent conditional checks), chạy sạch sẽ trên Base Core lẫn khi đã cài Plugins.
   - [x] `docs/erd_diagram.md` & `docs/erd_viewer.html`: Cập nhật toàn diện sơ đồ ERD trực quan 5 phân vùng và công cụ duyệt kéo thả zoom/pan.

@@ -1,8 +1,12 @@
 # 💎 Plugin: Subscriptions & Quota Metering (`subscriptions`)
 
 ## 1. Tổng Quan
-Plugin quản lý gói cước SaaS đa cấp độ (`subscription_plans`), trạng thái thuê bao của từng Tenant (`tenant_subscriptions`), đo lường mức sử dụng (`usage_meters`), và tự động kích hoạt trigger chặn vượt hạn ngạch dự án (`check_tenant_quota()`).
+Plugin quản lý gói cước SaaS đa cấp độ (`billing.plans`), trạng thái thuê bao của từng Tenant (`billing.subscriptions`), đo lường mức sử dụng tài nguyên động (`billing.usage_meters`), và cung cấp hàm kiểm tra và ghi nhận định mức sử dụng (`billing.check_tenant_quota()`, `billing.record_usage()`).
 
-* **Gói cước mặc định:** Free (3 projects, 2 members), Pro (25 projects, 10 members), Enterprise (500 projects, 100 members).
+* **Kiến trúc:** Schema chuyên biệt `billing`.
+* **Gói cước mặc định:**
+  - **Free:** 2 members, 500MB storage, 1,000 monthly automation runs ($0/tháng).
+  - **Pro:** 10 members, 10GB storage, 50,000 monthly automation runs ($29/tháng).
+  - **Enterprise:** 100 members, 100GB storage, 1,000,000 monthly automation runs ($199/tháng).
 * **Cài đặt:** `install.sql`.
 * **Gỡ bỏ:** `uninstall.sql`.
