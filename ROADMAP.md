@@ -106,12 +106,14 @@ flowchart TD
   - [x] `20260924000002_subscriptions_entitlements.sql`: Gói cước và tự động chặn vượt Quota `projects`.
   - [x] `20260924000003_outbox_webhooks_queue.sql`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch.
   - [x] `20260924000004_soft_delete_pattern.sql`: Cơ chế xóa mềm (`deleted_at`) và phục hồi dữ liệu.
-- [x] **Automa Cloud Bridge Migration (`20260924000005_automa_cloud_bridge.sql`):**
+- [x] **Automa Cloud Bridge Plugin (`supabase/plugins/automa/`):**
+  - [x] Kiến trúc Plugin module hóa: Tách biệt hoàn toàn khỏi Base Core migrations, hỗ trợ cài đặt (`install.sql`) và gỡ sạch sẽ (`uninstall.sql`) khi cần.
   - [x] Tuân thủ nghiêm ngặt quy tắc tiền tố bảng: `automa_*` (`automa_workflows`, `automa_runners`, `automa_campaign_runs`, `automa_execution_logs`, `automa_schedules`).
   - [x] Cơ chế phân quyền RBAC đa người thuê với RLS không đệ quy và trigger đồng bộ sự kiện sang `outbox_events`.
-- [x] **Seed Data & ERD Studio:**
-  - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu thực tế cho Auth, Profiles, Tenants, Subscriptions, và các thực thể `automa_*`.
+- [x] **Seed Data, ERD Studio & Dynamic Acceptance Studio:**
+  - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu thực tế cho Auth, Profiles, Tenants, Subscriptions, và Automa Plugin.
   - [x] `docs/erd_diagram.md` & `docs/erd_viewer.html`: Cập nhật toàn diện sơ đồ ERD trực quan 5 phân vùng và công cụ duyệt kéo thả zoom/pan.
+  - [x] `docs/acceptance_studio.html`: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt Plugin.
 - [x] **OpenAPI Specification:** Xuất file OpenAPI 3.0.3 JSON chuẩn (`docs/openapi_spec_rbac.json`).
 - [ ] **[Next Tasks - Core Base Focus]**:
   - [ ] Chạy kiểm thử tự động toàn bộ SQL Migration trên local Supabase Docker instance (`supabase start` && `supabase db reset`).

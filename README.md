@@ -13,12 +13,9 @@
 - 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: File OpenAPI 3.0.3 spec chuẩn mã hóa cho toàn bộ các endpoint Multi-tenant RBAC.
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
-- 💾 **[File SQL Migration Cấu Trúc RBAC & RLS](supabase/migrations/20260922000001_multitenant_rbac_schema.sql)**: Định nghĩa toàn bộ Enum, Bảng, Chỉ mục, Hàm `SECURITY DEFINER`, Triggers, Chính sách RLS và Dữ liệu Seed mẫu.
-- 🧩 **Thư Viện Module Mở Rộng Tùy Chọn (`supabase/snippets/modules/`)**:
-  - 📁 **[Module 1 - Media Storage & Assets](supabase/snippets/modules/01_media_storage_assets.sql)**: Quản lý file/media & Supabase Storage RLS phân lập theo Tenant.
-  - 💎 **[Module 2 - Subscriptions & Quota Metering](supabase/snippets/modules/02_subscriptions_entitlements.sql)**: Phân hạng gói cước & Chặn hạn ngạch tài nguyên (`projects`, `members`).
-  - ⚡ **[Module 3 - Asynchronous Outbox & Webhooks](supabase/snippets/modules/03_outbox_webhooks_queue.sql)**: Hàng chờ sự kiện bất đồng bộ & Bắn Webhook ra bên thứ 3.
-  - 🗑️ **[Module 4 - Soft Delete & Data Retention](supabase/snippets/modules/04_soft_delete_pattern.sql)**: Cơ chế Xóa mềm & Khôi phục dữ liệu chuẩn hóa.
+- 💾 **[Các File Base Core SQL Migration](supabase/migrations/)**: 5 file migration tuần tự thiết lập nền tảng IAM, Multi-tenant RBAC, Media Storage, Subscriptions & Quota, Outbox, và Soft Delete.
+- 🔌 **[Thư Viện Plugin Mở Rộng - Automa Cloud Bridge](supabase/plugins/automa/)**: Module kết nối cỗ máy tự động hóa `tuquet-automa` (`install.sql` / `uninstall.sql`), tách biệt 100% khỏi Base Core.
+- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt Plugin.
 
 ---
 

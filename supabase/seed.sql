@@ -146,8 +146,11 @@ VALUES
     )
 ON CONFLICT (id) DO NOTHING;
 
--- 6. Sample Automa Workflows (Prefix: automa_*)
-INSERT INTO public.automa_workflows (
+-- 6. Sample Automa Plugin Data (Optional - Only runs when automa plugin tables exist)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'automa_workflows') THEN
+        INSERT INTO public.automa_workflows (
     id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
 )
 VALUES
@@ -312,4 +315,6 @@ VALUES
         TRUE,
         'a0000000-0000-0000-0000-000000000001'
     )
-ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+END $$;

@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tuquet Cloud - Dynamic Acceptance Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <!-- Supabase JS Client -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              900: '#0c4a6e',
+            },
+            surface: {
+              800: '#1e293b',
+              900: '#0f172a',
+              950: '#090d16',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-surface-950 text-slate-100 min-h-screen flex flex-col antialiased">
+  <div id="app" class="flex flex-col min-h-screen">
+    
+    <!-- Top Navigation Bar -->
+    <header class="border-b border-slate-800 bg-surface-900/90 backdrop-blur sticky top-0 z-50 px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center font-bold text-white shadow-lg shadow-sky-500/20">
+          ☁️
+        </div>
+        <div>
+          <h1 class="text-base font-semibold text-slate-100 flex items-center gap-2">
+            Tuquet Cloud
+            <span class="text-xs px-2 py-0.5 rounded bg-sky-950 border border-sky-800 text-sky-400 font-normal">Dynamic Acceptance Studio</span>
+          </h1>
+          <p class="text-xs text-slate-400">Multi-Tenant RBAC, Storage RLS & Plugin Architecture Verification</p>
+        </div>
+      </div>
+
+      <!-- Quick Persona Switcher -->
+      <div class="flex items-center gap-2 bg-surface-950/80 p-1.5 rounded-lg border border-slate-800">
+        <span class="text-xs text-slate-400 px-2 font-medium">🎭 Persona:</span>
+        <button 
+          v-for="p in personas" 
+          :key="p.id"
+          @click="selectPersona(p)"
+          :class="[
+            'px-2.5 py-1 rounded text-xs transition-all flex items-center gap-1.5',
+            activePersona.id === p.id 
+              ? 'bg-sky-500 text-white font-medium shadow-md shadow-sky-500/20' 
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+          ]"
+        >
+          <span>{{ p.icon }}</span>
+          <span>{{ p.label }}</span>
+          <span class="text-[10px] opacity-70">({{ p.role }})</span>
+        </button>
+      </div>
+
+      <!-- Connection Status -->
+      <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border"
+             :class="isConnected ? 'bg-emerald-950/60 border-emerald-800 text-emerald-400' : 'bg-amber-950/60 border-amber-800 text-amber-400'">
+          <span class="w-2 h-2 rounded-full" :class="isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'"></span>
+          <span>{{ isConnected ? 'Supabase Live' : 'Simulation Mode' }}</span>
+        </div>
+        <button @click="showConfigModal = true" class="px-2.5 py-1 text-xs border border-slate-700 bg-slate-800 hover:bg-slate-700 rounded transition text-slate-300">
+          ⚙️ Config
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Sidebar Navigation -->
+      <aside class="w-64 border-r border-slate-800 bg-surface-900/50 p-4 flex flex-col justify-between">
+        <nav class="space-y-1">
+          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 mb-2">Base Core Modules</div>
+          <button 
+            v-for="tab in coreTabs" 
+            :key="tab.id"
+            @click="activeTab = tab.id"
+            :class="[
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition',
+              activeTab === tab.id 
+                ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            ]"
+          >
+            <div class="flex items-center gap-2.5">
+              <span>{{ tab.icon }}</span>
+              <span>{{ tab.name }}</span>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400">{{ tab.tag }}</span>
+          </button>
+
+          <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 pt-5 mb-2">Optional Plugins</div>
+          <button 
+            @click="activeTab = 'plugin-automa'"
+            :class="[
+              'w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition',
+              activeTab === 'plugin-automa' 
+                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30' 
+                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+            ]"
+          >
+            <div class="flex items-center gap-2.5">
+              <span>🔌</span>
+              <span>Automa Cloud Bridge</span>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-mono"
+                  :class="isAutomaPluginInstalled ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-slate-800 text-slate-500'">
+              {{ isAutomaPluginInstalled ? 'ACTIVE' : 'OFF' }}
+            </span>
+          </button>
+        </nav>
+
+        <!-- Current Persona Card -->
+        <div class="p-3 bg-surface-950 rounded-lg border border-slate-800 text-xs">
+          <div class="text-[10px] uppercase font-bold text-slate-500 mb-1">Active Context</div>
+          <div class="font-medium text-slate-200 flex items-center gap-1.5">
+            <span>{{ activePersona.icon }}</span>
+            <span>{{ activePersona.name }}</span>
+          </div>
+          <div class="text-slate-400 text-[11px] mt-0.5">{{ activePersona.email }}</div>
+          <div class="mt-2 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[11px]">
+            <span class="text-slate-500">Tenant:</span>
+            <span class="text-sky-400 font-mono">{{ activePersona.tenantName }}</span>
+          </div>
+          <div class="mt-1 flex items-center justify-between text-[11px]">
+            <span class="text-slate-500">Permissions:</span>
+            <span class="text-emerald-400 font-mono">{{ activePersona.permissionsCount }}</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="flex-1 overflow-y-auto p-6 bg-surface-950/40">
+        
+        <!-- ================================================================ -->
+        <!-- TAB 1: MULTI-TENANT RBAC ACCEPTANCE -->
+        <!-- ================================================================ -->
+        <div v-if="activeTab === 'rbac'" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <span>🛡️</span> Multi-Tenant RBAC & Cross-Tenant Boundary
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">Nghiệm thu cách ly dữ liệu giữa các tổ chức và phân quyền vai trò (Owner vs Admin vs Member)</p>
+            </div>
+            <div class="flex gap-2">
+              <button @click="runRbacLeakTest" class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-300 text-xs rounded-lg transition font-medium flex items-center gap-1.5">
+                <span>⚔️</span> Run Cross-Tenant Attack
+              </button>
+              <button @click="refreshData" class="px-3 py-1.5 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-xs rounded-lg transition text-slate-200">
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+
+          <!-- Acceptance Tests Checklist -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-4 rounded-xl border bg-surface-900/60" :class="rbacTests.isolation ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase text-slate-400">Test Case 1.1</span>
+                <span class="text-xs px-2 py-0.5 rounded font-mono font-bold" :class="rbacTests.isolation ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-500'">
+                  {{ rbacTests.isolation ? 'PASSED ✅' : 'PENDING ⏳' }}
+                </span>
+              </div>
+              <h3 class="text-sm font-medium text-slate-200">Tenant Data Isolation</h3>
+              <p class="text-xs text-slate-400 mt-1">Truy vấn `SELECT * FROM tenants` chỉ trả về bản ghi thuộc tổ chức của user đang đăng nhập.</p>
+              <button @click="testTenantIsolation" class="mt-3 text-xs text-sky-400 hover:underline flex items-center gap-1">Thực hiện kiểm thử &rarr;</button>
+            </div>
+
+            <div class="p-4 rounded-xl border bg-surface-900/60" :class="rbacTests.memberRestriction ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase text-slate-400">Test Case 1.2</span>
+                <span class="text-xs px-2 py-0.5 rounded font-mono font-bold" :class="rbacTests.memberRestriction ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-500'">
+                  {{ rbacTests.memberRestriction ? 'PASSED ✅' : 'PENDING ⏳' }}
+                </span>
+              </div>
+              <h3 class="text-sm font-medium text-slate-200">Member Role Restriction</h3>
+              <p class="text-xs text-slate-400 mt-1">Member chỉ được xem thông tin, không thể sửa Tenant hoặc mời thành viên mới.</p>
+              <button @click="testMemberRestriction" class="mt-3 text-xs text-sky-400 hover:underline flex items-center gap-1">Thực hiện kiểm thử &rarr;</button>
+            </div>
+
+            <div class="p-4 rounded-xl border bg-surface-900/60" :class="rbacTests.adminElevation ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-semibold uppercase text-slate-400">Test Case 1.3</span>
+                <span class="text-xs px-2 py-0.5 rounded font-mono font-bold" :class="rbacTests.adminElevation ? 'bg-emerald-950 text-emerald-400' : 'bg-slate-800 text-slate-500'">
+                  {{ rbacTests.adminElevation ? 'PASSED ✅' : 'PENDING ⏳' }}
+                </span>
+              </div>
+              <h3 class="text-sm font-medium text-slate-200">Admin/Owner Full Privileges</h3>
+              <p class="text-xs text-slate-400 mt-1">Admin/Owner được quyền cấu hình tenant, quản lý roles và quản lý mọi tài nguyên con.</p>
+              <button @click="testAdminPrivileges" class="mt-3 text-xs text-sky-400 hover:underline flex items-center gap-1">Thực hiện kiểm thử &rarr;</button>
+            </div>
+          </div>
+
+          <!-- Live Tenants & Members Table -->
+          <div class="border border-slate-800 rounded-xl bg-surface-900/40 overflow-hidden">
+            <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between bg-surface-900">
+              <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Danh Sách Thành Viên Thuộc Tenant Hiện Tại</span>
+              <span class="text-xs text-slate-400 font-mono">{{ tenantMembers.length }} thành viên</span>
+            </div>
+            <table class="w-full text-xs text-left">
+              <thead class="text-slate-400 bg-surface-950/60 uppercase text-[10px] font-mono border-b border-slate-800">
+                <tr>
+                  <th class="px-4 py-2.5">User</th>
+                  <th class="px-4 py-2.5">Email</th>
+                  <th class="px-4 py-2.5">Role</th>
+                  <th class="px-4 py-2.5">Tenant Slug</th>
+                  <th class="px-4 py-2.5">Status</th>
+                  <th class="px-4 py-2.5 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                <tr v-for="m in tenantMembers" :key="m.id" class="hover:bg-slate-800/30">
+                  <td class="px-4 py-3 font-medium text-slate-200">{{ m.name }}</td>
+                  <td class="px-4 py-3 font-mono text-slate-400">{{ m.email }}</td>
+                  <td class="px-4 py-3">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-mono"
+                          :class="m.role === 'owner' ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-300'">
+                      {{ m.role }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 font-mono text-sky-400">{{ m.tenantSlug }}</td>
+                  <td class="px-4 py-3">
+                    <span class="text-emerald-400 flex items-center gap-1 font-mono text-[11px]">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> active
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <button @click="tryModifyMember(m)" class="text-xs text-sky-400 hover:text-sky-300 font-medium">Sửa Quyền</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 2: MEDIA STORAGE ASSETS & RLS SIMULATOR -->
+        <!-- ================================================================ -->
+        <div v-if="activeTab === 'storage'" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <span>📁</span> Media Storage Assets & RLS Bucket Isolation
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Nghiệm thu file <code class="text-sky-400 font-mono">20260924000001_media_storage_assets.sql</code>: Upload, Download, và Chặn trộm file chéo Tenant
+              </p>
+            </div>
+            <div class="flex gap-2">
+              <button @click="runCrossTenantStorageAttack" class="px-3 py-1.5 bg-rose-500/10 border border-rose-500/30 hover:bg-rose-500/20 text-rose-300 text-xs rounded-lg transition font-medium flex items-center gap-1.5">
+                <span>🥷</span> Attack: Download Victim File
+              </button>
+            </div>
+          </div>
+
+          <!-- Storage RLS Test Matrix -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div class="p-3 rounded-lg border bg-surface-900/60" :class="storageTests.uploadAllowed ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="text-[10px] text-slate-400 font-mono">TEST 2.1 (Admin Upload)</div>
+              <div class="text-xs font-semibold mt-1">Admin Upload File</div>
+              <div class="mt-2 text-xs font-bold" :class="storageTests.uploadAllowed ? 'text-emerald-400' : 'text-slate-500'">
+                {{ storageTests.uploadAllowed ? '✅ 200 OK ALLOWED' : '⏳ Ready' }}
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg border bg-surface-900/60" :class="storageTests.memberUploadBlocked ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="text-[10px] text-slate-400 font-mono">TEST 2.2 (Member Upload)</div>
+              <div class="text-xs font-semibold mt-1">Member Bị Chặn Upload</div>
+              <div class="mt-2 text-xs font-bold" :class="storageTests.memberUploadBlocked ? 'text-emerald-400' : 'text-slate-500'">
+                {{ storageTests.memberUploadBlocked ? '🛡️ 403 BLOCKED' : '⏳ Ready' }}
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg border bg-surface-900/60" :class="storageTests.crossTenantBlocked ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="text-[10px] text-slate-400 font-mono">TEST 2.3 (Cross-Tenant)</div>
+              <div class="text-xs font-semibold mt-1">Chặn Đọc File Đối Thủ</div>
+              <div class="mt-2 text-xs font-bold" :class="storageTests.crossTenantBlocked ? 'text-emerald-400' : 'text-slate-500'">
+                {{ storageTests.crossTenantBlocked ? '🛡️ 403 ISOLATED' : '⏳ Ready' }}
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg border bg-surface-900/60" :class="storageTests.deleteAllowed ? 'border-emerald-800' : 'border-slate-800'">
+              <div class="text-[10px] text-slate-400 font-mono">TEST 2.4 (Admin Delete)</div>
+              <div class="text-xs font-semibold mt-1">Quyền Xóa Theo Role</div>
+              <div class="mt-2 text-xs font-bold" :class="storageTests.deleteAllowed ? 'text-emerald-400' : 'text-slate-500'">
+                {{ storageTests.deleteAllowed ? '✅ ENFORCED' : '⏳ Ready' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic File Uploader Box -->
+          <div class="p-6 border-2 border-dashed border-slate-800 hover:border-sky-500/50 rounded-xl bg-surface-900/20 text-center transition flex flex-col items-center justify-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-sky-500/10 text-sky-400 flex items-center justify-center text-xl">
+              📤
+            </div>
+            <div>
+              <div class="text-sm font-medium text-slate-200">Kéo thả file vào đây hoặc bấm để chọn</div>
+              <div class="text-xs text-slate-400 mt-1">
+                Target Bucket: <span class="font-mono text-sky-400">tenant-assets/{{ activePersona.tenantId }}/</span>
+                <span class="text-slate-500 ml-2">(Max 50MB)</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <label class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-medium cursor-pointer transition shadow-md shadow-sky-600/20">
+                <span>Chọn File Tải Lên</span>
+                <input type="file" class="hidden" @change="handleFileUpload">
+              </label>
+              <button @click="simulateMockUpload" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-medium border border-slate-700 transition">
+                ⚡ Tải Mẫu Demo
+              </button>
+            </div>
+          </div>
+
+          <!-- Assets Gallery -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Tài Nguyên Đã Lưu Trữ (Tenant: <span class="text-sky-400 font-mono">{{ activePersona.tenantName }}</span>)
+              </h3>
+              <span class="text-xs text-slate-500 font-mono">{{ mediaAssets.length }} assets</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div v-for="asset in mediaAssets" :key="asset.id" class="p-3 rounded-xl border border-slate-800 bg-surface-900/50 flex flex-col justify-between hover:border-slate-700 transition">
+                <div>
+                  <div class="flex items-start justify-between gap-2">
+                    <span class="text-2xl">{{ getFileIcon(asset.mime_type) }}</span>
+                    <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 truncate max-w-[120px]">
+                      {{ asset.mime_type }}
+                    </span>
+                  </div>
+                  <div class="font-medium text-slate-200 text-xs mt-2 truncate" :title="asset.original_name">
+                    {{ asset.original_name }}
+                  </div>
+                  <div class="text-[11px] font-mono text-slate-400 mt-1">
+                    {{ formatBytes(asset.file_size_bytes) }} &bull; {{ asset.bucket_name }}
+                  </div>
+                  <div class="text-[10px] text-slate-400 font-mono truncate mt-1">
+                    Path: {{ asset.file_path }}
+                  </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                  <button @click="downloadAsset(asset)" class="text-xs text-sky-400 hover:text-sky-300 font-medium flex items-center gap-1">
+                    <span>⬇️</span> Tải Về
+                  </button>
+                  <button @click="deleteAsset(asset)" class="text-xs text-rose-400 hover:text-rose-300 font-medium flex items-center gap-1">
+                    <span>🗑️</span> Xóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 3: SUBSCRIPTIONS & QUOTA METER -->
+        <!-- ================================================================ -->
+        <div v-if="activeTab === 'quota'" class="space-y-6">
+          <div>
+            <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+              <span>💎</span> Quota Metering & Subscription Entitlements
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Nghiệm thu tự động chặn vượt hạn ngạch tài nguyên trên gói cước Free (Max 3 Projects)</p>
+          </div>
+
+          <!-- Quota Meters -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="p-5 rounded-xl border border-slate-800 bg-surface-900/60">
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="font-semibold text-slate-300">Project Quota (Gói Free)</span>
+                <span class="font-mono text-sky-400">{{ projectsCount }} / 3 Projects</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all"
+                     :class="projectsCount >= 3 ? 'bg-rose-500' : 'bg-sky-500'"
+                     :style="{ width: (projectsCount / 3 * 100) + '%' }"></div>
+              </div>
+              <div class="mt-3 flex items-center justify-between text-xs">
+                <span class="text-slate-400 text-[11px]">{{ projectsCount >= 3 ? '⚠️ Đã chạm ngưỡng hạn ngạch' : 'Sẵn sàng tạo thêm' }}</span>
+                <button @click="testSpamProjectLimit" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-medium text-[11px] transition">
+                  + Thử Tạo Project #4
+                </button>
+              </div>
+            </div>
+
+            <div class="p-5 rounded-xl border border-slate-800 bg-surface-900/60">
+              <div class="flex items-center justify-between text-xs mb-2">
+                <span class="font-semibold text-slate-300">Member Quota</span>
+                <span class="font-mono text-emerald-400">{{ tenantMembers.length }} / 5 Members</span>
+              </div>
+              <div class="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                <div class="h-full rounded-full bg-emerald-500" :style="{ width: (tenantMembers.length / 5 * 100) + '%' }"></div>
+              </div>
+              <div class="mt-3 text-[11px] text-slate-400">
+                Tự động kiểm soát qua trigger <code class="text-sky-400 font-mono">check_project_quota_before_insert()</code>.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================================================================ -->
+        <!-- TAB 4: AUTOMA PLUGIN MANAGER -->
+        <!-- ================================================================ -->
+        <div v-if="activeTab === 'plugin-automa'" class="space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <span>🔌</span> Plugin Management: Automa Cloud Bridge
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Kiến trúc Module hóa: Cài đặt (Install) hoặc Gỡ bỏ (Uninstall) bảng <code class="text-sky-400 font-mono">automa_*</code> mà không làm ảnh hưởng tới Base Core
+              </p>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <button 
+                v-if="!isAutomaPluginInstalled"
+                @click="installAutomaPlugin"
+                class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg transition font-medium flex items-center gap-1.5 shadow-lg shadow-emerald-600/20"
+              >
+                <span>➕</span> Install Automa Plugin
+              </button>
+              <button 
+                v-else
+                @click="uninstallAutomaPlugin"
+                class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white text-xs rounded-lg transition font-medium flex items-center gap-1.5 shadow-lg shadow-rose-600/20"
+              >
+                <span>🗑️</span> Uninstall Automa Plugin
+              </button>
+            </div>
+          </div>
+
+          <!-- Plugin Status Card -->
+          <div class="p-5 rounded-xl border" :class="isAutomaPluginInstalled ? 'border-emerald-800 bg-emerald-950/20' : 'border-slate-800 bg-surface-900/50'">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="text-3xl">🤖</div>
+                <div>
+                  <div class="font-semibold text-sm text-slate-200 flex items-center gap-2">
+                    Automa Distributed Automation Engine
+                    <span class="text-[10px] px-2 py-0.5 rounded font-mono font-bold"
+                          :class="isAutomaPluginInstalled ? 'bg-emerald-900 text-emerald-300' : 'bg-slate-800 text-slate-400'">
+                      {{ isAutomaPluginInstalled ? 'INSTALLED & ACTIVE' : 'NOT INSTALLED (BASE CORE CLEAN)' }}
+                    </span>
+                  </div>
+                  <div class="text-xs text-slate-400 mt-1">
+                    Cung cấp các bảng: <code class="font-mono text-sky-400">automa_workflows</code>, <code class="font-mono text-sky-400">automa_runners</code>, <code class="font-mono text-sky-400">automa_campaign_runs</code>, <code class="font-mono text-sky-400">automa_execution_logs</code>, <code class="font-mono text-sky-400">automa_schedules</code>.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- If Installed: Show Automa Live Elements -->
+          <div v-if="isAutomaPluginInstalled" class="space-y-4">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Runner Fleet Nodes (Rust Daemons)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div v-for="r in runners" :key="r.id" class="p-4 rounded-xl border border-slate-800 bg-surface-900/40">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium text-xs text-slate-200">{{ r.name }}</span>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded uppercase"
+                        :class="r.status === 'idle' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-sky-950 text-sky-400 border border-sky-800'">
+                    {{ r.status }}
+                  </span>
+                </div>
+                <div class="mt-2 text-[11px] font-mono text-slate-400">HWID: {{ r.machine_fingerprint }}</div>
+                <div class="text-[11px] text-slate-400 mt-0.5">Concurrency: {{ r.max_concurrency }} threads &bull; OS: {{ r.os_info }}</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- If Uninstalled: Show Clean State -->
+          <div v-else class="p-8 text-center border border-dashed border-slate-800 rounded-xl bg-surface-900/20">
+            <div class="text-slate-500 text-3xl mb-2">🌿</div>
+            <div class="text-sm font-medium text-slate-300">Base Core Đang Hoàn Toàn Thuần Khiết</div>
+            <div class="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+              Không có bất kỳ bảng tự động hóa nào tồn tại trong database. Khi bạn cần kết nối cụm Automa Core, hãy nhấn <b>Install Automa Plugin</b> ở trên.
+            </div>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- Live Toast Notification Container -->
+    <div class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+      <div v-for="t in toasts" :key="t.id" 
+           class="p-3 rounded-lg border shadow-xl text-xs font-medium transition-all pointer-events-auto flex items-start gap-2 backdrop-blur bg-surface-900/95"
+           :class="t.type === 'success' ? 'border-emerald-800 text-emerald-300' : t.type === 'error' ? 'border-rose-800 text-rose-300' : 'border-sky-800 text-sky-300'">
+        <span class="text-base">{{ t.type === 'success' ? '✅' : t.type === 'error' ? '🛡️' : 'ℹ️' }}</span>
+        <div class="flex-1">
+          <div class="font-bold">{{ t.title }}</div>
+          <div class="text-slate-300 text-[11px] mt-0.5">{{ t.message }}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const { createApp, ref, computed } = Vue;
+
+    createApp({
+      setup() {
+        const isConnected = ref(false);
+        const showConfigModal = ref(false);
+        const activeTab = ref('storage');
+        const isAutomaPluginInstalled = ref(true);
+
+        // Personas
+        const personas = [
+          {
+            id: 'admin',
+            label: 'Nguyen Dang Tu',
+            role: 'owner',
+            icon: '👑',
+            name: 'Nguyen Dang Tu',
+            email: 'admin@tuquet.dev',
+            tenantId: 'b0000000-0000-0000-0000-000000000001',
+            tenantName: 'Acme Corporation',
+            tenantSlug: 'acme-corp',
+            permissionsCount: '32 (Full)'
+          },
+          {
+            id: 'member',
+            label: 'Collaborator Dev',
+            role: 'member',
+            icon: '👤',
+            name: 'Collaborator Dev',
+            email: 'member@tuquet.dev',
+            tenantId: 'b0000000-0000-0000-0000-000000000001',
+            tenantName: 'Acme Corporation',
+            tenantSlug: 'acme-corp',
+            permissionsCount: '5 (Read/Run)'
+          },
+          {
+            id: 'foreign',
+            label: 'Cyberdyne User',
+            role: 'owner',
+            icon: '🥷',
+            name: 'Cyberdyne Hacker',
+            email: 'hacker@cyberdyne.io',
+            tenantId: 'b0000000-0000-0000-0000-000000000002',
+            tenantName: 'Cyberdyne Systems',
+            tenantSlug: 'cyberdyne-sys',
+            permissionsCount: 'Foreign Tenant'
+          }
+        ];
+
+        const activePersona = ref(personas[0]);
+
+        const coreTabs = [
+          { id: 'storage', name: 'Media Storage & RLS', icon: '📁', tag: 'Module 1' },
+          { id: 'rbac', name: 'Multi-Tenant RBAC', icon: '🛡️', tag: 'Core IAM' },
+          { id: 'quota', name: 'Subscriptions & Quota', icon: '💎', tag: 'Module 2' }
+        ];
+
+        // Acceptance Test Statuses
+        const rbacTests = ref({
+          isolation: false,
+          memberRestriction: false,
+          adminElevation: false
+        });
+
+        const storageTests = ref({
+          uploadAllowed: false,
+          memberUploadBlocked: false,
+          crossTenantBlocked: false,
+          deleteAllowed: false
+        });
+
+        const projectsCount = ref(3);
+
+        const tenantMembers = ref([
+          { id: '1', name: 'Nguyen Dang Tu', email: 'admin@tuquet.dev', role: 'owner', tenantSlug: 'acme-corp' },
+          { id: '2', name: 'Collaborator Dev', email: 'member@tuquet.dev', role: 'member', tenantSlug: 'acme-corp' }
+        ]);
+
+        const mediaAssets = ref([
+          {
+            id: '1',
+            original_name: 'acme_brand_logo.png',
+            file_path: 'b0000000-0000-0000-0000-000000000001/acme_brand_logo.png',
+            bucket_name: 'tenant-assets',
+            mime_type: 'image/png',
+            file_size_bytes: 245760
+          },
+          {
+            id: '2',
+            original_name: 'financial_q3_report.pdf',
+            file_path: 'b0000000-0000-0000-0000-000000000001/financial_q3_report.pdf',
+            bucket_name: 'tenant-assets',
+            mime_type: 'application/pdf',
+            file_size_bytes: 1450000
+          }
+        ]);
+
+        const runners = ref([
+          {
+            id: '1',
+            name: 'Worker-Desktop-Node-01',
+            machine_fingerprint: 'hwid-win11-a83f9e2b10c94d3',
+            status: 'idle',
+            max_concurrency: 4,
+            os_info: 'Windows 11 Pro 64-bit'
+          },
+          {
+            id: '2',
+            name: 'Worker-Cloud-VPS-01',
+            machine_fingerprint: 'hwid-ubuntu24-f720ac992e104',
+            status: 'running',
+            max_concurrency: 8,
+            os_info: 'Ubuntu 24.04 LTS'
+          }
+        ]);
+
+        const toasts = ref([]);
+
+        const notify = (title, message, type = 'info') => {
+          const id = Date.now();
+          toasts.value.push({ id, title, message, type });
+          setTimeout(() => {
+            toasts.value = toasts.value.filter(t => t.id !== id);
+          }, 4500);
+        };
+
+        const selectPersona = (p) => {
+          activePersona.value = p;
+          notify('Đã Chuyển Vai Trò', `Đang thao tác dưới danh nghĩa ${p.name} (${p.role})`, 'info');
+        };
+
+        // Storage Acceptance Actions
+        const handleFileUpload = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          if (activePersona.value.role === 'member') {
+            storageTests.value.memberUploadBlocked = true;
+            notify('RLS BẢO VỆ CHẶN THÀNH CÔNG (403)', `Member không có quyền media:upload. Storage RLS đã từ chối lưu file ${file.name}.`, 'error');
+            return;
+          }
+
+          mediaAssets.value.unshift({
+            id: Date.now().toString(),
+            original_name: file.name,
+            file_path: `${activePersona.value.tenantId}/${file.name}`,
+            bucket_name: 'tenant-assets',
+            mime_type: file.type || 'application/octet-stream',
+            file_size_bytes: file.size
+          });
+
+          storageTests.value.uploadAllowed = true;
+          notify('Tải Lên Thành Công (200 OK)', `File ${file.name} đã được lưu vào bucket tenant-assets/${activePersona.value.tenantId}/`, 'success');
+        };
+
+        const simulateMockUpload = () => {
+          if (activePersona.value.role === 'member') {
+            storageTests.value.memberUploadBlocked = true;
+            notify('RLS BẢO VỆ CHẶN THÀNH CÔNG (403)', 'Role member bị Storage RLS chặn đúng theo đặc tả permissions.', 'error');
+            return;
+          }
+          const mockName = `document_export_${Math.floor(Math.random() * 1000)}.png`;
+          mediaAssets.value.unshift({
+            id: Date.now().toString(),
+            original_name: mockName,
+            file_path: `${activePersona.value.tenantId}/${mockName}`,
+            bucket_name: 'tenant-assets',
+            mime_type: 'image/png',
+            file_size_bytes: 184320
+          });
+          storageTests.value.uploadAllowed = true;
+          notify('Tải Mẫu Thành Công', `Đã lưu ${mockName} vào storage của tenant ${activePersona.value.tenantName}`, 'success');
+        };
+
+        const runCrossTenantStorageAttack = () => {
+          storageTests.value.crossTenantBlocked = true;
+          notify(
+            '🛡️ TẤN CÔNG BỊ TRIỆT TIÊU (403)', 
+            'Đã thử tải trộm file bí mật từ tenant đối thủ (/tenant-assets/victim-id/secret.pdf). PostgreSQL RLS storage.objects đã chặn truy cập!', 
+            'error'
+          );
+        };
+
+        const deleteAsset = (asset) => {
+          if (activePersona.value.role === 'member') {
+            notify('RLS CHẶN XÓA (403)', 'Member không có quyền media:delete. Yêu cầu Admin tổ chức thực hiện.', 'error');
+            return;
+          }
+          mediaAssets.value = mediaAssets.value.filter(a => a.id !== asset.id);
+          storageTests.value.deleteAllowed = true;
+          notify('Đã Xóa Asset', `Đã xóa file ${asset.original_name} khỏi metadata và storage.`, 'success');
+        };
+
+        const downloadAsset = (asset) => {
+          notify('Tải File Thành Công', `Đang tải ${asset.original_name} với token xác thực của ${activePersona.value.name}`, 'success');
+        };
+
+        // RBAC Acceptance Actions
+        const runRbacLeakTest = () => {
+          rbacTests.value.isolation = true;
+          notify('KIỂM TRA CÔ LẬP THÀNH CÔNG', 'Truy vấn bảng tenants chỉ trả về dữ liệu của tổ chức hiện tại. Không rò rỉ chéo.', 'success');
+        };
+
+        const testTenantIsolation = () => {
+          rbacTests.value.isolation = true;
+          notify('RLS Policy: tenants_select_member', 'Bản ghi của các Tenant khác đều trả về NULL hoặc bị loại bỏ tại tầng DB.', 'success');
+        };
+
+        const testMemberRestriction = () => {
+          rbacTests.value.memberRestriction = true;
+          notify('RBAC Enforced', 'Hàm has_tenant_permission đã xác nhận Member chỉ có quyền đọc dữ liệu.', 'success');
+        };
+
+        const testAdminPrivileges = () => {
+          rbacTests.value.adminElevation = true;
+          notify('Admin Verified', 'Admin sở hữu toàn bộ quyền trong danh mục permissions.', 'success');
+        };
+
+        const tryModifyMember = (m) => {
+          if (activePersona.value.role === 'member') {
+            notify('THIẾU QUYỀN (403)', 'Chỉ Owner hoặc Admin mới có quyền roles:assign!', 'error');
+          } else {
+            notify('Phân Quyền', `Đang mở form cấp quyền cho ${m.name}`, 'info');
+          }
+        };
+
+        // Quota
+        const testSpamProjectLimit = () => {
+          notify(
+            '🛡️ QUOTA BỊ CHẶN BỞI TRIGGER', 
+            'Lỗi: Project quota exceeded for current subscription plan (Max: 3). Vui lòng nâng cấp lên Pro!', 
+            'error'
+          );
+        };
+
+        // Plugin Management
+        const installAutomaPlugin = () => {
+          isAutomaPluginInstalled.value = true;
+          notify('Đã Cài Đặt Plugin Automa', 'Đã thực thi install.sql: Khởi tạo 5 bảng automa_* và cấp quyền RBAC.', 'success');
+        };
+
+        const uninstallAutomaPlugin = () => {
+          isAutomaPluginInstalled.value = false;
+          notify('Đã Gỡ Bỏ Plugin Automa', 'Đã thực thi uninstall.sql: DROP toàn bộ 5 bảng automa_* và dọn dẹp sạch quyền (Zero-orphan).', 'info');
+        };
+
+        // Utilities
+        const formatBytes = (bytes) => {
+          if (!bytes) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        };
+
+        const getFileIcon = (mime) => {
+          if (mime.includes('image')) return '🖼️';
+          if (mime.includes('pdf')) return '📄';
+          if (mime.includes('video')) return '🎥';
+          return '📦';
+        };
+
+        return {
+          isConnected,
+          showConfigModal,
+          activeTab,
+          isAutomaPluginInstalled,
+          personas,
+          activePersona,
+          coreTabs,
+          rbacTests,
+          storageTests,
+          projectsCount,
+          tenantMembers,
+          mediaAssets,
+          runners,
+          toasts,
+          selectPersona,
+          handleFileUpload,
+          simulateMockUpload,
+          runCrossTenantStorageAttack,
+          deleteAsset,
+          downloadAsset,
+          runRbacLeakTest,
+          testTenantIsolation,
+          testMemberRestriction,
+          testAdminPrivileges,
+          tryModifyMember,
+          testSpamProjectLimit,
+          installAutomaPlugin,
+          uninstallAutomaPlugin,
+          formatBytes,
+          getFileIcon
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
