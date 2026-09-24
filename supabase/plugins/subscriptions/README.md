@@ -43,7 +43,7 @@ erDiagram
 | Gói | Thành Viên (`max_members`) | Lưu Trữ (`max_storage_mb`) | Lượt Chạy (`max_monthly_runs`) | Giá / Tháng |
 |---|:---:|:---:|:---:|:---:|
 | **Free Starter** (`free`) | 2 | 500 MB | 1,000 | $0.00 |
-| **Creator Pro** (`pro`) | 10 | 10,240 MB (10GB) | 50,000 | $29.00 |
+| **Team Pro** (`pro`) | 10 | 10,240 MB (10GB) | 50,000 | $29.00 |
 | **Enterprise Fleet** (`enterprise`) | 100 | 102,400 MB (100GB) | 1,000,000 | $199.00 |
 
 ### 2. `billing.subscriptions`

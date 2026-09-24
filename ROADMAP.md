@@ -1,8 +1,8 @@
-# 🗺️ Omniverse Ecosystem Master Roadmap
+# 🗺️ Tuquet Platform Master Roadmap
 
-> **Hệ sinh thái:** Tuquet / Omni Creator  
+> **Hệ sinh thái:** Tuquet Ecosystem  
 > **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-cloud` | `tuquet-scoop-bucket`  
-> **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Cloud Multi-Tenant SaaS BaaS Hub).
+> **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Enterprise Multi-Tenant SaaS Engine).
 
 ---
 
@@ -91,11 +91,11 @@ flowchart TD
 ---
 
 ### ☁️ Workstream 1.3: `tuquet-cloud` (Nền Tảng Multi-Tenant RBAC Cloud & BaaS Hub)
-*Trách nhiệm: Quản trị bảo mật phân quyền đa tổ chức, mô hình hóa dữ liệu chuẩn hóa trên Supabase (trước đây là `tuquet-creator`).*
+*Trách nhiệm: Quản trị bảo mật phân quyền đa tổ chức, mô hình hóa dữ liệu chuẩn hóa trên Supabase.*
 
 - [x] **Định Danh Chuẩn Hóa:** Đổi tên repository và định vị chuẩn xác thành `tuquet-cloud` — đóng vai trò là Central Cloud BaaS Hub của toàn bộ hệ sinh thái.
 - [x] **Schema Thiết Kế Multi-Tenant RBAC:**
-  - [x] Hoàn thiện schema PostgreSQL (`tenants`, `profiles`, `roles`, `permissions`, `member_roles`, `tenant_invitations`, `audit_logs`, `projects`).
+  - [x] Hoàn thiện schema PostgreSQL (`tenants`, `profiles`, `roles`, `permissions`, `member_roles`, `tenant_invitations`, `audit_logs`).
   - [x] Phân biệt rõ ràng System Role (`tenant_id IS NULL`) và Custom Tenant Role (`tenant_id = UUID`).
 - [x] **Bảo Mật & Hiệu Năng RLS:**
   - [x] Ngăn chặn triệt để RLS Infinite Recursion bằng các hàm `SECURITY DEFINER` (`is_tenant_member`, `has_tenant_permission`, `is_tenant_admin`).
@@ -134,9 +134,9 @@ flowchart TD
 
 1. **Supabase Remote Adapter trên `tuquet-automa`:**
    - Xây dựng tầng kết nối đám mây song song với SQLite cục bộ.
-   - Hỗ trợ người dùng đồng bộ workflows, campaign templates, và lịch sử thực thi lên tài khoản Creator trên mây `tuquet-cloud`.
-2. **Web Dashboard Quản Trị SaaS (`tuquet-creator` app):**
-   - Xây dựng giao diện web cho Creator quản lý tổ chức, phân quyền thành viên, cấp phát khóa kích hoạt bot và giám sát quota thông qua `tuquet-cloud`.
+   - Hỗ trợ người dùng đồng bộ workflows, campaign templates, và lịch sử thực thi lên tài khoản tổ chức trên mây `tuquet-cloud`.
+2. **Web Dashboard Quản Trị SaaS (`tuquet-dashboard` app):**
+   - Xây dựng giao diện web cho Tenant Owners quản lý tổ chức, phân quyền thành viên, cấp phát khóa kích hoạt bot và giám sát quota thông qua `tuquet-cloud`.
 3. **Mở Rộng UI Components trên `tuquet-lib`:**
    - Bổ sung Analytics Charts, Agent Flow Node components, và Command Palette (`Cmd+K`).
 

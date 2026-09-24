@@ -64,8 +64,8 @@ COMMENT ON TABLE billing.usage_meters IS '[Plugin: subscriptions] Generic usage 
 -- 3. Seed Default Plans
 INSERT INTO billing.plans (id, name, description, max_members, max_storage_mb, max_monthly_runs, price_monthly_usd)
 VALUES 
-    ('free', 'Free Starter', 'Entry plan for personal creators and small tests', 2, 500, 1000, 0.00),
-    ('pro', 'Creator Pro', 'Advanced automation capabilities with team collaboration', 10, 10240, 50000, 29.00),
+    ('free', 'Free Starter', 'Entry plan for individual developers and small tests', 2, 500, 1000, 0.00),
+    ('pro', 'Team Pro', 'Advanced automation capabilities with team collaboration', 10, 10240, 50000, 29.00),
     ('enterprise', 'Enterprise Fleet', 'Dedicated runners, custom quotas, and SLAs', 100, 102400, 1000000, 199.00)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,

@@ -1,6 +1,6 @@
 # Từ Điển Thuật Ngữ & Chuẩn Hóa Danh Pháp (Terminology Dictionary & Anti-Hallucination Lexicon)
 
-> **Mục Đích Tối Thượng**: Tài liệu này đóng vai trò là **Hiến pháp thuật ngữ duy nhất (Single Source of Truth)** của hệ thống `tuquet-cloud` và toàn bộ hệ sinh thái Omniverse Creator (`tuquet-lib`, `tuquet-automa`, `tuquet-cloud`, `tuquet-scoop-bucket`).  
+> **Mục Đích Tối Thượng**: Tài liệu này đóng vai trò là **Hiến pháp thuật ngữ duy nhất (Single Source of Truth)** của hệ thống `tuquet-cloud` và toàn bộ hệ sinh thái Tuquet (`tuquet-lib`, `tuquet-automa`, `tuquet-cloud`, `tuquet-scoop-bucket`).  
 > Mọi tài liệu kỹ thuật, mã nguồn SQL, migration, API DTO, mã nguồn Frontend và AI Agents **bắt buộc tuân thủ 100%**, triệt tiêu hoàn toàn hiện tượng **ảo giác thuật ngữ (Terminology Hallucination)** hoặc dùng lẫn lộn giữa các khái niệm.
 
 ---
