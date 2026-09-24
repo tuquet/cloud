@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Omniverse Multi-Tenant RBAC - Interactive ERD Studio</title>
+  <title>Tuquet Cloud & Automa Bridge — Interactive ERD Studio</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -100,53 +100,61 @@
 
     .btn:hover {
       background: var(--surface-hover);
-      border-color: var(--primary);
-      color: var(--primary);
+      border-color: #334155;
+      color: #fff;
     }
 
     .btn-primary {
-      background: #0284c7;
-      border-color: #38bdf8;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      border: 1px solid #38bdf8;
       color: #fff;
     }
+
     .btn-primary:hover {
-      background: #0369a1;
-      color: #fff;
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.4);
     }
 
     .search-box {
-      background: var(--surface);
+      background: #090d16;
       border: 1px solid var(--surface-border);
-      border-radius: 8px;
-      padding: 6px 12px;
       color: var(--text);
-      font-family: var(--font-mono);
-      font-size: 12px;
+      font-family: var(--font-sans);
+      font-size: 13px;
+      padding: 7px 14px;
+      border-radius: 8px;
       outline: none;
-      width: 200px;
-      transition: border-color 0.2s;
-    }
-    .search-box:focus {
-      border-color: var(--primary);
+      width: 220px;
+      transition: all 0.15s ease;
     }
 
-    /* Main Workspace */
-    #workspace {
+    .search-box:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+      width: 260px;
+    }
+
+    /* Canvas Area */
+    main {
       flex: 1;
       position: relative;
       overflow: hidden;
       cursor: grab;
+      user-select: none;
       background-image: 
-        radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0);
-      background-size: 24px 24px;
+        radial-gradient(#1e293b 1px, transparent 1px),
+        radial-gradient(#1e293b 1px, #090d16 1px);
+      background-size: 40px 40px;
+      background-position: 0 0, 20px 20px;
     }
 
-    #workspace:active {
+    main:active {
       cursor: grabbing;
     }
 
     #canvas-container {
       position: absolute;
+      top: 0;
+      left: 0;
       transform-origin: 0 0;
       will-change: transform;
       padding: 60px;
@@ -220,8 +228,8 @@
 
   <header>
     <div class="brand">
-      <span class="brand-badge">Supabase BaaS</span>
-      <h1>Omniverse Multi-Tenant RBAC — Schema Architecture</h1>
+      <span class="brand-badge">Tuquet Cloud</span>
+      <h1>Architecture ERD Studio (Multi-Tenant RBAC & Automa Engine)</h1>
     </div>
 
     <div class="controls">
@@ -264,6 +272,11 @@ erDiagram
     TENANTS ||--o{ TENANT_INVITATIONS : "tenant_id"
     TENANTS ||--o{ AUDIT_LOGS : "tenant_id"
     TENANTS ||--o{ PROJECTS : "tenant_id"
+    TENANTS ||--o{ MEDIA_ASSETS : "tenant_id"
+    TENANTS ||--|| TENANT_SUBSCRIPTIONS : "tenant_id"
+    TENANTS ||--o{ TENANT_USAGE_METERS : "tenant_id"
+    TENANTS ||--o{ OUTBOX_EVENTS : "tenant_id"
+    TENANTS ||--o{ WEBHOOK_SUBSCRIPTIONS : "tenant_id"
 
     ROLES ||--o{ ROLE_PERMISSIONS : "role_id"
     PERMISSIONS ||--o{ ROLE_PERMISSIONS : "permission_id"
@@ -271,6 +284,22 @@ erDiagram
     TENANT_MEMBERS ||--o{ MEMBER_ROLES : "member_id"
     ROLES ||--o{ MEMBER_ROLES : "role_id"
     ROLES ||--o{ TENANT_INVITATIONS : "role_id"
+
+    SUBSCRIPTION_PLANS ||--o{ TENANT_SUBSCRIPTIONS : "plan_id"
+    WEBHOOK_SUBSCRIPTIONS ||--o{ WEBHOOK_DELIVERIES : "webhook_id"
+    OUTBOX_EVENTS ||--o{ WEBHOOK_DELIVERIES : "event_id"
+
+    TENANTS ||--o{ AUTOMA_WORKFLOWS : "tenant_id"
+    TENANTS ||--o{ AUTOMA_RUNNERS : "tenant_id"
+    TENANTS ||--o{ AUTOMA_CAMPAIGN_RUNS : "tenant_id"
+    TENANTS ||--o{ AUTOMA_EXECUTION_LOGS : "tenant_id"
+    TENANTS ||--o{ AUTOMA_SCHEDULES : "tenant_id"
+
+    AUTOMA_WORKFLOWS ||--o{ AUTOMA_CAMPAIGN_RUNS : "workflow_id"
+    AUTOMA_RUNNERS ||--o{ AUTOMA_CAMPAIGN_RUNS : "runner_id"
+    AUTOMA_CAMPAIGN_RUNS ||--o{ AUTOMA_EXECUTION_LOGS : "campaign_run_id"
+    AUTOMA_RUNNERS ||--o{ AUTOMA_EXECUTION_LOGS : "runner_id"
+    AUTOMA_WORKFLOWS ||--o{ AUTOMA_SCHEDULES : "workflow_id"
 
     AUTH_USERS {
         uuid id PK "Supabase Internal UID"
@@ -303,14 +332,14 @@ erDiagram
     ROLES {
         uuid id PK "Role UUID"
         uuid tenant_id FK "NULL = System Role"
-        string name "owner, admin, editor..."
+        string name "owner, admin, member..."
         string display_name "Tên hiển thị"
         boolean is_system "Role hệ thống"
     }
 
     PERMISSIONS {
-        string id PK "tenants:update, projects:create"
-        string module "tenant, projects..."
+        string id PK "automa:campaigns:run, media:upload"
+        string module "automa, media, tenants..."
         string description "Mô tả quyền"
     }
 
@@ -347,6 +376,77 @@ erDiagram
         uuid tenant_id FK "Tenant ID (RLS)"
         string name "Tên dự án"
         uuid created_by FK "Profile ID"
+        timestamptz deleted_at "Soft Delete"
+    }
+
+    MEDIA_ASSETS {
+        uuid id PK "Media Asset ID"
+        uuid tenant_id FK "Tenant ID"
+        string file_path "Storage Path"
+        bigint file_size_bytes "Size in bytes"
+    }
+
+    SUBSCRIPTION_PLANS {
+        string id PK "free | pro | enterprise"
+        string name "Tên gói SaaS"
+        int max_members "Max Members"
+        int max_projects "Max Projects"
+    }
+
+    TENANT_SUBSCRIPTIONS {
+        uuid id PK "Subscription ID"
+        uuid tenant_id FK "Tenant ID"
+        string plan_id FK "Plan Tier"
+        enum status "active|free_tier"
+    }
+
+    OUTBOX_EVENTS {
+        uuid id PK "Event ID"
+        uuid tenant_id FK "Tenant ID"
+        string event_type "project.created, automa.run"
+        enum status "pending|delivered"
+    }
+
+    AUTOMA_WORKFLOWS {
+        uuid id PK "Workflow ID"
+        uuid tenant_id FK "Tenant ID"
+        string name "Tên quy trình"
+        enum status "draft|published"
+        jsonb graph_data "Nodes and Edges"
+    }
+
+    AUTOMA_RUNNERS {
+        uuid id PK "Runner Node ID"
+        uuid tenant_id FK "Tenant ID"
+        string name "Tên máy trạm Runner"
+        string machine_fingerprint UK "HWID"
+        enum status "idle|running|busy"
+        timestamptz last_heartbeat_at "Heartbeat"
+    }
+
+    AUTOMA_CAMPAIGN_RUNS {
+        uuid id PK "Campaign Run ID"
+        uuid tenant_id FK "Tenant ID"
+        uuid workflow_id FK "Workflow ID"
+        uuid runner_id FK "Runner ID"
+        enum status "pending|running|completed"
+        numeric progress_percent "0 - 100%"
+    }
+
+    AUTOMA_EXECUTION_LOGS {
+        uuid id PK "Log UUID"
+        uuid tenant_id FK "Tenant ID"
+        uuid campaign_run_id FK "Campaign ID"
+        enum level "info|warn|error"
+        text message "Log Message"
+    }
+
+    AUTOMA_SCHEDULES {
+        uuid id PK "Schedule ID"
+        uuid tenant_id FK "Tenant ID"
+        uuid workflow_id FK "Workflow ID"
+        string cron_expression "Cron Expression"
+        boolean is_active "Active Status"
     }
       </div>
     </div>
@@ -359,6 +459,7 @@ erDiagram
       <div class="legend-item"><span class="dot" style="background: #38bdf8;"></span><span>Khóa chính (PK) / Khóa ngoại (FK)</span></div>
       <div class="legend-item"><span class="dot" style="background: #818cf8;"></span><span>Quan hệ 1:1, 1:N, N:N</span></div>
       <div class="legend-item"><span class="dot" style="background: #34d399;"></span><span>RLS Boundary Isolation</span></div>
+      <div class="legend-item"><span class="dot" style="background: #fbbf24;"></span><span>Automa Bridge Engine (automa_*)</span></div>
     </div>
   </main>
 
@@ -379,7 +480,7 @@ erDiagram
       }
     });
 
-    let scale = 1;
+    let scale = 0.8;
     let panX = 40;
     let panY = 40;
     let isDragging = false;
@@ -417,7 +518,7 @@ erDiagram
       if (e.deltaY < 0) {
         scale = Math.min(scale * (1 + zoomFactor), 3);
       } else {
-        scale = Math.max(scale * (1 - zoomFactor), 0.3);
+        scale = Math.max(scale * (1 - zoomFactor), 0.2);
       }
       updateTransform();
     }, { passive: false });
@@ -428,12 +529,12 @@ erDiagram
     }
 
     function zoomOut() {
-      scale = Math.max(scale / 1.2, 0.3);
+      scale = Math.max(scale / 1.2, 0.2);
       updateTransform();
     }
 
     function resetZoom() {
-      scale = 0.9;
+      scale = 0.75;
       panX = 40;
       panY = 40;
       updateTransform();

@@ -101,11 +101,17 @@ flowchart TD
   - [x] Ngăn chặn triệt để RLS Infinite Recursion bằng các hàm `SECURITY DEFINER` (`is_tenant_member`, `has_tenant_permission`, `is_tenant_admin`).
   - [x] Tích hợp Supabase Custom Access Token (JWT) Hook nhúng `tenant_id` và roles vào Claims để kiểm tra quyền với độ phức tạp $O(1)$.
   - [x] Đánh Composite Index bắt đầu bằng `tenant_id` trên mọi bảng nghiệp vụ nhằm triệt tiêu nguy cơ rò rỉ chéo dữ liệu và sẵn sàng cho Table Partitioning.
-- [x] **Module Mở Rộng SQL (Plug & Play):**
-  - [x] `01_media_storage_assets.sql`: Quản lý tài nguyên media & RLS Storage phân lập.
-  - [x] `02_subscriptions_entitlements.sql`: Gói cước và tự động chặn vượt Quota `projects`.
-  - [x] `03_outbox_webhooks_queue.sql`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch.
-  - [x] `04_soft_delete_pattern.sql`: Cơ chế xóa mềm (`deleted_at`) và phục hồi dữ liệu.
+- [x] **Module Mở Rộng SQL (Plug & Play -> Sequential Migrations):**
+  - [x] `20260924000001_media_storage_assets.sql`: Quản lý tài nguyên media & RLS Storage phân lập.
+  - [x] `20260924000002_subscriptions_entitlements.sql`: Gói cước và tự động chặn vượt Quota `projects`.
+  - [x] `20260924000003_outbox_webhooks_queue.sql`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch.
+  - [x] `20260924000004_soft_delete_pattern.sql`: Cơ chế xóa mềm (`deleted_at`) và phục hồi dữ liệu.
+- [x] **Automa Cloud Bridge Migration (`20260924000005_automa_cloud_bridge.sql`):**
+  - [x] Tuân thủ nghiêm ngặt quy tắc tiền tố bảng: `automa_*` (`automa_workflows`, `automa_runners`, `automa_campaign_runs`, `automa_execution_logs`, `automa_schedules`).
+  - [x] Cơ chế phân quyền RBAC đa người thuê với RLS không đệ quy và trigger đồng bộ sự kiện sang `outbox_events`.
+- [x] **Seed Data & ERD Studio:**
+  - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu thực tế cho Auth, Profiles, Tenants, Subscriptions, và các thực thể `automa_*`.
+  - [x] `docs/erd_diagram.md` & `docs/erd_viewer.html`: Cập nhật toàn diện sơ đồ ERD trực quan 5 phân vùng và công cụ duyệt kéo thả zoom/pan.
 - [x] **OpenAPI Specification:** Xuất file OpenAPI 3.0.3 JSON chuẩn (`docs/openapi_spec_rbac.json`).
 - [ ] **[Next Tasks - Core Base Focus]**:
   - [ ] Chạy kiểm thử tự động toàn bộ SQL Migration trên local Supabase Docker instance (`supabase start` && `supabase db reset`).
