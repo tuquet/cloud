@@ -1,7 +1,9 @@
 -- ============================================================================
--- SUPABASE MIGRATION: MEDIA STORAGE & ASSETS MANAGEMENT
--- Version: 20260924000001
--- Description: Multi-tenant Media Assets table and Supabase Storage RLS policies.
+-- TUQUET-CLOUD PLUGIN: MEDIA STORAGE & ASSETS MANAGEMENT (INSTALLATION SCRIPT)
+-- Plugin Name: storage (Media Assets)
+-- Version: 1.0.0
+-- Target: Supabase / PostgreSQL (Storage Integration)
+-- Description: Multi-tenant Media Assets table and Supabase Storage bucket RLS policies.
 -- ============================================================================
 
 -- Helper function for updated_at column timestamp refresh if not already defined
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS public.media_assets (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-COMMENT ON TABLE public.media_assets IS 'Stores metadata for tenant files uploaded to Supabase Storage';
+COMMENT ON TABLE public.media_assets IS '[Plugin: storage] Stores metadata for tenant files uploaded to Supabase Storage';
 
 CREATE INDEX IF NOT EXISTS idx_media_assets_tenant_created ON public.media_assets (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_media_assets_project_id ON public.media_assets (project_id) WHERE project_id IS NOT NULL;

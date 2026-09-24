@@ -13,9 +13,14 @@
 - 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: File OpenAPI 3.0.3 spec chuẩn mã hóa cho toàn bộ các endpoint Multi-tenant RBAC.
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
-- 💾 **[Các File Base Core SQL Migration](supabase/migrations/)**: 5 file migration tuần tự thiết lập nền tảng IAM, Multi-tenant RBAC, Media Storage, Subscriptions & Quota, Outbox, và Soft Delete.
-- 🔌 **[Thư Viện Plugin Mở Rộng - Automa Cloud Bridge](supabase/plugins/automa/)**: Module kết nối cỗ máy tự động hóa `tuquet-automa` (`install.sql` / `uninstall.sql`), tách biệt 100% khỏi Base Core.
-- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt Plugin.
+- 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260922000001_multitenant_rbac_schema.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook và Audit Trail.
+- 🔌 **[Thư Viện Plugins Mở Rộng Theo Nhu Cầu (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng mở rộng được đóng gói dạng Plugin (`install.sql` / `uninstall.sql`), chỉ cài đặt khi Admin thấy cần:
+  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file & Storage Bucket RLS phân lập theo Tenant.
+  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Chặn hạn ngạch tài nguyên.
+  - ⚡ **[Plugin 3: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện & Bắn Webhook.
+  - 🗑️ **[Plugin 4: Soft Delete & Data Retention](supabase/plugins/soft_delete/)**: Thùng rác & Khôi phục dữ liệu.
+  - 🤖 **[Plugin 5: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán.
+- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ 5 Plugins.
 
 ---
 

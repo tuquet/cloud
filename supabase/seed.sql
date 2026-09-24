@@ -118,14 +118,19 @@ VALUES (
 )
 ON CONFLICT (member_id, role_id) DO NOTHING;
 
--- 4. Subscription Tier Seed
-INSERT INTO public.tenant_subscriptions (tenant_id, plan_id, status)
-VALUES 
-    ('b0000000-0000-0000-0000-000000000001', 'pro', 'active'),
-    ('b0000000-0000-0000-0000-000000000002', 'free', 'free_tier')
-ON CONFLICT (tenant_id) DO UPDATE SET
-    plan_id = EXCLUDED.plan_id,
-    status = EXCLUDED.status;
+-- 4. Subscription Tier Seed (Optional - Only runs when subscriptions plugin is installed)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'tenant_subscriptions') THEN
+        INSERT INTO public.tenant_subscriptions (tenant_id, plan_id, status)
+        VALUES 
+            ('b0000000-0000-0000-0000-000000000001', 'pro', 'active'),
+            ('b0000000-0000-0000-0000-000000000002', 'free', 'free_tier')
+        ON CONFLICT (tenant_id) DO UPDATE SET
+            plan_id = EXCLUDED.plan_id,
+            status = EXCLUDED.status;
+    END IF;
+END $$;
 
 -- 5. Sample Projects
 INSERT INTO public.projects (id, tenant_id, name, description, created_by)

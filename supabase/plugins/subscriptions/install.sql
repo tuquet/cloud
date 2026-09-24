@@ -1,6 +1,8 @@
 -- ============================================================================
--- SUPABASE MIGRATION: SUBSCRIPTIONS, ENTITLEMENTS & QUOTA METERING
--- Version: 20260924000002
+-- TUQUET-CLOUD PLUGIN: SUBSCRIPTIONS, ENTITLEMENTS & QUOTA METERING (INSTALLATION SCRIPT)
+-- Plugin Name: subscriptions
+-- Version: 1.0.0
+-- Target: Supabase / PostgreSQL (Billing & Quotas)
 -- Description: SaaS Tiers, Quota Enforcement (max projects, max members), & Usage Tracking.
 -- ============================================================================
 
@@ -43,7 +45,7 @@ CREATE TABLE IF NOT EXISTS public.subscription_plans (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-COMMENT ON TABLE public.subscription_plans IS 'Catalog of available SaaS subscription tiers and feature limits';
+COMMENT ON TABLE public.subscription_plans IS '[Plugin: subscriptions] Catalog of available SaaS subscription tiers and feature limits';
 
 -- 3. Tenant Subscriptions Table
 CREATE TABLE IF NOT EXISTS public.tenant_subscriptions (
@@ -60,93 +62,47 @@ CREATE TABLE IF NOT EXISTS public.tenant_subscriptions (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
+COMMENT ON TABLE public.tenant_subscriptions IS '[Plugin: subscriptions] Active subscription tier and billing state per tenant';
+
 CREATE INDEX IF NOT EXISTS idx_tenant_subscriptions_tenant ON public.tenant_subscriptions (tenant_id);
 CREATE INDEX IF NOT EXISTS idx_tenant_subscriptions_status ON public.tenant_subscriptions (status);
 
--- Trigger for updated_at
+-- 4. Usage Meters Table
+CREATE TABLE IF NOT EXISTS public.usage_meters (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
+    metric_name VARCHAR(64) NOT NULL, -- e.g. 'api_requests', 'storage_bytes'
+    current_value BIGINT NOT NULL DEFAULT 0,
+    reset_at TIMESTAMPTZ NOT NULL DEFAULT (date_trunc('month', timezone('utc'::text, now())) + INTERVAL '1 month'),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT uq_tenant_metric UNIQUE (tenant_id, metric_name)
+);
+
+COMMENT ON TABLE public.usage_meters IS '[Plugin: subscriptions] Usage metering counters for rate limiting and billing';
+
+CREATE INDEX IF NOT EXISTS idx_usage_meters_tenant ON public.usage_meters (tenant_id);
+
+-- Triggers for updated_at
 DROP TRIGGER IF EXISTS update_tenant_subscriptions_modtime ON public.tenant_subscriptions;
 CREATE TRIGGER update_tenant_subscriptions_modtime
     BEFORE UPDATE ON public.tenant_subscriptions
     FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
--- 4. Tenant Usage Meters Table
-CREATE TABLE IF NOT EXISTS public.tenant_usage_meters (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    feature_key TEXT NOT NULL, -- e.g. 'projects_count', 'members_count', 'storage_bytes'
-    current_usage BIGINT NOT NULL DEFAULT 0 CHECK (current_usage >= 0),
-    last_reset_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    CONSTRAINT uq_tenant_feature UNIQUE (tenant_id, feature_key)
-);
-
-CREATE INDEX IF NOT EXISTS idx_tenant_usage_tenant_feature ON public.tenant_usage_meters (tenant_id, feature_key);
-
--- Enable RLS
-ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tenant_subscriptions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.tenant_usage_meters ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies
-DROP POLICY IF EXISTS "plans_select_all" ON public.subscription_plans;
-CREATE POLICY "plans_select_all" ON public.subscription_plans
-    FOR SELECT TO authenticated, anon USING (is_active = TRUE);
-
-DROP POLICY IF EXISTS "tenant_subscriptions_select_member" ON public.tenant_subscriptions;
-CREATE POLICY "tenant_subscriptions_select_member" ON public.tenant_subscriptions
-    FOR SELECT TO authenticated
-    USING (public.is_tenant_member(tenant_id));
-
-DROP POLICY IF EXISTS "tenant_usage_select_member" ON public.tenant_usage_meters;
-CREATE POLICY "tenant_usage_select_member" ON public.tenant_usage_meters
-    FOR SELECT TO authenticated
-    USING (public.is_tenant_member(tenant_id));
-
--- 5. Seed Default Subscription Plans
+-- 5. Seed Core Subscription Tiers
 INSERT INTO public.subscription_plans (id, name, description, max_members, max_projects, max_storage_mb, price_monthly_usd)
-VALUES
-    ('free', 'Free Creator', 'Perfect for individuals and small projects', 3, 5, 500, 0.00),
-    ('pro', 'Pro Creator', 'For growing teams requiring higher limits', 20, 50, 10240, 29.00),
-    ('enterprise', 'Enterprise Scale', 'Unlimited scale and custom support', 1000, 10000, 1024000, 199.00)
+VALUES 
+    ('free', 'Free Starter', 'Entry plan for personal creators and small tests', 2, 3, 500, 0.00),
+    ('pro', 'Creator Pro', 'Advanced automation capabilities with team collaboration', 10, 25, 10240, 29.00),
+    ('enterprise', 'Enterprise Fleet', 'Dedicated runners, custom quotas, and SLAs', 100, 500, 102400, 199.00)
 ON CONFLICT (id) DO UPDATE SET
     name = EXCLUDED.name,
-    description = EXCLUDED.description,
     max_members = EXCLUDED.max_members,
     max_projects = EXCLUDED.max_projects,
     max_storage_mb = EXCLUDED.max_storage_mb,
     price_monthly_usd = EXCLUDED.price_monthly_usd;
 
--- Auto-assign 'free' plan when a new Tenant is created
-CREATE OR REPLACE FUNCTION public.auto_assign_free_subscription()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-BEGIN
-    INSERT INTO public.tenant_subscriptions (tenant_id, plan_id, status)
-    VALUES (NEW.id, 'free', 'free_tier')
-    ON CONFLICT (tenant_id) DO NOTHING;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trigger_auto_assign_free_subscription ON public.tenants;
-CREATE TRIGGER trigger_auto_assign_free_subscription
-    AFTER INSERT ON public.tenants
-    FOR EACH ROW EXECUTE FUNCTION public.auto_assign_free_subscription();
-
--- Backfill existing tenants with free subscription
-INSERT INTO public.tenant_subscriptions (tenant_id, plan_id, status)
-SELECT t.id, 'free', 'free_tier'
-FROM public.tenants t
-ON CONFLICT (tenant_id) DO NOTHING;
-
--- 6. Quota Checking Helper Function
-CREATE OR REPLACE FUNCTION public.check_tenant_quota(
-    _tenant_id UUID,
-    _feature_key TEXT
-)
+-- 6. Quota Enforcement Logic (SECURITY DEFINER Function)
+CREATE OR REPLACE FUNCTION public.check_tenant_quota(_tenant_id UUID, _feature_key TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 STABLE
@@ -159,7 +115,6 @@ DECLARE
     v_max_members INT;
     v_current_count BIGINT;
 BEGIN
-    -- Get active plan for tenant (default to free if missing)
     SELECT ts.plan_id INTO v_plan_id
     FROM public.tenant_subscriptions ts
     WHERE ts.tenant_id = _tenant_id AND ts.status IN ('free_tier', 'trialing', 'active')
@@ -169,7 +124,6 @@ BEGIN
         v_plan_id := 'free';
     END IF;
 
-    -- Fetch plan limits
     SELECT max_projects, max_members INTO v_max_projects, v_max_members
     FROM public.subscription_plans
     WHERE id = v_plan_id;
@@ -212,3 +166,45 @@ DROP TRIGGER IF EXISTS trigger_enforce_project_quota ON public.projects;
 CREATE TRIGGER trigger_enforce_project_quota
     BEFORE INSERT ON public.projects
     FOR EACH ROW EXECUTE FUNCTION public.enforce_project_quota();
+
+-- 8. RLS Policies
+ALTER TABLE public.subscription_plans ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.tenant_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.usage_meters ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "subscription_plans_select_all" ON public.subscription_plans
+    FOR SELECT TO authenticated USING (is_active = TRUE);
+
+CREATE POLICY "tenant_subscriptions_select" ON public.tenant_subscriptions
+    FOR SELECT TO authenticated USING (public.is_tenant_member(tenant_id));
+
+CREATE POLICY "usage_meters_select" ON public.usage_meters
+    FOR SELECT TO authenticated USING (public.is_tenant_member(tenant_id));
+
+-- 9. Permissions
+INSERT INTO public.permissions (id, module, description)
+VALUES 
+    ('subscriptions:read', 'billing', 'View subscription plans and current tenant subscription'),
+    ('subscriptions:manage', 'billing', 'Upgrade, downgrade, or cancel tenant subscription'),
+    ('quota:read', 'billing', 'View tenant usage meters and quota limits')
+ON CONFLICT (id) DO UPDATE SET
+    module = EXCLUDED.module,
+    description = EXCLUDED.description;
+
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+CROSS JOIN (
+    VALUES ('subscriptions:read'), ('subscriptions:manage'), ('quota:read')
+) AS p(id)
+WHERE r.tenant_id IS NULL AND r.name IN ('owner', 'admin')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id
+FROM public.roles r
+CROSS JOIN (
+    VALUES ('subscriptions:read'), ('quota:read')
+) AS p(id)
+WHERE r.tenant_id IS NULL AND r.name = 'member'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
