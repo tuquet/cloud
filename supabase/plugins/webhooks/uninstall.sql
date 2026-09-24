@@ -4,8 +4,8 @@
 -- Architecture: Atomic Zero-Orphan Cleanup via DROP SCHEMA CASCADE
 -- ============================================================================
 
--- 1. Drop Outbox Trigger from Core Projects Table
-DROP TRIGGER IF EXISTS trigger_log_project_outbox ON public.projects;
+-- 1. Drop Outbox Trigger from Core Members Table
+DROP TRIGGER IF EXISTS trigger_log_member_outbox ON public.tenant_members;
 
 -- 2. Atomic Schema Drop (Instantly drops all events tables, views, enums, and functions)
 DROP SCHEMA IF EXISTS events CASCADE;

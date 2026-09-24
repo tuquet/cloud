@@ -59,8 +59,31 @@ CREATE TABLE IF NOT EXISTS events.deliveries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3. Automatic Outbox Trigger on Core Projects
-CREATE OR REPLACE FUNCTION events.log_project_event_to_outbox()
+-- 3. Event Helper & Automatic Core Triggers
+CREATE OR REPLACE FUNCTION events.emit_event(
+    _tenant_id UUID,
+    _event_type TEXT,
+    _payload JSONB DEFAULT '{}'::jsonb
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_event_id UUID;
+BEGIN
+    INSERT INTO events.outbox (tenant_id, event_type, payload, status, created_at)
+    VALUES (_tenant_id, _event_type, _payload, 'pending', timezone('utc'::text, now()))
+    RETURNING id INTO v_event_id;
+
+    RETURN v_event_id;
+END;
+$$;
+
+COMMENT ON FUNCTION events.emit_event IS '[Plugin: webhooks] Programmatic API to enqueue domain events into the Transactional Outbox';
+
+CREATE OR REPLACE FUNCTION events.log_member_event_to_outbox()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -68,20 +91,26 @@ SET search_path = ''
 AS $$
 BEGIN
     IF TG_OP = 'INSERT' THEN
-        INSERT INTO events.outbox (tenant_id, event_type, payload)
-        VALUES (NEW.tenant_id, 'project.created', jsonb_build_object('id', NEW.id, 'name', NEW.name, 'created_at', NEW.created_at));
+        PERFORM events.emit_event(
+            NEW.tenant_id, 
+            'member.joined', 
+            jsonb_build_object('member_id', NEW.id, 'user_id', NEW.user_id, 'joined_at', NEW.joined_at)
+        );
     ELSIF TG_OP = 'DELETE' THEN
-        INSERT INTO events.outbox (tenant_id, event_type, payload)
-        VALUES (OLD.tenant_id, 'project.deleted', jsonb_build_object('id', OLD.id, 'name', OLD.name));
+        PERFORM events.emit_event(
+            OLD.tenant_id, 
+            'member.removed', 
+            jsonb_build_object('member_id', OLD.id, 'user_id', OLD.user_id)
+        );
     END IF;
     RETURN NULL;
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trigger_log_project_outbox ON public.projects;
-CREATE TRIGGER trigger_log_project_outbox
-    AFTER INSERT OR DELETE ON public.projects
-    FOR EACH ROW EXECUTE FUNCTION events.log_project_event_to_outbox();
+DROP TRIGGER IF EXISTS trigger_log_member_outbox ON public.tenant_members;
+CREATE TRIGGER trigger_log_member_outbox
+    AFTER INSERT OR DELETE ON public.tenant_members
+    FOR EACH ROW EXECUTE FUNCTION events.log_member_event_to_outbox();
 
 -- 4. RLS
 ALTER TABLE events.outbox ENABLE ROW LEVEL SECURITY;
