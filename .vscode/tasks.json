@@ -2,169 +2,6 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "supabase login",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "login"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase link",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "link"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase db push",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "db",
-        "push"
-      ],
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase db pull",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "db",
-        "pull"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase gen types",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "gen",
-        "types",
-        "typescript",
-        "--local"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase functions deploy",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "supabase",
-        "functions",
-        "deploy"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "supabase status",
-      "type": "shell",
-      "command": "supabase",
-      "args": ["status"],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
       "label": "supabase start",
       "type": "shell",
       "command": "supabase",
@@ -174,7 +11,6 @@
         "reveal": "always",
         "focus": true,
         "panel": "shared",
-        "showReuseMessage": false,
         "clear": true
       },
       "problemMatcher": []
@@ -189,49 +25,40 @@
         "reveal": "always",
         "focus": true,
         "panel": "shared",
-        "showReuseMessage": false,
         "clear": true
       },
       "problemMatcher": []
     },
     {
-      "label": "🌐 Network: Test Proxy Connection",
+      "label": "supabase status",
       "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/test_network.ps1"
-      ],
-      "problemMatcher": [],
+      "command": "supabase",
+      "args": ["status"],
       "presentation": {
+        "echo": true,
         "reveal": "always",
+        "focus": true,
         "panel": "shared",
-        "focus": true
-      }
+        "clear": true
+      },
+      "problemMatcher": []
     },
     {
-      "label": "🔧 Network: Configure Git Proxy",
+      "label": "supabase db reset",
       "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/configure_git_proxy.ps1"
-      ],
-      "problemMatcher": [],
+      "command": "supabase",
+      "args": ["db", "reset"],
       "presentation": {
+        "echo": true,
         "reveal": "always",
+        "focus": true,
         "panel": "shared",
-        "focus": true
-      }
+        "clear": true
+      },
+      "problemMatcher": []
     },
     {
-      "label": "🛑 Network: Stop SOCKS5 Proxy",
+      "label": "apply plugins",
       "type": "shell",
       "command": "powershell.exe",
       "args": [
@@ -239,139 +66,41 @@
         "-ExecutionPolicy",
         "Bypass",
         "-File",
-        "${workspaceFolder}/scripts/network/stop_proxy.ps1"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
-      }
-    },
-    {
-      "label": "🚀 Git Push (via Proxy)",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "git",
-        "push"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
-      }
-    },
-    {
-      "label": "📥 Git Pull (via Proxy)",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "git",
-        "pull"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "shared",
-        "focus": true
-      }
-    },
-    {
-      "label": "git push",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "git",
-        "push"
+        "${workspaceFolder}/scripts/plugins/apply_plugins.ps1"
       ],
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": true,
         "panel": "shared",
-        "showReuseMessage": false,
         "clear": true
       },
       "problemMatcher": []
     },
     {
-      "label": "git pull",
+      "label": "supabase db push",
       "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/ensure_proxy.ps1",
-        "git",
-        "pull"
-      ],
+      "command": "supabase",
+      "args": ["db", "push"],
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": true,
         "panel": "shared",
-        "showReuseMessage": false,
         "clear": true
       },
       "problemMatcher": []
     },
     {
-      "label": "test network",
+      "label": "supabase gen types",
       "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/test_network.ps1"
-      ],
+      "command": "supabase",
+      "args": ["gen", "types", "typescript", "--local"],
       "presentation": {
         "echo": true,
         "reveal": "always",
         "focus": true,
         "panel": "shared",
-        "showReuseMessage": false,
-        "clear": true
-      },
-      "problemMatcher": []
-    },
-    {
-      "label": "stop proxy",
-      "type": "shell",
-      "command": "powershell.exe",
-      "args": [
-        "-NoProfile",
-        "-ExecutionPolicy",
-        "Bypass",
-        "-File",
-        "${workspaceFolder}/scripts/network/stop_proxy.ps1"
-      ],
-      "presentation": {
-        "echo": true,
-        "reveal": "always",
-        "focus": true,
-        "panel": "shared",
-        "showReuseMessage": false,
         "clear": true
       },
       "problemMatcher": []

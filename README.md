@@ -7,27 +7,20 @@
 
 ## 📑 Mục Lục Tài Liệu (Documentation Sitemap)
 
-- 📊 **[Sơ đồ thực thể liên kết (ERD chi tiết)](docs/erd_diagram.md)**: Sơ đồ Mermaid đầy đủ, từ điển trường, ma trận quan hệ và ràng buộc khóa ngoại.
-- 🔬 **[Nghiên cứu kiến trúc RLS & Custom Claims Hook](docs/supabase_multitenant_rbac_research.md)**: Phân tích kỹ thuật phòng vệ chống RLS Infinite Recursion và CWE-426 Search Path Hijacking.
-- 📐 **[Phân tích OpenAPI Specification](docs/openapi_export_analysis.md)**: Đánh giá RAM hệ thống, quy trình tự động sinh OpenAPI Specs và TypeScript Client SDK.
-- 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: Đặc tả API 3.0.3 chuẩn hóa cho toàn bộ các endpoint của hệ thống.
-- 🌐 **[Kế hoạch vượt tường lửa (Proxy Routing Plan)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm SOCKS5 Proxy (`127.0.0.1:1080`) vượt rào cản firewall.
-- 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
+- 🏛️ **[Kiến Trúc Kỹ Thuật & Sơ Đồ ERD (docs/architecture.md)](docs/architecture.md)**: Sơ đồ Mermaid đầy đủ 5 phân vùng, từ điển trường, ma trận ràng buộc khóa ngoại, cơ chế bảo mật O(1) RLS và hướng dẫn PostgREST OpenAPI.
+- 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Chuẩn mã lệnh, proxy toàn cục hệ điều hành và quy tắc an toàn script.
 - 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260920000001_base_platform_core.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook, Audit Trail và Master Plugin Registry.
 - 🔌 **[Thư Viện Phân Hệ & Plugins Độc Lập (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng được đóng gói dạng Module chuẩn mực (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
   - 🛡️ **[System Core: Multi-Tenant IAM & RBAC Engine](supabase/plugins/core-iam/README.md)**: Thành phần cốt lõi bất biến (`is_system = true`, schema `public`).
-  - 🤖 **[Plugin 1: Automa Cloud Bridge](supabase/plugins/automa/README.md)**: Điều phối hạm đội tự động hóa phân tán (schema `automa`).
-  - 📁 **[Plugin 2: Media Storage Assets](supabase/plugins/storage/README.md)**: Quản lý metadata tập tin & Storage Bucket RLS (schema `media`).
-  - 💎 **[Plugin 3: Subscriptions & Quota](supabase/plugins/subscriptions/README.md)**: Gói cước SaaS & Kiểm soát định mức tài nguyên (schema `billing`).
-  - ⚡ **[Plugin 4: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/README.md)**: Hàng đợi sự kiện Transactional Outbox & Bắn Webhook HTTP (schema `events`).
-- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ Plugins.
+  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/README.md)**: Quản lý metadata tập tin & Storage Bucket RLS (schema `media`).
+  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/README.md)**: Gói cước SaaS & Kiểm soát định mức tài nguyên (schema `billing`).
+  - ⚡ **[Plugin 3: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/README.md)**: Hàng đợi sự kiện Transactional Outbox & Bắn Webhook HTTP (schema `events`).
+  - 🤖 **[Plugin 4: Automa Cloud Bridge](supabase/plugins/automa/README.md)**: Điều phối hạm đội tự động hóa phân tán (schema `automa`).
 - 🛠️ **[Script Cài Đặt Plugin Tự Động (scripts/plugins/apply_plugins.ps1)](scripts/plugins/apply_plugins.ps1)**: Tiện ích PowerShell cài đặt toàn bộ Plugin theo thứ tự chuẩn kiến trúc.
 
 ---
 
 ## 1. Sơ Đồ ERD Nền Tảng Cốt Lõi (Base Core IAM ERD)
-
-> 🚀 **Mở xem sơ đồ tương tác mượt mà (Pan, Zoom, Tìm kiếm)**: Mở file [**`docs/erd_viewer.html`**](docs/erd_viewer.html) trực tiếp trên trình duyệt hoặc qua lệnh `Simple Browser: Show` trong VS Code.
 
 ```mermaid
 %%{init: {
@@ -246,9 +239,6 @@ supabase db query --local -f supabase/plugins/webhooks/install.sql
 supabase db query --local -f supabase/plugins/automa/install.sql
 supabase db query --local -f supabase/plugins/automa/seed.sql
 ```
-
-#### Cách C: Trực Quan Hóa Qua Dynamic Acceptance Studio
-Mở tệp [**`docs/acceptance_studio.html`**](docs/acceptance_studio.html) trên trình duyệt hoặc qua Live Server để theo dõi trạng thái, chuyển đổi vai trò (Persona Switcher) và bấm nút **[➕ Install Plugin]** tương ứng.
 
 ---
 

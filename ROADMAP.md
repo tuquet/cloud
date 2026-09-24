@@ -109,28 +109,24 @@ flowchart TD
     - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập (schema `media`).
     - [x] `subscriptions/`: Gói cước SaaS và quản lý hạn ngạch tài nguyên (schema `billing`).
     - [x] `webhooks/`: Hàng đợi sự kiện Transactional Outbox & Webhooks dispatch (schema `events`).
-- [x] **Seed Data, ERD Studio & Dynamic Acceptance Studio:**
+- [x] **Seed Data & Kiến Trúc Chuẩn Hóa (KISS & YAGNI):**
   - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu tự thích ứng (idempotent conditional checks), chạy sạch sẽ trên Base Core lẫn khi đã cài Plugins.
-  - [x] `docs/erd_diagram.md` & `docs/erd_viewer.html`: Cập nhật toàn diện sơ đồ ERD trực quan 5 phân vùng và công cụ duyệt kéo thả zoom/pan.
-  - [x] `docs/acceptance_studio.html`: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher) và quản lý bật/tắt toàn bộ Plugins theo nhu cầu.
-- [x] **OpenAPI Specification:** Xuất file OpenAPI 3.0.3 JSON chuẩn (`docs/openapi_spec_rbac.json`).
+  - [x] `docs/architecture.md`: Tài liệu kiến trúc chuẩn hóa duy nhất kết hợp ERD 5 phân vùng, từ điển khóa ngoại, cơ chế bảo mật O(1) RLS và PostgREST OpenAPI Introspection.
+  - [x] Tinh giản triệt để: Loại bỏ các file rác/stale JSON và HTML duplicate để loại bỏ hoàn toàn nợ tài liệu.
 - [ ] **[Next Tasks - Core Base Focus]**:
   - [ ] Chạy kiểm thử tự động toàn bộ SQL Migration trên local Supabase Docker instance (`supabase start` && `supabase db reset`).
-  - [ ] Tạo script tự động sinh TypeScript Client SDK từ `openapi_spec_rbac.json` để chia sẻ cho các client tiêu thụ.
+  - [ ] Tạo script tự động sinh TypeScript Client SDK trực tiếp qua `supabase gen types typescript`.
 
 ---
 
-### 🌐 Workstream 1.4: Hạ Tầng Mạng, Proxy & Dev Tooling
-*Trách nhiệm: Đảm bảo môi trường làm việc thông suốt trong mọi điều kiện mạng bị chặn/tường lửa.*
+### 🌐 Workstream 1.4: Hạ Tầng Mạng & Dev Tooling (Host OS Managed)
+*Trách nhiệm: Quản lý proxy toàn cục ở tầng hệ điều hành, giữ workspace gọn gàng tuyệt đối theo chuẩn KISS.*
 
-- [x] **Bộ Scripts Mạng Chuẩn Hóa (`scripts/network/`):**
-  - [x] `configure_git_proxy.ps1`: Cấu hình repo local dùng proxy SOCKS5 (`127.0.0.1:1080`).
-  - [x] `ensure_proxy.ps1` & `ensure_proxy.bat`: Tự phục hồi Cloudflare Tunnel (`2222`) và SSH SOCKS5 (`1080`).
-  - [x] `stop_proxy.ps1` & `test_network.ps1`: Giải phóng cổng và chẩn đoán trạng thái kết nối.
-  - [x] Áp dụng nhất quán 100% trên `tuquet-lib`, `tuquet-automa`, `tuquet-cloud`, `scoop-bucket`, và `lotte-ecosystem`.
+- [x] **Global SOCKS5 Proxy (`127.0.0.1:1080`):** Khởi động tự động qua `lotte_services.vbs` khi Windows boot, Git repo định tuyến qua `http.proxy`.
+- [x] **KISS Workspace Clean:** Loại bỏ hoàn toàn các script proxy cục bộ trong repo (`scripts/network/`), ủy quyền 100% cho tiến trình toàn cục của hệ điều hành.
 - [x] **Chuẩn Hóa VS Code Workspace:**
   - [x] Cấu hình `"search.useIgnoreFiles": false` và danh sách loại trừ artifact trong `.vscode/settings.json`.
-  - [x] Tích hợp 5 tác vụ Network & Git Proxy tiêu chuẩn trong `.vscode/tasks.json`.
+  - [x] Rút gọn `.vscode/tasks.json` thành các tác vụ native chuẩn (`supabase db reset`, `apply plugins`, `supabase gen types`).
 
 ---
 
