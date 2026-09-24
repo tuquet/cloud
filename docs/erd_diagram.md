@@ -6,7 +6,27 @@ Tài liệu này cung cấp sơ đồ ERD chi tiết, chuẩn hóa và được 
 
 ## 1. Sơ Đồ Mermaid ERD (Tổng Thể Hệ Thống)
 
+> 💡 **Trải nghiệm trực quan tốt nhất**:  
+> Thay vì xem sơ đồ tĩnh bị giới hạn chiều rộng trong VS Code Markdown Preview, bạn có thể:  
+> 1. Mở file [**`docs/erd_viewer.html`**](./erd_viewer.html) bằng trình duyệt (hoặc ấn `Ctrl+Shift+P` trong VS Code gõ `Simple Browser: Show` và trỏ vào file này) để có tính năng **Kéo chuột (Pan), Cuộn zoom mượt mà, Tìm kiếm bảng và Tải file SVG**.  
+> 2. Hoặc kết nối trực tiếp vào PostgreSQL bằng **DBeaver** (đã có sẵn trong Scoop) để sinh sơ đồ ERD động có thể tùy biến vị trí từng bảng.
+
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#0f172a',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#38bdf8',
+    'secondaryColor': '#1e293b',
+    'tertiaryColor': '#0f172a',
+    'fontFamily': 'JetBrains Mono, Segoe UI, sans-serif',
+    'fontSize': '12px',
+    'attributeBackgroundColorOdd': '#090d16',
+    'attributeBackgroundColorEven': '#0f172a'
+  }
+}}%%
 erDiagram
     %% ==========================================
     %% 1. IDENTITY & PROFILES

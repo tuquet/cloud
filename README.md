@@ -24,7 +24,24 @@
 
 ## 1. Sơ Đồ ERD Trực Quan (Entity-Relationship Diagram)
 
+> 🚀 **Mở xem sơ đồ tương tác mượt mà (Pan, Zoom, Tìm kiếm)**: Mở file [**`docs/erd_viewer.html`**](docs/erd_viewer.html) trực tiếp trên trình duyệt hoặc qua lệnh `Simple Browser: Show` trong VS Code.
+
 ```mermaid
+%%{init: {
+  'theme': 'base',
+  'themeVariables': {
+    'primaryColor': '#0f172a',
+    'primaryTextColor': '#f8fafc',
+    'primaryBorderColor': '#38bdf8',
+    'lineColor': '#38bdf8',
+    'secondaryColor': '#1e293b',
+    'tertiaryColor': '#0f172a',
+    'fontFamily': 'JetBrains Mono, Segoe UI, sans-serif',
+    'fontSize': '12px',
+    'attributeBackgroundColorOdd': '#090d16',
+    'attributeBackgroundColorEven': '#0f172a'
+  }
+}}%%
 erDiagram
     AUTH_USERS ||--|| PROFILES : "1:1 Sync via Trigger"
     PROFILES ||--o{ TENANTS : "created_by"
