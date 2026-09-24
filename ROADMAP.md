@@ -1,7 +1,7 @@
 # 🗺️ Omniverse Ecosystem Master Roadmap
 
 > **Hệ sinh thái:** Tuquet / Omni Creator  
-> **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-cloud` | `scoop-bucket`  
+> **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-cloud` | `tuquet-scoop-bucket`  
 > **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Cloud Multi-Tenant SaaS BaaS Hub).
 
 ---
