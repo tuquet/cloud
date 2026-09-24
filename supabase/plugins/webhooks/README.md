@@ -1,7 +1,8 @@
 # ⚡ Enterprise Plugin: Transactional Outbox & Webhooks (`webhooks`)
 
 > **Hạ Tầng Hàng Đợi Sự Kiện Bất Đồng Bộ & Phát Sóng Webhook Độ Tin Cậy Cao (Event Bus & Webhook Dispatcher)**  
-> Cung cấp cơ chế **Transactional Outbox Pattern** (`events.outbox`), quản lý danh mục đích nhận Webhook bên ngoài (`events.subscriptions`), và lưu trữ nhật ký đối soát lượt gọi HTTP (`events.deliveries`). Đảm bảo độ tin cậy At-Least-Once Delivery mà không làm tắc nghẽn luồng xử lý database.
+> Cung cấp cơ chế **Transactional Outbox Pattern** (`events.outbox`), quản lý danh mục đích nhận Webhook bên ngoài (`events.subscriptions`), và lưu trữ nhật ký đối soát lượt gọi HTTP (`events.deliveries`). Đảm bảo độ tin cậy At-Least-Once Delivery mà không làm tắc nghẽn luồng xử lý database.  
+> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa chuẩn về Transactional Outbox Pattern tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
 
 ---
 

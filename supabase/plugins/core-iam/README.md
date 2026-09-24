@@ -1,7 +1,8 @@
 # 🛡️ Base Component: Multi-Tenant IAM & RBAC Engine (`core-iam`)
 
 > **Phân hệ Nền tảng Bất biến (Immutable System Kernel)**  
-> Cung cấp dịch vụ Định danh tập trung (Identity), Ranh giới Đa tổ chức (Multi-Tenant Boundary), Phân quyền dựa trên vai trò (RBAC), Nhật ký an ninh tuần tự (Audit Trail), và Động cơ điều phối vòng đời Plugin (`system_plugins`).
+> Cung cấp dịch vụ Định danh tập trung (Identity), Ranh giới Đa tổ chức (Multi-Tenant Boundary), Phân quyền dựa trên vai trò (RBAC), Nhật ký an ninh tuần tự (Audit Trail), và Động cơ điều phối vòng đời Plugin (`system_plugins`).  
+> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa thực thể chuẩn và quy tắc chống ảo giác tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
 
 ---
 

@@ -1,7 +1,8 @@
 # 🤖 Enterprise Plugin: Automa Cloud Bridge (`automa`)
 
 > **Cầu Nối Điều Phối Hạm Đội Tự Động Hóa Phân Tán (Distributed Fleet Orchestrator)**  
-> Cung cấp cơ sở hạ tầng lưu trữ kịch bản Workflow dạng đồ thị AST, quản lý cụm máy trạm (Worker Runners), điều phối chiến dịch chạy hàng loạt (Campaigns), lưu trữ nhật ký thực thi (Telemetry Logs), và lập lịch tự động (Schedules) cho hệ sinh thái `tuquet-automa`.
+> Cung cấp cơ sở hạ tầng lưu trữ kịch bản Workflow dạng đồ thị AST, quản lý cụm máy trạm (Worker Runners), điều phối chiến dịch chạy hàng loạt (Campaigns), lưu trữ nhật ký thực thi (Telemetry Logs), và lập lịch tự động (Schedules) cho hệ sinh thái `tuquet-automa`.  
+> 📖 **Quy chuẩn danh pháp**: Xem quy tắc cấm từ "Profile" cho trình duyệt ảo và định nghĩa chuẩn tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
 
 ---
 

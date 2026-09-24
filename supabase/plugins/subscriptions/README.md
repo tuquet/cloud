@@ -1,7 +1,8 @@
 # 💎 Enterprise Plugin: Subscriptions & Quota Metering (`subscriptions`)
 
 > **Hệ Thống Quản Lý Thuê Bao SaaS & Kiểm Soát Định Mức Tài Nguyên (SaaS Billing & Quota Engine)**  
-> Cung cấp cơ chế phân tầng gói cước SaaS đa cấp độ (`billing.plans`), quản lý trạng thái đăng ký thuê bao của từng Tổ chức (`billing.subscriptions`), đồng hồ đo lường hạn ngạch động (`billing.usage_meters`), và các hàm nguyên tử kiểm tra / ghi nhận định mức sử dụng.
+> Cung cấp cơ chế phân tầng gói cước SaaS đa cấp độ (`billing.plans`), quản lý trạng thái đăng ký thuê bao của từng Tổ chức (`billing.subscriptions`), đồng hồ đo lường hạn ngạch động (`billing.usage_meters`), và các hàm nguyên tử kiểm tra / ghi nhận định mức sử dụng.  
+> 📖 **Quy chuẩn danh pháp**: Xem định nghĩa chuẩn về Plan, Subscription và Quota Meter tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
 
 ---
 

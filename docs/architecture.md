@@ -1,6 +1,7 @@
 # Tuquet Cloud Architecture & Data Model
 
-> **KISS & YAGNI Compliant**: Tài liệu kiến trúc chuẩn hóa duy nhất của `tuquet-cloud`. Tổng hợp toàn diện sơ đồ ERD, mô hình dữ liệu đa tổ chức (Multi-Tenant RBAC), kiến trúc Plugins phân tán và cơ chế API PostgREST thời gian thực.
+> **KISS & YAGNI Compliant**: Tài liệu kiến trúc chuẩn hóa duy nhất của `tuquet-cloud`. Tổng hợp toàn diện sơ đồ ERD, mô hình dữ liệu đa tổ chức (Multi-Tenant RBAC), kiến trúc Plugins phân tán và cơ chế API PostgREST thời gian thực.  
+> 📖 **Từ Điển Danh Pháp Chuẩn Hóa**: Vui lòng tham chiếu [**Từ Điển Thuật Ngữ & Chống Ảo Giác (docs/terminology_dictionary.md)**](./terminology_dictionary.md) để đảm bảo tính nhất quán danh pháp trên toàn hệ sinh thái.
 
 ---
 

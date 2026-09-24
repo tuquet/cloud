@@ -7,8 +7,9 @@
 
 ## 📑 Mục Lục Tài Liệu (Documentation Sitemap)
 
+- 📖 **[Từ Điển Thuật Ngữ & Chống Ảo Giác (docs/terminology_dictionary.md)](docs/terminology_dictionary.md)**: Hiến pháp thuật ngữ duy nhất (Canonical Lexicon) quy định ranh giới định danh, thực thể DB và danh sách từ ngữ cấm kỵ (Zero Forbidden Terms).
 - 🏛️ **[Kiến Trúc Kỹ Thuật & Sơ Đồ ERD (docs/architecture.md)](docs/architecture.md)**: Sơ đồ Mermaid đầy đủ 5 phân vùng, từ điển trường, ma trận ràng buộc khóa ngoại, cơ chế bảo mật O(1) RLS và hướng dẫn PostgREST OpenAPI.
-- 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Chuẩn mã lệnh, proxy toàn cục hệ điều hành và quy tắc an toàn script.
+- 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Chuẩn kiến trúc cơ sở dữ liệu, danh pháp thuật ngữ chống ảo giác và an toàn script.
 - 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260920000001_base_platform_core.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook, Audit Trail và Master Plugin Registry.
 - 🔌 **[Thư Viện Phân Hệ & Plugins Độc Lập (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng được đóng gói dạng Module chuẩn mực (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
   - 🛡️ **[System Core: Multi-Tenant IAM & RBAC Engine](supabase/plugins/core-iam/README.md)**: Thành phần cốt lõi bất biến (`is_system = true`, schema `public`).

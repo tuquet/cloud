@@ -1,7 +1,8 @@
 # 📁 Enterprise Plugin: Media Storage Assets (`storage`)
 
 > **Quản Lý Metadata Tệp & Phân Lập Storage Bucket Đa Tổ Chức**  
-> Cung cấp cơ mục lục lưu trữ metadata tệp đa phương tiện (`media.assets`), tự động khởi tạo Supabase Storage Bucket `tenant-assets` và thiết lập ma trận chính sách Row Level Security (RLS) bảo vệ tệp theo ranh giới `tenant_id`.
+> Cung cấp cơ mục lục lưu trữ metadata tệp đa phương tiện (`media.assets`), tự động khởi tạo Supabase Storage Bucket `tenant-assets` và thiết lập ma trận chính sách Row Level Security (RLS) bảo vệ tệp theo ranh giới `tenant_id`.  
+> 📖 **Quy chuẩn danh pháp**: Xem quy tắc cấm từ "Vault" và định nghĩa chuẩn tại [**Từ Điển Thuật Ngữ (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md).
 
 ---
 
