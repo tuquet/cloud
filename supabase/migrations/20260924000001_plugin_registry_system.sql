@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.system_plugins (
     id VARCHAR(64) PRIMARY KEY,                  -- e.g. 'automa', 'storage', 'subscriptions', 'webhooks'
     name VARCHAR(128) NOT NULL,
     version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
-    schema_name VARCHAR(64) NOT NULL UNIQUE,     -- e.g. 'automa', 'storage_mod', 'billing', 'events'
+    schema_name VARCHAR(64) NOT NULL UNIQUE,     -- e.g. 'automa', 'media', 'billing', 'events'
     status public.plugin_status NOT NULL DEFAULT 'installed',
     dependencies TEXT[] NOT NULL DEFAULT '{}',   -- e.g. ARRAY['storage']
     description TEXT,

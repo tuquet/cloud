@@ -14,8 +14,8 @@ BEGIN
     END IF;
 END $$;
 
--- 2. Atomic Schema Drop (Drops storage_mod.assets, indexes, views, and functions)
-DROP SCHEMA IF EXISTS storage_mod CASCADE;
+-- 2. Atomic Schema Drop (Drops media.assets, indexes, views, and functions)
+DROP SCHEMA IF EXISTS media CASCADE;
 
 -- 3. Unregister Plugin from Master Registry (Validates reverse dependencies)
 SELECT public.unregister_plugin('storage');

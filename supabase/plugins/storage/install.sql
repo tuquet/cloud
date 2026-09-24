@@ -2,17 +2,17 @@
 -- TUQUET-CLOUD PLUGIN: MEDIA STORAGE & ASSETS MANAGEMENT (INSTALLATION SCRIPT)
 -- Plugin ID: storage
 -- Version: 1.0.0
--- Architecture: PostgreSQL Dedicated Schema Isolation (schema: storage_mod)
+-- Architecture: PostgreSQL Dedicated Schema Isolation (schema: media)
 -- ============================================================================
 
 -- 1. Create Dedicated Schema & Grants
-CREATE SCHEMA IF NOT EXISTS storage_mod;
-GRANT USAGE ON SCHEMA storage_mod TO authenticated, service_role, anon;
-ALTER DEFAULT PRIVILEGES IN SCHEMA storage_mod GRANT ALL ON TABLES TO authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA storage_mod GRANT ALL ON FUNCTIONS TO authenticated, service_role;
+CREATE SCHEMA IF NOT EXISTS media;
+GRANT USAGE ON SCHEMA media TO authenticated, service_role, anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA media GRANT ALL ON TABLES TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA media GRANT ALL ON FUNCTIONS TO authenticated, service_role;
 
--- 2. Metadata Table inside schema storage_mod
-CREATE TABLE IF NOT EXISTS storage_mod.assets (
+-- 2. Metadata Table inside schema media
+CREATE TABLE IF NOT EXISTS media.assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
@@ -27,23 +27,23 @@ CREATE TABLE IF NOT EXISTS storage_mod.assets (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-COMMENT ON TABLE storage_mod.assets IS '[Plugin: storage] Metadata catalog for tenant assets stored in Supabase Storage';
+COMMENT ON TABLE media.assets IS '[Plugin: storage] Metadata catalog for tenant assets stored in Supabase Storage';
 
-CREATE INDEX IF NOT EXISTS idx_storage_assets_tenant ON storage_mod.assets (tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_storage_assets_file_path ON storage_mod.assets (bucket_name, file_path);
+CREATE INDEX IF NOT EXISTS idx_storage_assets_tenant ON media.assets (tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_storage_assets_file_path ON media.assets (bucket_name, file_path);
 
 -- RLS
-ALTER TABLE storage_mod.assets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE media.assets ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "assets_select" ON storage_mod.assets
+CREATE POLICY "assets_select" ON media.assets
     FOR SELECT TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:read') OR public.is_tenant_member(tenant_id));
 
-CREATE POLICY "assets_insert" ON storage_mod.assets
+CREATE POLICY "assets_insert" ON media.assets
     FOR INSERT TO authenticated
     WITH CHECK (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id));
 
-CREATE POLICY "assets_delete" ON storage_mod.assets
+CREATE POLICY "assets_delete" ON media.assets
     FOR DELETE TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:delete') OR public.is_tenant_admin(tenant_id));
 
@@ -98,7 +98,7 @@ SELECT public.register_plugin(
     'storage',
     'Media Storage & Assets',
     '1.0.0',
-    'storage_mod',
+    'media',
     ARRAY[]::TEXT[],
     'Multi-tenant file metadata management and isolated Supabase Storage bucket RLS policies',
     '{"bucket": "tenant-assets", "max_file_size_mb": 50}'::jsonb

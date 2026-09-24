@@ -71,9 +71,12 @@ CREATE TABLE IF NOT EXISTS public.roles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- Đảm bảo tên vai trò là duy nhất trong mỗi tenant, hoặc trong phạm vi system roles
+-- Đảm bảo tên vai trò là duy nhất: System roles (tenant_id IS NULL) và Tenant roles (tenant_id IS NOT NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_system_name_unique 
+    ON public.roles (name) WHERE tenant_id IS NULL;
+
 CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_tenant_name_unique 
-    ON public.roles (COALESCE(tenant_id, '00000000-0000-0000-0000-000000000000'::uuid), name);
+    ON public.roles (tenant_id, name) WHERE tenant_id IS NOT NULL;
 
 -- 2.4. Bảng Quyền hạn nguyên tử (Permissions)
 CREATE TABLE IF NOT EXISTS public.permissions (
@@ -126,12 +129,12 @@ CREATE TABLE IF NOT EXISTS public.tenant_invitations (
 
 -- 2.9. Bảng Nhật ký kiểm toán an ninh (Audit Logs)
 CREATE TABLE IF NOT EXISTS public.audit_logs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     actor_id UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    action VARCHAR(100) NOT NULL,
-    entity_type VARCHAR(50) NOT NULL,
-    entity_id VARCHAR(100) NOT NULL,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
     old_values JSONB,
     new_values JSONB,
     ip_address INET,
@@ -272,9 +275,14 @@ BEGIN
         '[]'::jsonb
     )
     INTO user_tenants
-    FROM public.tenant_members tm
-    WHERE tm.user_id = (event->>'user_id')::uuid
-      AND tm.status = 'active';
+    FROM (
+        SELECT tm.id, tm.tenant_id
+        FROM public.tenant_members tm
+        WHERE tm.user_id = (event->>'user_id')::uuid
+          AND tm.status = 'active'
+        ORDER BY tm.joined_at ASC
+        LIMIT 25 -- Bao ve kich thuoc JWT header < 8KB khi user tham gia nhieu tenant
+    ) tm;
 
     claims := event->'claims';
     claims := jsonb_set(claims, '{app_metadata,tenants}', user_tenants);
