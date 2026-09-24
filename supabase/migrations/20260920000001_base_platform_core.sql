@@ -1,8 +1,10 @@
 -- ============================================================================
--- SUPABASE MIGRATION: SCALABLE MULTI-TENANT RBAC DATABASE SCHEMA
--- Version: 20260922000001
--- Description: Production-ready Multi-tenant Role-Based Access Control schema
---              with RLS optimization, Custom Claims Hook support, and Seed Data.
+-- SUPABASE MIGRATION: BASE PLATFORM CORE & KERNEL ENGINE
+-- Version: 20260920000001
+-- Target: Supabase / PostgreSQL (Base Core Infrastructure)
+-- Description: Unifies foundational Multi-tenant Identity & Access Management (IAM),
+--              Role-Based Access Control (RBAC), Security Definer Helpers,
+--              Custom Access Token Claims Hook, and Master System Plugin Registry.
 -- ============================================================================
 
 -- Bật phần mở rộng cần thiết
@@ -31,8 +33,14 @@ EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
+DO $$ BEGIN
+    CREATE TYPE public.plugin_status AS ENUM ('installed', 'disabled', 'uninstalled');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
 -- ============================================================================
--- 2. ĐỊNH NGHĨA CÁC BẢNG (TABLE DEFINITIONS)
+-- 2. ĐỊNH NGHĨA CÁC BẢNG NỀN TẢNG (CORE TABLE DEFINITIONS)
 -- ============================================================================
 
 -- 2.1. Hồ sơ người dùng mở rộng (1:1 với auth.users)
@@ -78,9 +86,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_system_name_unique
 CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_tenant_name_unique 
     ON public.roles (tenant_id, name) WHERE tenant_id IS NOT NULL;
 
--- 2.4. Bảng Quyền hạn nguyên tử (Permissions)
+-- 2.4. Bảng Quyền hạn nguyên tử (Permissions Dictionary)
 CREATE TABLE IF NOT EXISTS public.permissions (
-    id VARCHAR(64) PRIMARY KEY, -- Format: 'module:action' (vd: 'projects:create')
+    id VARCHAR(64) PRIMARY KEY, -- Format: 'module:action' (vd: 'tenants:update')
     module VARCHAR(50) NOT NULL,
     description TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
@@ -127,7 +135,7 @@ CREATE TABLE IF NOT EXISTS public.tenant_invitations (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 2.9. Bảng Nhật ký kiểm toán an ninh (Audit Logs)
+-- 2.9. Bảng Nhật ký kiểm toán an ninh (Audit Logs - Sequential Identity Clustered)
 CREATE TABLE IF NOT EXISTS public.audit_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -142,16 +150,22 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 2.10. Bảng Dữ liệu mẫu thuộc Tenant (Demo Resource: Projects)
-CREATE TABLE IF NOT EXISTS public.projects (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
+-- 2.10. Bảng Đăng ký Plugin Hệ thống (Master System Plugin Registry)
+CREATE TABLE IF NOT EXISTS public.system_plugins (
+    id VARCHAR(64) PRIMARY KEY,                  -- vd: 'core-iam', 'automa', 'storage', 'subscriptions', 'webhooks'
+    name VARCHAR(128) NOT NULL,
+    version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
+    schema_name VARCHAR(64) NOT NULL UNIQUE,     -- vd: 'public', 'automa', 'media', 'billing', 'events'
+    status public.plugin_status NOT NULL DEFAULT 'installed',
+    is_system BOOLEAN NOT NULL DEFAULT false,    -- TRUE = Bất biến (Core Kernel), FALSE = On-demand plugin
+    dependencies TEXT[] NOT NULL DEFAULT '{}',   -- vd: ARRAY['storage']
     description TEXT,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    installed_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    installed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb
 );
+
+COMMENT ON TABLE public.system_plugins IS 'Master registry tracking all core and dynamically installed plugins/schemas in the BaaS instance';
 
 -- ============================================================================
 -- 3. CHỈ MỤC HIỆU NĂNG CAO (SCALABLE COMPOSITE INDEXES)
@@ -169,7 +183,9 @@ CREATE INDEX IF NOT EXISTS idx_invitations_tenant_status ON public.tenant_invita
 CREATE INDEX IF NOT EXISTS idx_invitations_email ON public.tenant_invitations(email);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_time ON public.audit_logs(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(tenant_id, actor_id);
-CREATE INDEX IF NOT EXISTS idx_projects_tenant_created ON public.projects(tenant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_system_plugins_status ON public.system_plugins(status);
+CREATE INDEX IF NOT EXISTS idx_system_plugins_schema ON public.system_plugins(schema_name);
+CREATE INDEX IF NOT EXISTS idx_system_plugins_is_system ON public.system_plugins(is_system);
 
 -- ============================================================================
 -- 4. HÀM TRỢ NĂNG BẢO MẬT & TRÁNH ĐỆ QUY RLS (SECURITY DEFINER HELPERS)
@@ -249,6 +265,7 @@ BEGIN
 END;
 $$;
 
+-- 4.5. Custom Access Token Hook với giới hạn an toàn 25 Tenants (<8KB Header)
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -281,7 +298,7 @@ BEGIN
         WHERE tm.user_id = (event->>'user_id')::uuid
           AND tm.status = 'active'
         ORDER BY tm.joined_at ASC
-        LIMIT 25 -- Bao ve kich thuoc JWT header < 8KB khi user tham gia nhieu tenant
+        LIMIT 25 -- Bảo vệ kích thước JWT header < 8KB khi user tham gia nhiều tenant
     ) tm;
 
     claims := event->'claims';
@@ -292,7 +309,114 @@ END;
 $$;
 
 -- ============================================================================
--- 5. DATABASE TRIGGERS TỰ ĐỘNG HÓA
+-- 5. PLUGIN LIFECYCLE RPCs (ĐỘNG CƠ QUẢN LÝ VÒNG ĐỜI PLUGIN)
+-- ============================================================================
+
+-- 5.1. Register Plugin Function
+CREATE OR REPLACE FUNCTION public.register_plugin(
+    p_id VARCHAR(64),
+    p_name VARCHAR(128),
+    p_version VARCHAR(32),
+    p_schema_name VARCHAR(64),
+    p_dependencies TEXT[] DEFAULT '{}',
+    p_description TEXT DEFAULT NULL,
+    p_is_system BOOLEAN DEFAULT false,
+    p_metadata JSONB DEFAULT '{}'::jsonb
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    INSERT INTO public.system_plugins (
+        id, name, version, schema_name, status, is_system, dependencies, description, installed_by, metadata, installed_at
+    )
+    VALUES (
+        p_id, p_name, p_version, p_schema_name, 'installed', p_is_system, p_dependencies, p_description, auth.uid(), p_metadata, timezone('utc'::text, now())
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        version = EXCLUDED.version,
+        schema_name = EXCLUDED.schema_name,
+        status = 'installed',
+        is_system = EXCLUDED.is_system,
+        dependencies = EXCLUDED.dependencies,
+        description = EXCLUDED.description,
+        metadata = EXCLUDED.metadata,
+        installed_at = timezone('utc'::text, now());
+END;
+$$;
+
+-- 5.2. Unregister Plugin Function (Bảo vệ Core Kernel & Kiểm tra phụ thuộc đảo)
+CREATE OR REPLACE FUNCTION public.unregister_plugin(
+    p_id VARCHAR(64)
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_is_system BOOLEAN;
+    v_dependent_plugin TEXT;
+BEGIN
+    -- 1. Kiểm tra nếu là Core System Plugin (Bất biến, không thể gỡ bỏ)
+    SELECT is_system INTO v_is_system
+    FROM public.system_plugins
+    WHERE id = p_id;
+
+    IF v_is_system IS TRUE THEN
+        RAISE EXCEPTION 'Cannot unregister core system plugin "%": Foundation components are immutable.', p_id
+            USING ERRCODE = '55000';
+    END IF;
+
+    -- 2. Kiểm tra phụ thuộc đảo (Reverse Dependency Check)
+    SELECT id INTO v_dependent_plugin
+    FROM public.system_plugins
+    WHERE status = 'installed' AND p_id = ANY(dependencies)
+    LIMIT 1;
+
+    IF v_dependent_plugin IS NOT NULL THEN
+        RAISE EXCEPTION 'Cannot unregister plugin "%": Plugin "%" depends on it.', p_id, v_dependent_plugin
+            USING ERRCODE = '23503';
+    END IF;
+
+    DELETE FROM public.system_plugins WHERE id = p_id;
+END;
+$$;
+
+-- 5.3. Get Installed Plugins Function
+CREATE OR REPLACE FUNCTION public.get_installed_plugins()
+RETURNS TABLE (
+    id VARCHAR(64),
+    name VARCHAR(128),
+    version VARCHAR(32),
+    schema_name VARCHAR(64),
+    status public.plugin_status,
+    is_system BOOLEAN,
+    dependencies TEXT[],
+    description TEXT,
+    installed_at TIMESTAMPTZ,
+    metadata JSONB
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        sp.id, sp.name, sp.version, sp.schema_name, sp.status, sp.is_system, sp.dependencies, sp.description, sp.installed_at, sp.metadata
+    FROM public.system_plugins sp
+    WHERE sp.status = 'installed'
+    ORDER BY sp.is_system DESC, sp.installed_at ASC;
+END;
+$$;
+
+-- ============================================================================
+-- 6. DATABASE TRIGGERS TỰ ĐỘNG HÓA
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
@@ -316,9 +440,6 @@ CREATE TRIGGER set_roles_updated_at BEFORE UPDATE ON public.roles FOR EACH ROW E
 
 DROP TRIGGER IF EXISTS set_tenant_members_updated_at ON public.tenant_members;
 CREATE TRIGGER set_tenant_members_updated_at BEFORE UPDATE ON public.tenant_members FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
-
-DROP TRIGGER IF EXISTS set_projects_updated_at ON public.projects;
-CREATE TRIGGER set_projects_updated_at BEFORE UPDATE ON public.projects FOR EACH ROW EXECUTE FUNCTION public.handle_updated_at();
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
@@ -379,7 +500,7 @@ CREATE TRIGGER on_tenant_created_assign_owner
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_tenant_owner();
 
 -- ============================================================================
--- 6. BẬT VÀ THIẾT LẬP CHÍNH SÁCH BẢO MẬT (ROW LEVEL SECURITY - RLS)
+-- 7. BẬT VÀ THIẾT LẬP CHÍNH SÁCH BẢO MẬT (ROW LEVEL SECURITY - RLS)
 -- ============================================================================
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
@@ -391,7 +512,7 @@ ALTER TABLE public.tenant_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.member_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tenant_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.system_plugins ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Profiles are readable by authenticated users"
     ON public.profiles FOR SELECT TO authenticated USING (true);
@@ -490,82 +611,88 @@ CREATE POLICY "Authorized members can view audit logs"
     ON public.audit_logs FOR SELECT TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'audit:read'));
 
-CREATE POLICY "Tenant members can view projects"
-    ON public.projects FOR SELECT TO authenticated
+-- Chính sách RLS cho System Plugins
+CREATE POLICY "system_plugins_select_all" ON public.system_plugins
+    FOR SELECT TO authenticated
+    USING (TRUE);
+
+CREATE POLICY "system_plugins_manage_admin" ON public.system_plugins
+    FOR ALL TO authenticated
     USING (
-        tenant_id IN (SELECT public.get_user_tenant_ids()) 
-        AND public.has_tenant_permission(tenant_id, 'projects:read')
+        auth.jwt() ->> 'role' = 'service_role'
+        OR EXISTS (
+            SELECT 1 FROM public.roles r
+            JOIN public.member_roles mr ON mr.role_id = r.id
+            JOIN public.tenant_members tm ON tm.id = mr.member_id
+            WHERE tm.user_id = auth.uid() AND r.name = 'owner'
+        )
     );
-
-CREATE POLICY "Tenant members with create permission can insert projects"
-    ON public.projects FOR INSERT TO authenticated
-    WITH CHECK (
-        tenant_id IN (SELECT public.get_user_tenant_ids()) 
-        AND public.has_tenant_permission(tenant_id, 'projects:create')
-    );
-
-CREATE POLICY "Tenant members with update permission can edit projects"
-    ON public.projects FOR UPDATE TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'projects:update'))
-    WITH CHECK (public.has_tenant_permission(tenant_id, 'projects:update'));
-
-CREATE POLICY "Tenant members with delete permission can delete projects"
-    ON public.projects FOR DELETE TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'projects:delete'));
 
 -- ============================================================================
--- 7. SEED DATA MẪU (PERMISSIONS & DEFAULT SYSTEM ROLES)
+-- 8. SEED DATA MẪU (PERMISSIONS & DEFAULT SYSTEM ROLES & CORE REGISTRATION)
 -- ============================================================================
 
 INSERT INTO public.permissions (id, module, description) VALUES
-    ('tenants:read', 'tenants', 'Xem thông tin tổ chức'),
-    ('tenants:update', 'tenants', 'Cập nhật cấu hình và thông tin tổ chức'),
-    ('tenants:delete', 'tenants', 'Xóa hoàn toàn tổ chức'),
-    ('members:read', 'members', 'Xem danh sách thành viên trong tổ chức'),
-    ('members:invite', 'members', 'Mời thành viên mới vào tổ chức'),
-    ('members:update', 'members', 'Cập nhật trạng thái thành viên'),
-    ('members:manage', 'members', 'Gán và thu hồi vai trò của thành viên'),
-    ('members:delete', 'members', 'Xóa thành viên khỏi tổ chức'),
-    ('roles:read', 'roles', 'Xem danh sách các vai trò và quyền hạn'),
-    ('roles:manage', 'roles', 'Tạo, sửa và xóa các vai trò tùy chỉnh (Custom Roles)'),
-    ('billing:read', 'billing', 'Xem thông tin gói cước và hóa đơn'),
-    ('billing:manage', 'billing', 'Thay đổi phương thức thanh toán và nâng cấp gói'),
-    ('audit:read', 'audit', 'Xem nhật ký kiểm toán hệ thống'),
-    ('projects:read', 'projects', 'Xem danh sách và chi tiết dự án'),
-    ('projects:create', 'projects', 'Tạo dự án mới'),
-    ('projects:update', 'projects', 'Chỉnh sửa nội dung dự án'),
-    ('projects:delete', 'projects', 'Xóa bỏ dự án')
+    ('tenants:read',    'tenants', 'Xem thông tin tổ chức'),
+    ('tenants:update',  'tenants', 'Cập nhật cấu hình và thông tin tổ chức'),
+    ('tenants:delete',  'tenants', 'Xóa hoàn toàn tổ chức'),
+    ('members:read',    'members', 'Xem danh sách thành viên trong tổ chức'),
+    ('members:invite',  'members', 'Mời thành viên mới vào tổ chức'),
+    ('members:update',  'members', 'Cập nhật trạng thái thành viên'),
+    ('members:manage',  'members', 'Gán và thu hồi vai trò của thành viên'),
+    ('members:delete',  'members', 'Xóa thành viên khỏi tổ chức'),
+    ('roles:read',      'roles',   'Xem danh sách các vai trò và quyền hạn'),
+    ('roles:manage',    'roles',   'Tạo, sửa và xóa các vai trò tùy chỉnh (Custom Roles)'),
+    ('billing:read',    'billing', 'Xem thông tin gói cước và hóa đơn'),
+    ('billing:manage',  'billing', 'Thay đổi phương thức thanh toán và nâng cấp gói'),
+    ('audit:read',      'audit',   'Xem nhật ký kiểm toán hệ thống'),
+    ('plugins:read',    'system',  'Xem danh mục plugin đã cài đặt và cấu hình'),
+    ('plugins:manage',  'system',  'Cài đặt, nâng cấp hoặc gỡ bỏ các plugin hệ thống')
 ON CONFLICT (id) DO UPDATE SET 
     description = EXCLUDED.description,
     module = EXCLUDED.module;
 
 INSERT INTO public.roles (id, tenant_id, name, display_name, description, is_system) VALUES
-    ('00000000-0000-0000-0000-000000000001', NULL, 'owner', 'Chủ sở hữu', 'Toàn quyền kiểm soát và chịu trách nhiệm pháp lý cao nhất đối với tổ chức', true),
-    ('00000000-0000-0000-0000-000000000002', NULL, 'admin', 'Quản trị viên', 'Quản lý thành viên, tài nguyên và cấu hình hoạt động thường nhật', true),
-    ('00000000-0000-0000-0000-000000000003', NULL, 'member', 'Thành viên', 'Cộng tác viên tiêu chuẩn, tạo và chỉnh sửa tài nguyên được phép', true),
-    ('00000000-0000-0000-0000-000000000004', NULL, 'viewer', 'Người xem', 'Chỉ có quyền đọc dữ liệu, không được tạo mới hoặc chỉnh sửa', true)
+    ('00000000-0000-0000-0000-000000000001', NULL, 'owner',  'Chủ sở hữu',    'Toàn quyền kiểm soát và chịu trách nhiệm pháp lý cao nhất đối với tổ chức', true),
+    ('00000000-0000-0000-0000-000000000002', NULL, 'admin',  'Quản trị viên', 'Quản lý thành viên, tài nguyên và cấu hình hoạt động thường nhật', true),
+    ('00000000-0000-0000-0000-000000000003', NULL, 'member', 'Thành viên',    'Cộng tác viên tiêu chuẩn, tạo và chỉnh sửa tài nguyên được phép', true),
+    ('00000000-0000-0000-0000-000000000004', NULL, 'viewer', 'Người xem',     'Chỉ có quyền đọc dữ liệu, không được tạo mới hoặc chỉnh sửa', true)
 ON CONFLICT (id) DO NOTHING;
 
+-- Gán toàn bộ quyền cho vai trò Owner
 INSERT INTO public.role_permissions (role_id, permission_id)
 SELECT '00000000-0000-0000-0000-000000000001'::uuid, p.id FROM public.permissions p
 ON CONFLICT DO NOTHING;
 
+-- Gán quyền cho vai trò Admin (trừ tenants:delete)
 INSERT INTO public.role_permissions (role_id, permission_id)
-SELECT '00000000-0000-0000-0000-000000000002'::uuid, p.id FROM public.permissions p WHERE p.id NOT IN ('tenants:delete')
+SELECT '00000000-0000-0000-0000-000000000002'::uuid, p.id FROM public.permissions p 
+WHERE p.id NOT IN ('tenants:delete')
 ON CONFLICT DO NOTHING;
 
+-- Gán quyền cho vai trò Member
 INSERT INTO public.role_permissions (role_id, permission_id) VALUES
     ('00000000-0000-0000-0000-000000000003', 'tenants:read'),
     ('00000000-0000-0000-0000-000000000003', 'members:read'),
     ('00000000-0000-0000-0000-000000000003', 'roles:read'),
-    ('00000000-0000-0000-0000-000000000003', 'projects:read'),
-    ('00000000-0000-0000-0000-000000000003', 'projects:create'),
-    ('00000000-0000-0000-0000-000000000003', 'projects:update')
+    ('00000000-0000-0000-0000-000000000003', 'plugins:read')
 ON CONFLICT DO NOTHING;
 
+-- Gán quyền cho vai trò Viewer
 INSERT INTO public.role_permissions (role_id, permission_id) VALUES
     ('00000000-0000-0000-0000-000000000004', 'tenants:read'),
     ('00000000-0000-0000-0000-000000000004', 'members:read'),
-    ('00000000-0000-0000-0000-000000000004', 'roles:read'),
-    ('00000000-0000-0000-0000-000000000004', 'projects:read')
+    ('00000000-0000-0000-0000-000000000004', 'roles:read')
 ON CONFLICT DO NOTHING;
+
+-- 8.5. Tự Động Đăng Ký Core IAM vào Bảng System Plugins (is_system = TRUE)
+SELECT public.register_plugin(
+    'core-iam',
+    'Multi-Tenant IAM & RBAC Engine',
+    '1.0.0',
+    'public',
+    ARRAY[]::TEXT[],
+    'Base Core Identity, Multi-tenancy, and Role-Based Access Control Platform',
+    TRUE, -- is_system = true (Bất biến, không thể gỡ bỏ)
+    '{"type": "kernel", "layer": 0, "immutable": true}'::jsonb
+);

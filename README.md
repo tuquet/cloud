@@ -13,14 +13,16 @@
 - 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: File OpenAPI 3.0.3 spec chuẩn mã hóa cho toàn bộ các endpoint Multi-tenant RBAC.
 - 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
-- 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260922000001_multitenant_rbac_schema.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook và Audit Trail.
-- 🔌 **[Thư Viện Plugins Mở Rộng Theo Nhu Cầu (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng mở rộng được đóng gói dạng Plugin (`install.sql` / `uninstall.sql`), chỉ cài đặt khi Admin thấy cần:
-  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file & Storage Bucket RLS phân lập theo Tenant.
-  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Chặn hạn ngạch tài nguyên.
-  - ⚡ **[Plugin 3: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện & Bắn Webhook.
+- 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260920000001_base_platform_core.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook, Audit Trail và Master Plugin Registry.
+- 🔌 **[Thư Viện Phân Hệ & Plugins (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng được đóng gói dạng Component & Plugin chuẩn mực (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
+  - 🛡️ **[System Core: Multi-Tenant IAM & RBAC](supabase/plugins/core-iam/)**: Thành phần cốt lõi bất biến (`is_system = true`).
+  - 💼 **[Plugin: Demo Projects Resource](supabase/plugins/demo-projects/)**: Nghiệp vụ dự án mẫu phân lập theo Tenant.
+  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file & Storage Bucket RLS phân lập theo Tenant (schema `media`).
+  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Chặn hạn ngạch tài nguyên (schema `billing`).
+  - ⚡ **[Plugin 3: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện & Bắn Webhook (schema `events`).
   - 🗑️ **[Plugin 4: Soft Delete & Data Retention](supabase/plugins/soft_delete/)**: Thùng rác & Khôi phục dữ liệu.
-  - 🤖 **[Plugin 5: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán.
-- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ 5 Plugins.
+  - 🤖 **[Plugin 5: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán (schema `automa`).
+- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ Plugins.
 
 ---
 
@@ -198,7 +200,7 @@ Mọi bảng nghiệp vụ đều được đánh chỉ mục bắt đầu bằn
 ### Cách 1: Sử dụng Supabase Dashboard (Nhanh nhất)
 1. Truy cập vào dự án Supabase của bạn tại [supabase.com](https://supabase.com).
 2. Vào mục **SQL Editor** ở thanh menu bên trái.
-3. Tạo truy vấn mới và dán toàn bộ nội dung trong file [supabase/migrations/20260922000001_multitenant_rbac_schema.sql](supabase/migrations/20260922000001_multitenant_rbac_schema.sql).
+3. Tạo truy vấn mới và dán toàn bộ nội dung trong file [supabase/migrations/20260920000001_base_platform_core.sql](supabase/migrations/20260920000001_base_platform_core.sql).
 4. Nhấn **Run** (Chạy). Toàn bộ bảng, index, trigger, hàm helper, chính sách RLS và dữ liệu seed sẽ được tạo tự động.
 
 ### Cách 2: Sử dụng Supabase CLI (Dành cho quy trình CI/CD)

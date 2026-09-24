@@ -115,10 +115,15 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trigger_enforce_project_quota ON public.projects;
-CREATE TRIGGER trigger_enforce_project_quota
-    BEFORE INSERT ON public.projects
-    FOR EACH ROW EXECUTE FUNCTION billing.enforce_project_quota();
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects') THEN
+        DROP TRIGGER IF EXISTS trigger_enforce_project_quota ON public.projects;
+        CREATE TRIGGER trigger_enforce_project_quota
+            BEFORE INSERT ON public.projects
+            FOR EACH ROW EXECUTE FUNCTION billing.enforce_project_quota();
+    END IF;
+END $$;
 
 -- 5. RLS
 ALTER TABLE billing.plans ENABLE ROW LEVEL SECURITY;

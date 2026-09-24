@@ -4,8 +4,13 @@
 -- Architecture: Atomic Zero-Orphan Cleanup via DROP SCHEMA CASCADE
 -- ============================================================================
 
--- 1. Drop Quota Trigger from Core Projects Table
-DROP TRIGGER IF EXISTS trigger_enforce_project_quota ON public.projects;
+-- 1. Drop Quota Trigger from Core Projects Table (If table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects') THEN
+        DROP TRIGGER IF EXISTS trigger_enforce_project_quota ON public.projects;
+    END IF;
+END $$;
 
 -- 2. Atomic Schema Drop (Instantly drops all billing tables, views, enums, and functions)
 DROP SCHEMA IF EXISTS billing CASCADE;

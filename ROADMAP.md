@@ -101,18 +101,20 @@ flowchart TD
   - [x] Ngăn chặn triệt để RLS Infinite Recursion bằng các hàm `SECURITY DEFINER` (`is_tenant_member`, `has_tenant_permission`, `is_tenant_admin`).
   - [x] Tích hợp Supabase Custom Access Token (JWT) Hook nhúng `tenant_id` và roles vào Claims để kiểm tra quyền với độ phức tạp $O(1)$.
   - [x] Đánh Composite Index bắt đầu bằng `tenant_id` trên mọi bảng nghiệp vụ nhằm triệt tiêu nguy cơ rò rỉ chéo dữ liệu và sẵn sàng cho Table Partitioning.
-- [x] **Kiến Trúc Module Hóa 5 Plugins Theo Nhu Cầu (`supabase/plugins/`):**
-  - [x] Base Core tối giản: `supabase/migrations/` chỉ chứa duy nhất schema nền tảng (`20260922000001_multitenant_rbac_schema.sql`).
-  - [x] 100% tính năng mở rộng được đóng gói dạng Plugin độc lập (`install.sql` / `uninstall.sql`), chỉ dùng khi Admin thấy cần:
-    - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập.
-    - [x] `subscriptions/`: Gói cước SaaS và tự động chặn vượt Quota `projects`.
-    - [x] `webhooks/`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch.
+- [x] **Kiến Trúc Module Hóa Phân Hệ & Plugins Theo Nhu Cầu (`supabase/plugins/`):**
+  - [x] Base Core tối giản & hợp nhất: `supabase/migrations/` chỉ chứa duy nhất schema nền tảng (`20260920000001_base_platform_core.sql`) bao gồm IAM, RBAC, Claims JWT Hook, Audit Trail và Master Plugin Registry.
+  - [x] 100% tính năng được đóng gói dạng Component & Plugin độc lập (`plugin.json`, `install.sql` / `uninstall.sql`, `README.md`):
+    - [x] `core-iam/`: Thành phần cốt lõi bất biến (`is_system = true`, cấm unregister).
+    - [x] `demo-projects/`: Bảng nghiệp vụ dự án mẫu (`projects`) phân lập theo Tenant.
+    - [x] `storage/`: Quản lý tài nguyên media & RLS Storage phân lập (schema `media`).
+    - [x] `subscriptions/`: Gói cước SaaS và tự động chặn vượt Quota `projects` (schema `billing`).
+    - [x] `webhooks/`: Hàng đợi sự kiện bất đồng bộ và Webhook dispatch (schema `events`).
     - [x] `soft_delete/`: Cơ chế xóa mềm (`deleted_at`) và phục hồi dữ liệu.
-    - [x] `automa/`: Cầu nối điều phối hạm đội tự động hóa phân tán (`automa_*`).
+    - [x] `automa/`: Cầu nối điều phối hạm đội tự động hóa phân tán (schema `automa`).
 - [x] **Seed Data, ERD Studio & Dynamic Acceptance Studio:**
   - [x] `supabase/seed.sql`: Bộ dữ liệu mẫu tự thích ứng (idempotent conditional checks), chạy sạch sẽ trên Base Core lẫn khi đã cài Plugins.
   - [x] `docs/erd_diagram.md` & `docs/erd_viewer.html`: Cập nhật toàn diện sơ đồ ERD trực quan 5 phân vùng và công cụ duyệt kéo thả zoom/pan.
-  - [x] `docs/acceptance_studio.html`: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher) và quản lý bật/tắt toàn bộ 5 Plugins theo nhu cầu.
+  - [x] `docs/acceptance_studio.html`: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher) và quản lý bật/tắt toàn bộ Plugins theo nhu cầu.
 - [x] **OpenAPI Specification:** Xuất file OpenAPI 3.0.3 JSON chuẩn (`docs/openapi_spec_rbac.json`).
 - [ ] **[Next Tasks - Core Base Focus]**:
   - [ ] Chạy kiểm thử tự động toàn bộ SQL Migration trên local Supabase Docker instance (`supabase start` && `supabase db reset`).

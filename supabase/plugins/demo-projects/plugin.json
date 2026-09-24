@@ -1,0 +1,20 @@
+{
+  "id": "demo-projects",
+  "name": "Demo Projects Resource",
+  "version": "1.0.0",
+  "schema": "public",
+  "is_system": false,
+  "description": "Showcase domain resource demonstrating multi-tenant foreign keys, RLS scoping, and granular permissions",
+  "dependencies": [
+    "core-iam"
+  ],
+  "tables": [
+    "public.projects"
+  ],
+  "permissions": [
+    "projects:read",
+    "projects:create",
+    "projects:update",
+    "projects:delete"
+  ]
+}

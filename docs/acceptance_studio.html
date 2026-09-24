@@ -204,20 +204,25 @@
               </div>
 
               <div class="flex items-center gap-2">
-                <button 
-                  v-if="!plugins[p.key]"
-                  @click="togglePlugin(p.key, true)"
-                  class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg transition font-medium shadow-md shadow-emerald-600/20"
-                >
-                  ➕ Install Plugin
-                </button>
-                <button 
-                  v-else
-                  @click="togglePlugin(p.key, false)"
-                  class="px-3.5 py-1.5 bg-rose-600/80 hover:bg-rose-500 text-white text-xs rounded-lg transition font-medium shadow-md shadow-rose-600/20"
-                >
-                  🗑️ Remove Plugin
-                </button>
+                <div v-if="p.isSystem" class="px-3.5 py-1.5 bg-blue-500/10 border border-blue-500/30 text-blue-300 text-xs rounded-lg font-medium flex items-center gap-1.5 cursor-not-allowed">
+                  <span>🔒</span> Core System (Immutable)
+                </div>
+                <template v-else>
+                  <button 
+                    v-if="!plugins[p.key]"
+                    @click="togglePlugin(p.key, true)"
+                    class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs rounded-lg transition font-medium shadow-md shadow-emerald-600/20"
+                  >
+                    ➕ Install Plugin
+                  </button>
+                  <button 
+                    v-else
+                    @click="togglePlugin(p.key, false)"
+                    class="px-3.5 py-1.5 bg-rose-600/80 hover:bg-rose-500 text-white text-xs rounded-lg transition font-medium shadow-md shadow-rose-600/20"
+                  >
+                    🗑️ Remove Plugin
+                  </button>
+                </template>
               </div>
             </div>
           </div>
@@ -481,6 +486,8 @@
 
         // Plugins State
         const plugins = ref({
+          'core-iam': true,
+          'demo-projects': true,
           storage: true,
           subscriptions: true,
           webhooks: false,
@@ -493,6 +500,25 @@
         });
 
         const pluginCatalog = [
+          {
+            key: 'core-iam',
+            name: 'Multi-Tenant IAM & RBAC Engine',
+            icon: '🛡️',
+            schema: 'public',
+            isSystem: true,
+            desc: 'Nền tảng Cốt lõi: Ranh giới đa tổ chức, RBAC, Claims JWT Hook, và Plugin Registry.',
+            tables: ['public.profiles', 'public.tenants', 'public.roles', 'public.permissions', 'public.tenant_members', 'public.system_plugins'],
+            manifest: 'supabase/plugins/core-iam/plugin.json'
+          },
+          {
+            key: 'demo-projects',
+            name: 'Demo Projects Resource',
+            icon: '💼',
+            schema: 'public',
+            desc: 'Showcase tài nguyên nghiệp vụ mẫu kết nối với tenant boundary của Core IAM.',
+            tables: ['public.projects'],
+            manifest: 'supabase/plugins/demo-projects/plugin.json'
+          },
           {
             key: 'storage',
             name: 'Media Storage & Assets',

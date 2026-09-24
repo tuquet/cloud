@@ -82,7 +82,7 @@ SELECT public.register_plugin(
     'Soft Delete & Data Retention',
     '1.0.0',
     'public',
-    ARRAY[]::TEXT[],
+    ARRAY['demo-projects']::TEXT[],
     'Standardized Soft Delete pattern with automatic RLS filtering, recycle bin, and trash recovery functions',
     '{}'::jsonb
 );

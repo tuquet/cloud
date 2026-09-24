@@ -132,24 +132,29 @@ BEGIN
     END IF;
 END $$;
 
--- 5. Sample Projects
-INSERT INTO public.projects (id, tenant_id, name, description, created_by)
-VALUES
-    (
-        'f0000000-0000-0000-0000-000000000001',
-        'b0000000-0000-0000-0000-000000000001',
-        'Omni Automation Platform',
-        'Central campaign workflow and data scraping workspace',
-        'a0000000-0000-0000-0000-000000000001'
-    ),
-    (
-        'f0000000-0000-0000-0000-000000000002',
-        'b0000000-0000-0000-0000-000000000001',
-        'Social Media Bot Network',
-        'Distributed browser automation cluster for content distribution',
-        'a0000000-0000-0000-0000-000000000001'
-    )
-ON CONFLICT (id) DO NOTHING;
+-- 5. Sample Projects (Optional - Only runs when demo-projects plugin is installed)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'projects') THEN
+        INSERT INTO public.projects (id, tenant_id, name, description, created_by)
+        VALUES
+            (
+                'f0000000-0000-0000-0000-000000000001',
+                'b0000000-0000-0000-0000-000000000001',
+                'Omni Automation Platform',
+                'Central campaign workflow and data scraping workspace',
+                'a0000000-0000-0000-0000-000000000001'
+            ),
+            (
+                'f0000000-0000-0000-0000-000000000002',
+                'b0000000-0000-0000-0000-000000000001',
+                'Social Media Bot Network',
+                'Distributed browser automation cluster for content distribution',
+                'a0000000-0000-0000-0000-000000000001'
+            )
+        ON CONFLICT (id) DO NOTHING;
+    END IF;
+END $$;
 
 -- 6. Sample Automa Plugin Data (Optional - Only runs when automa plugin tables exist)
 DO $$

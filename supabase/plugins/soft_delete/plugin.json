@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "schema": "public",
   "description": "Standardized Soft Delete pattern with automatic RLS filtering, recycle bin, and trash recovery functions",
-  "dependencies": [],
+  "dependencies": [
+    "demo-projects"
+  ],
   "tables": [
     "public.projects (deleted_at)"
   ],
