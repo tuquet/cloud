@@ -1,9 +1,8 @@
 -- ============================================================================
 -- TUQUET-CLOUD PLUGIN: SOFT DELETE & DATA RETENTION PATTERN (INSTALLATION SCRIPT)
--- Plugin Name: soft_delete
+-- Plugin ID: soft_delete
 -- Version: 1.0.0
--- Target: Supabase / PostgreSQL (Recycle Bin & Data Retention)
--- Description: Adds soft-delete column, views, and trash recovery functions.
+-- Architecture: Data Lifecycle & Trash Recovery Extension
 -- ============================================================================
 
 -- 1. Add deleted_at column to projects table
@@ -26,7 +25,6 @@ CREATE POLICY "projects_select_active_tenant_member" ON public.projects
         AND deleted_at IS NULL
     );
 
--- Allow Tenant Admins to view soft-deleted projects in Trash / Archive view
 DROP POLICY IF EXISTS "projects_select_trash_tenant_admin" ON public.projects;
 CREATE POLICY "projects_select_trash_tenant_admin" ON public.projects
     FOR SELECT TO authenticated
@@ -45,23 +43,14 @@ AS $$
 DECLARE
     v_tenant_id UUID;
 BEGIN
-    SELECT tenant_id INTO v_tenant_id
-    FROM public.projects
-    WHERE id = _project_id AND deleted_at IS NULL;
-
-    IF v_tenant_id IS NULL THEN
-        RETURN FALSE;
-    END IF;
+    SELECT tenant_id INTO v_tenant_id FROM public.projects WHERE id = _project_id AND deleted_at IS NULL;
+    IF v_tenant_id IS NULL THEN RETURN FALSE; END IF;
 
     IF NOT (public.has_tenant_permission(v_tenant_id, 'projects:delete') OR public.is_tenant_admin(v_tenant_id)) THEN
-        RAISE EXCEPTION 'Permission denied: Cannot soft-delete project'
-            USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Permission denied: Cannot soft-delete project' USING ERRCODE = '42501';
     END IF;
 
-    UPDATE public.projects
-    SET deleted_at = timezone('utc'::text, now())
-    WHERE id = _project_id;
-
+    UPDATE public.projects SET deleted_at = timezone('utc'::text, now()) WHERE id = _project_id;
     RETURN TRUE;
 END;
 $$;
@@ -75,50 +64,25 @@ AS $$
 DECLARE
     v_tenant_id UUID;
 BEGIN
-    SELECT tenant_id INTO v_tenant_id
-    FROM public.projects
-    WHERE id = _project_id AND deleted_at IS NOT NULL;
-
-    IF v_tenant_id IS NULL THEN
-        RETURN FALSE;
-    END IF;
+    SELECT tenant_id INTO v_tenant_id FROM public.projects WHERE id = _project_id AND deleted_at IS NOT NULL;
+    IF v_tenant_id IS NULL THEN RETURN FALSE; END IF;
 
     IF NOT public.is_tenant_admin(v_tenant_id) THEN
-        RAISE EXCEPTION 'Permission denied: Only tenant admin can restore deleted projects'
-            USING ERRCODE = '42501';
+        RAISE EXCEPTION 'Permission denied: Only tenant admin can restore deleted projects' USING ERRCODE = '42501';
     END IF;
 
-    UPDATE public.projects
-    SET deleted_at = NULL
-    WHERE id = _project_id;
-
+    UPDATE public.projects SET deleted_at = NULL WHERE id = _project_id;
     RETURN TRUE;
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.hard_delete_project(_project_id UUID)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-    v_tenant_id UUID;
-BEGIN
-    SELECT tenant_id INTO v_tenant_id
-    FROM public.projects
-    WHERE id = _project_id;
-
-    IF v_tenant_id IS NULL THEN
-        RETURN FALSE;
-    END IF;
-
-    IF NOT public.is_tenant_admin(v_tenant_id) THEN
-        RAISE EXCEPTION 'Permission denied: Only tenant admin can permanently purge projects'
-            USING ERRCODE = '42501';
-    END IF;
-
-    DELETE FROM public.projects WHERE id = _project_id;
-    RETURN TRUE;
-END;
-$$;
+-- 4. Register Plugin in Master Registry
+SELECT public.register_plugin(
+    'soft_delete',
+    'Soft Delete & Data Retention',
+    '1.0.0',
+    'public',
+    ARRAY[]::TEXT[],
+    'Standardized Soft Delete pattern with automatic RLS filtering, recycle bin, and trash recovery functions',
+    '{}'::jsonb
+);

@@ -1,0 +1,25 @@
+{
+  "id": "automa",
+  "name": "Automa Cloud Bridge",
+  "version": "1.0.0",
+  "schema": "automa",
+  "description": "Distributed browser automation engine coordinator, fleet runners, batch campaign runs, and telemetry logs",
+  "dependencies": [],
+  "tables": [
+    "automa.workflows",
+    "automa.runners",
+    "automa.campaign_runs",
+    "automa.execution_logs",
+    "automa.schedules"
+  ],
+  "permissions": [
+    "automa:workflows:read",
+    "automa:workflows:manage",
+    "automa:runners:read",
+    "automa:runners:manage",
+    "automa:campaigns:read",
+    "automa:campaigns:run",
+    "automa:campaigns:manage",
+    "automa:logs:read"
+  ]
+}

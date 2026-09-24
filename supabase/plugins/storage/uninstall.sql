@@ -1,10 +1,7 @@
 -- ============================================================================
 -- TUQUET-CLOUD PLUGIN: MEDIA STORAGE & ASSETS MANAGEMENT (UNINSTALLATION SCRIPT)
--- Plugin Name: storage (Media Assets)
--- Version: 1.0.0
--- Target: Supabase / PostgreSQL
--- Description: Cleanly drops media_assets table, triggers, RLS, permissions,
---              and storage bucket policies without affecting Base Core.
+-- Plugin ID: storage
+-- Architecture: Atomic Zero-Orphan Cleanup via DROP SCHEMA CASCADE
 -- ============================================================================
 
 -- 1. Drop Storage RLS Policies
@@ -17,15 +14,12 @@ BEGIN
     END IF;
 END $$;
 
--- 2. Drop Table RLS Policies & Triggers
-DROP POLICY IF EXISTS "media_assets_select_tenant_member" ON public.media_assets;
-DROP POLICY IF EXISTS "media_assets_insert_tenant_member" ON public.media_assets;
-DROP POLICY IF EXISTS "media_assets_delete_tenant_admin" ON public.media_assets;
-DROP TRIGGER IF EXISTS update_media_assets_modtime ON public.media_assets;
+-- 2. Atomic Schema Drop (Drops storage_mod.assets, indexes, views, and functions)
+DROP SCHEMA IF EXISTS storage_mod CASCADE;
 
--- 3. Drop Table & Indexes
-DROP TABLE IF EXISTS public.media_assets CASCADE;
+-- 3. Unregister Plugin from Master Registry (Validates reverse dependencies)
+SELECT public.unregister_plugin('storage');
 
--- 4. Cleanup Permissions Dictionary
+-- 4. Cleanup Permissions from Base Core
 DELETE FROM public.role_permissions WHERE permission_id LIKE 'media:%';
 DELETE FROM public.permissions WHERE module = 'media';

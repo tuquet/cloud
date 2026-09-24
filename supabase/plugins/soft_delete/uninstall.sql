@@ -1,13 +1,10 @@
 -- ============================================================================
 -- TUQUET-CLOUD PLUGIN: SOFT DELETE & DATA RETENTION PATTERN (UNINSTALLATION SCRIPT)
--- Plugin Name: soft_delete
--- Version: 1.0.0
--- Target: Supabase / PostgreSQL
--- Description: Reverts soft delete RLS policies and helper functions.
+-- Plugin ID: soft_delete
+-- Architecture: Atomic Cleanup & Project RLS Restoration
 -- ============================================================================
 
 -- 1. Drop Helper Functions
-DROP FUNCTION IF EXISTS public.hard_delete_project(UUID);
 DROP FUNCTION IF EXISTS public.restore_project(UUID);
 DROP FUNCTION IF EXISTS public.soft_delete_project(UUID);
 
@@ -29,3 +26,6 @@ CREATE POLICY "projects_select_tenant_member" ON public.projects
 -- 3. Drop Index & Column
 DROP INDEX IF EXISTS public.idx_projects_deleted_at;
 ALTER TABLE public.projects DROP COLUMN IF EXISTS deleted_at;
+
+-- 4. Unregister from Master Registry
+SELECT public.unregister_plugin('soft_delete');

@@ -497,36 +497,46 @@
             key: 'storage',
             name: 'Media Storage & Assets',
             icon: '📁',
+            schema: 'storage_mod',
             desc: 'Quản lý metadata tập tin và RLS Storage bucket theo từng Tenant.',
-            tables: ['public.media_assets', 'storage.buckets (tenant-assets)']
+            tables: ['storage_mod.assets', 'storage.buckets (tenant-assets)'],
+            manifest: 'supabase/plugins/storage/plugin.json'
           },
           {
             key: 'subscriptions',
             name: 'Subscriptions & Quota Metering',
             icon: '💎',
+            schema: 'billing',
             desc: 'Phân hạng gói cước SaaS (Free, Pro, Enterprise) và trigger chặn vượt hạn ngạch.',
-            tables: ['subscription_plans', 'tenant_subscriptions', 'usage_meters']
+            tables: ['billing.plans', 'billing.subscriptions', 'billing.usage_meters'],
+            manifest: 'supabase/plugins/subscriptions/plugin.json'
           },
           {
             key: 'webhooks',
             name: 'Asynchronous Outbox & Webhooks',
             icon: '⚡',
+            schema: 'events',
             desc: 'Transactional Outbox pattern & phát sóng Webhook HTTP cho hệ thống bên ngoài.',
-            tables: ['outbox_events', 'webhook_subscriptions', 'webhook_deliveries']
+            tables: ['events.outbox', 'events.subscriptions', 'events.deliveries'],
+            manifest: 'supabase/plugins/webhooks/plugin.json'
           },
           {
             key: 'soft_delete',
             name: 'Soft Delete & Data Retention',
             icon: '🗑️',
+            schema: 'public',
             desc: 'Thùng rác tái chế, lọc tự động RLS cho bản ghi bị xóa và hàm khôi phục dữ liệu.',
-            tables: ['projects (deleted_at)', 'soft_delete_project()']
+            tables: ['public.projects (deleted_at)', 'soft_delete_project()'],
+            manifest: 'supabase/plugins/soft_delete/plugin.json'
           },
           {
             key: 'automa',
             name: 'Automa Cloud Bridge',
             icon: '🤖',
+            schema: 'automa',
             desc: 'Cầu nối điều phối hạm đội tự động hóa phân tán kết nối với tuquet-automa.',
-            tables: ['automa_workflows', 'automa_runners', 'automa_campaign_runs', 'automa_execution_logs', 'automa_schedules']
+            tables: ['automa.workflows', 'automa.runners', 'automa.campaign_runs', 'automa.execution_logs', 'automa.schedules'],
+            manifest: 'supabase/plugins/automa/plugin.json'
           }
         ];
 
@@ -610,10 +620,11 @@
 
         const togglePlugin = (key, state) => {
           plugins.value[key] = state;
+          const p = pluginCatalog.find(item => item.key === key);
           if (state) {
-            notify('Đã Cài Đặt Plugin', `Đã thực thi install.sql cho plugin '${key}'.`, 'success');
+            notify('Đã Cài Đặt Plugin', `Schema '${p.schema}' đã khởi tạo & đăng ký vào public.system_plugins.`, 'success');
           } else {
-            notify('Đã Gỡ Bỏ Plugin', `Đã thực thi uninstall.sql cho plugin '${key}'. Base Core sạch sẽ.`, 'info');
+            notify('Gỡ Bỏ Sạch Sẽ (Zero-Orphan)', `Đã thực thi DROP SCHEMA ${p.schema} CASCADE & unregister_plugin('${key}').`, 'info');
           }
         };
 

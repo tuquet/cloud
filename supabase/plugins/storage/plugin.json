@@ -1,0 +1,16 @@
+{
+  "id": "storage",
+  "name": "Media Storage & Assets",
+  "version": "1.0.0",
+  "schema": "storage_mod",
+  "description": "Multi-tenant file metadata management and isolated Supabase Storage bucket RLS policies",
+  "dependencies": [],
+  "tables": [
+    "storage_mod.assets"
+  ],
+  "permissions": [
+    "media:read",
+    "media:upload",
+    "media:delete"
+  ]
+}
