@@ -1,8 +1,8 @@
 # 🗺️ Omniverse Ecosystem Master Roadmap
 
 > **Hệ sinh thái:** Tuquet / Omni Creator  
-> **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-creator` | `scoop-bucket`  
-> **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Cloud Multi-Tenant SaaS).
+> **Các repository nòng cốt:** `tuquet-lib` | `tuquet-automa` | `tuquet-cloud` | `scoop-bucket`  
+> **Mục tiêu:** Xây dựng nền tảng tự động hóa trình duyệt hiệu năng cao (Automation Engine), thư viện UI/Core dùng chung (Design System), và trung tâm điều phối đám mây đa tổ chức (Cloud Multi-Tenant SaaS BaaS Hub).
 
 ---
 
@@ -23,7 +23,7 @@ flowchart TD
         LOCAL_DB["SQLite Local DB (Offline-first & Encrypted Vault)"]
     end
 
-    subgraph CREATOR["3. tuquet-creator (Cloud Hub & SaaS Governance)"]
+    subgraph CLOUD["3. tuquet-cloud (Central Cloud BaaS Hub)"]
         SUPABASE["Supabase PostgreSQL (Multi-tenant RBAC)"]
         JWT["Custom JWT Token Hook (O(1) RLS Check)"]
         MODULES["Modules (Quota Metering, Storage, Webhooks Outbox)"]
@@ -31,8 +31,8 @@ flowchart TD
     end
 
     LIB -->|"npm packages (UI / Utilities)"| AUTOMA
-    LIB -.->|"UI Design System"| CREATOR
-    AUTOMA <-->|"Sync Workflows, Fleet & Telemetry"| CREATOR
+    LIB -.->|"UI Design System"| CLOUD
+    AUTOMA <-->|"Sync Workflows, Fleet & Telemetry"| CLOUD
 ```
 
 ---
@@ -41,8 +41,8 @@ flowchart TD
 
 | Giai Đoạn | Tên Giai Đoạn | Trọng Tâm | Trạng Thái |
 | :--- | :--- | :--- | :---: |
-| **Giai đoạn 1** | **Core Base & Foundation Hardening** | Chuẩn hóa toàn bộ nền móng: UI Primitives, Remote Table, Rust Engine Core, Schema RBAC, Proxy hạ tầng. | 🔥 **TRỌNG TÂM HIỆN TẠI** |
-| **Giai đoạn 2** | **Cloud Integration & SaaS Sync** | Kết nối `automa` lên `creator` cloud qua Supabase Adapter; ra mắt Web Dashboard quản trị SaaS; mở rộng components. | ⏳ Sắp thực hiện |
+| **Giai đoạn 1** | **Core Base & Foundation Hardening** | Chuẩn hóa toàn bộ nền móng: UI Primitives, Remote Table, Rust Engine Core, Schema RBAC trên Supabase, Proxy hạ tầng. | 🔥 **TRỌNG TÂM HIỆN TẠI** |
+| **Giai đoạn 2** | **Cloud Integration & SaaS Sync** | Kết nối `automa` lên `tuquet-cloud` qua Supabase Adapter; ra mắt Web Dashboard quản trị SaaS; mở rộng components. | ⏳ Sắp thực hiện |
 | **Giai đoạn 3** | **AI Agentic Automation & Distributed Grid** | AI Vision Autonomous Agent, CDP Selector tự phục hồi; điều phối hạm đội bot phân tán; thanh toán theo mức sử dụng. | 🔮 Tương lai |
 
 ---
@@ -83,16 +83,17 @@ flowchart TD
 - [x] **Quản Trị Trình Duyệt (Chromium Isolation):**
   - [x] Tải và quản lý binary Chromium độc lập theo kiến trúc Playwright (không quét hay chiếm quyền trình duyệt cá nhân của máy).
 - [x] **Phân Phối Ứng Dụng:** Đóng gói Scoop bucket (`automa.json`) và pre-built binary GitHub Releases.
+- [x] **Rust Core Toolchain:** Cấu hình và kích hoạt thành công toolchain GNU (`stable-x86_64-pc-windows-gnu`) cùng Scoop MinGW GCC và proxy SOCKS5, `cargo check` biên dịch thành công 100% `apps/core` (Finished dev profile in 2m 18s).
 - [ ] **[Next Tasks - Core Base Focus]**:
-  - [ ] **Rust Core Toolchain:** Cấu hình và chuẩn hóa môi trường build Rust cục bộ trên Windows (`apps/core`) với linker phù hợp (MinGW GCC GNU target hoặc MSVC Build Tools) để `cargo check` và `cargo build` pass 100%.
   - [ ] **Local Daemon End-to-End Test:** Chạy kiểm thử tương tác thực tế giữa Axum Daemon (`127.0.0.1:8765`), Scalar API Server (`:8767`), và Web Studio Canvas (`apps/webe`).
   - [ ] **Shadcn Consumption Alignment:** Đảm bảo `apps/webe` tiêu thụ trực tiếp các linh kiện từ `@tuquet/vue-ui` và `@tuquet/vue-table` thay vì định nghĩa trùng lặp.
 
 ---
 
-### ☁️ Workstream 1.3: `tuquet-creator` (Nền Tảng Multi-Tenant RBAC Cloud)
-*Trách nhiệm: Quản trị bảo mật phân quyền đa tổ chức, mô hình hóa dữ liệu chuẩn hóa trên Supabase.*
+### ☁️ Workstream 1.3: `tuquet-cloud` (Nền Tảng Multi-Tenant RBAC Cloud & BaaS Hub)
+*Trách nhiệm: Quản trị bảo mật phân quyền đa tổ chức, mô hình hóa dữ liệu chuẩn hóa trên Supabase (trước đây là `tuquet-creator`).*
 
+- [x] **Định Danh Chuẩn Hóa:** Đổi tên repository và định vị chuẩn xác thành `tuquet-cloud` — đóng vai trò là Central Cloud BaaS Hub của toàn bộ hệ sinh thái.
 - [x] **Schema Thiết Kế Multi-Tenant RBAC:**
   - [x] Hoàn thiện schema PostgreSQL (`tenants`, `profiles`, `roles`, `permissions`, `member_roles`, `tenant_invitations`, `audit_logs`, `projects`).
   - [x] Phân biệt rõ ràng System Role (`tenant_id IS NULL`) và Custom Tenant Role (`tenant_id = UUID`).
@@ -119,7 +120,7 @@ flowchart TD
   - [x] `configure_git_proxy.ps1`: Cấu hình repo local dùng proxy SOCKS5 (`127.0.0.1:1080`).
   - [x] `ensure_proxy.ps1` & `ensure_proxy.bat`: Tự phục hồi Cloudflare Tunnel (`2222`) và SSH SOCKS5 (`1080`).
   - [x] `stop_proxy.ps1` & `test_network.ps1`: Giải phóng cổng và chẩn đoán trạng thái kết nối.
-  - [x] Áp dụng nhất quán 100% trên `tuquet-lib`, `tuquet-automa`, `tuquet-creator`, `scoop-bucket`, và `lotte-ecosystem`.
+  - [x] Áp dụng nhất quán 100% trên `tuquet-lib`, `tuquet-automa`, `tuquet-cloud`, `scoop-bucket`, và `lotte-ecosystem`.
 - [x] **Chuẩn Hóa VS Code Workspace:**
   - [x] Cấu hình `"search.useIgnoreFiles": false` và danh sách loại trừ artifact trong `.vscode/settings.json`.
   - [x] Tích hợp 5 tác vụ Network & Git Proxy tiêu chuẩn trong `.vscode/tasks.json`.
@@ -130,9 +131,9 @@ flowchart TD
 
 1. **Supabase Remote Adapter trên `tuquet-automa`:**
    - Xây dựng tầng kết nối đám mây song song với SQLite cục bộ.
-   - Hỗ trợ người dùng đồng bộ workflows, campaign templates, và lịch sử thực thi lên tài khoản Creator trên mây.
-2. **Web Dashboard Quản Trị SaaS trên `tuquet-creator`:**
-   - Xây dựng giao diện web cho Creator quản lý tổ chức, phân quyền thành viên, cấp phát khóa kích hoạt bot và giám sát quota.
+   - Hỗ trợ người dùng đồng bộ workflows, campaign templates, và lịch sử thực thi lên tài khoản Creator trên mây `tuquet-cloud`.
+2. **Web Dashboard Quản Trị SaaS (`tuquet-creator` app):**
+   - Xây dựng giao diện web cho Creator quản lý tổ chức, phân quyền thành viên, cấp phát khóa kích hoạt bot và giám sát quota thông qua `tuquet-cloud`.
 3. **Mở Rộng UI Components trên `tuquet-lib`:**
    - Bổ sung Analytics Charts, Agent Flow Node components, và Command Palette (`Cmd+K`).
 
@@ -143,7 +144,7 @@ flowchart TD
 1. **AI Vision & Self-Healing Automation (`tuquet-automa`):**
    - Tích hợp mô hình AI đa phương thức để tự phục hồi Selector khi giao diện mục tiêu thay đổi.
    - Giải quyết tự động các bài toán tương tác phức tạp (CAPTCHA, OTP, dynamic multi-step canvas).
-2. **Distributed Runner Grid (`tuquet-creator`):**
+2. **Distributed Runner Grid (`tuquet-cloud`):**
    - Quản trị hạm đội hàng trăm bot runner `automa` phân tán trên toàn cầu thông qua WebSocket/Supabase Realtime.
    - Tích hợp cổng thanh toán SaaS (Stripe/MoMo) và tính cước theo mức sử dụng thực tế (Pay-as-you-go).
 3. **Headless Cross-Platform UI (`tuquet-lib`):**

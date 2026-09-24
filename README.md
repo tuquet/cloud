@@ -1,6 +1,7 @@
-# Kiến Trúc Multi-Tenant RBAC Chuẩn Hóa Trên Supabase (PostgreSQL)
+# ☁️ Tuquet Cloud
 
-Hệ thống thiết kế cơ sở dữ liệu mẫu phục vụ kiến trúc **Đa người thuê (Multi-tenancy)** kết hợp **Kiểm soát truy cập dựa trên vai trò (Role-Based Access Control - RBAC)** có khả năng mở rộng cao (Scale-ready) trên nền tảng **Supabase**.
+> **Omniverse Central Cloud BaaS & Multi-Tenant RBAC Hub**  
+> Nền tảng Backend-as-a-Service (BaaS) trung tâm cho toàn bộ hệ sinh thái Tuquet trên nền **Supabase (PostgreSQL)**, cung cấp dịch vụ Định danh (IAM), Phân quyền đa tổ chức (Multi-Tenant RBAC), Quản lý hạn ngạch (Subscriptions & Quota), Lưu trữ (Storage), và Hàng đợi sự kiện (Outbox & Webhooks).
 
 ---
 
