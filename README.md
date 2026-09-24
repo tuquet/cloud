@@ -6,8 +6,9 @@
 
 [![Supabase](https://img.shields.io/badge/Supabase-181818?style=for-the-badge&logo=supabase&logoColor=3ECF8E)](https://supabase.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15+-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Architecture](https://img.shields.io/badge/Architecture-Modular_Schema_Plugins-blueviolet?style=for-the-badge)](#-3-modular-schema-plugin-catalog)
+[![Architecture](https://img.shields.io/badge/Architecture-Modular_Schema_Plugins-blueviolet?style=for-the-badge)](#-2-modular-schema-plugin-catalog-authoritative-router)
 [![Security](https://img.shields.io/badge/RLS-O(1)_JWT_Claims-success?style=for-the-badge)](#-why-tuquet-cloud)
+[![Documentation](https://img.shields.io/badge/Docs-SOLID_SSOT-blue?style=for-the-badge)](#-solid-documentation-architecture-zero-doc-rot)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 
 <p align="center">
@@ -63,11 +64,11 @@ flowchart TD
     KERNEL ==> CONTRACT
 
     subgraph PLUGINS["DYNAMIC ON-DEMAND PLUGINS (Isolated Schemas)"]
-        STORAGE["📦 Plugin: storage\nSchema: media\nTables: assets"]
-        BILLING["💎 Plugin: subscriptions\nSchema: billing\nTables: plans, subs, meters"]
-        EVENTS["⚡ Plugin: webhooks\nSchema: events\nTables: outbox, deliveries"]
-        AUTOMA["🤖 Plugin: automa\nSchema: automa\nTables: workflows, runners, runs"]
-        CUSTOM["🔮 Future Plugins\nSchema: custom_*\n(e.g., CRM, Notifications, AI)"]
+        STORAGE["📦 Plugin: storage\nSchema: media\nAuthoritative Docs: plugins/storage/"]
+        BILLING["💎 Plugin: subscriptions\nSchema: billing\nAuthoritative Docs: plugins/subscriptions/"]
+        EVENTS["⚡ Plugin: webhooks\nSchema: events\nAuthoritative Docs: plugins/webhooks/"]
+        AUTOMA["🤖 Plugin: automa\nSchema: automa\nAuthoritative Docs: plugins/automa/"]
+        CUSTOM["🔮 Future Plugins\nSchema: custom_*\nZero Core Modification"]
     end
 
     CONTRACT -.-> STORAGE
@@ -79,52 +80,48 @@ flowchart TD
 
 ---
 
-## 📑 Documentation Sitemap
+## 📚 SOLID Documentation Architecture (Zero Doc Rot)
 
-- 📖 **[Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)](docs/terminology_dictionary.md)**: Authoritative lexicon defining naming invariants, database entities, and forbidden ambiguous terms.
-- 🏛️ **[Technical Architecture & Extension Contract (docs/architecture.md)](docs/architecture.md)**: In-depth technical specifications, Kernel ERD, universal plugin attachment contracts, and PostgREST OpenAPI guide.
-- 🤖 **[Project Agent Behavioral Rules (AGENTS.md)](AGENTS.md)**: Coding standards, database invariants, and anti-hallucination rules for AI agents and contributors.
-- 💾 **[Base Platform Core Migration (supabase/migrations/)](supabase/migrations/)**: Single baseline forward migration (`20260920000001_base_platform_core.sql`) setting up IAM, RBAC, JWT hook, audit trail, and plugin registry.
-- 🔌 **[Modular Plugin Catalog (supabase/plugins/)](supabase/plugins/)**: Self-contained domain plugins (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
-  - 🛡️ **[System Core: Multi-Tenant IAM & RBAC Engine](supabase/plugins/core-iam/README.md)**: Immutable kernel (`is_system = true`, schema `public`).
-  - 📁 **[Plugin 1: Media Storage Assets](supabase/plugins/storage/README.md)**: File metadata catalog & Storage bucket RLS (schema `media`).
-  - 💎 **[Plugin 2: Subscriptions & Quota](supabase/plugins/subscriptions/README.md)**: SaaS tiers, tenant subscriptions, and usage metering (schema `billing`).
-  - ⚡ **[Plugin 3: Transactional Outbox & Webhooks](supabase/plugins/webhooks/README.md)**: Reliable event queue & HTTP webhook dispatcher (schema `events`).
-  - 🤖 **[Plugin 4: Automa Cloud Bridge](supabase/plugins/automa/README.md)**: Browser automation workflows, runner fleet, and telemetry logs (schema `automa`).
-- 🛠️ **[Automated Plugin Pipeline Runner (scripts/plugins/apply_plugins.ps1)](scripts/plugins/apply_plugins.ps1)**: CLI utility automating atomic plugin installations in canonical topological order.
+To ensure long-term maintainability and prevent documentation rot when underlying components evolve, this repository strictly adheres to **SOLID Documentation Principles & Single Source of Truth (SSOT)**:
 
----
+* **Single Responsibility Principle (SRP)**: Each document has one distinct owner and purpose. Root `README.md` acts strictly as an architectural facade, quickstart guide, and central routing index. It does not duplicate low-level schema definitions.
+* **Single Source of Truth (SSOT / DRY)**: Detailed table definitions, column types, RLS policies, permissions, and lifecycle scripts are documented **exclusively** within their authoritative source files. Cross-document copy-pasting is strictly avoided; all references point directly to the canonical source.
+* **Open/Closed Principle (OCP)**: Adding a new plugin extends the platform by adding a router reference in the catalog table without altering existing core architectural documentation.
 
-## 1. Base Core IAM Data Dictionary (10 Core Tables)
-
-The `public` schema contains exactly 10 immutable kernel tables:
-
-| Core Table | Schema | Primary Purpose | Security & RLS Policy |
-| :--- | :--- | :--- | :--- |
-| **`profiles`** | `public` | Extended user profiles synchronized 1:1 from `auth.users`. | Users can only modify their own profile (`id = auth.uid()`). |
-| **`tenants`** | `public` | Root multi-tenancy isolation boundary for organizations. | Members can only read tenants they belong to via `tenant_members`. |
-| **`roles`** | `public` | System roles (`is_system = true`) and Custom Tenant roles. | Scoped by `tenant_id` or public read for global system roles. |
-| **`permissions`** | `public` | Atomic capability registry (`module:resource:action`). | Read-only for all authenticated users. |
-| **`role_permissions`** | `public` | Many-to-many bridge mapping permissions to roles. | Restricted; only Tenant Admins can configure role mappings. |
-| **`tenant_members`** | `public` | Active membership links connecting Users to Tenants. | Scoped to active tenant members; prevents cross-tenant enumeration. |
-| **`member_roles`** | `public` | Role assignments granting one or more roles to a member. | Tenant Administrators have grant/revoke management privileges. |
-| **`tenant_invitations`**| `public` | Email invitations protected by cryptographic `token_hash`. | Secured by hashed tokens with automatic expiration timestamps. |
-| **`audit_logs`** | `public` | Immutable security audit trail with `BIGINT IDENTITY` & `INET`. | Append-only; mutation and deletion are blocked at the database level. |
-| **`system_plugins`** | `public` | Master Plugin Registry coordinating installed database modules. | Privileged access only; immutable flag `is_system` protects the kernel. |
+| Document Scope | Authoritative Responsibility | Single Source of Truth |
+| :--- | :--- | :--- |
+| **Architectural Facade & Router** | High-level overview, architectural value, quickstart commands, and documentation routing hub. | [**`README.md`**](README.md) |
+| **System Architecture & Contracts** | Core Kernel ERD, the 4 universal attachment contracts, $O(1)$ RLS engine, and PostgREST multi-schema API gateway. | [**`docs/architecture.md`**](docs/architecture.md) |
+| **Domain Lexicon & Anti-Hallucination** | Canonical naming invariants, database entity classifications, and forbidden ambiguous terminology. | [**`docs/terminology_dictionary.md`**](docs/terminology_dictionary.md) |
+| **Backend Roadmap** | PostgreSQL & Supabase evolution milestones, testing suites (pgTAP), and SDK generation pipeline. | [**`ROADMAP.md`**](ROADMAP.md) |
+| **Domain Plugins** | Complete internal schemas, tables, indexes, RLS policies, permissions dictionary, and lifecycle scripts. | [**`supabase/plugins/*/README.md`**](supabase/plugins/) |
 
 ---
 
-## 2. Modular Schema Plugin Catalog
+## 1. Base Platform Core IAM (10 Foundational Tables)
 
-Each business domain is packaged as an independent module under [supabase/plugins/](supabase/plugins/):
+The `public` schema forms the immutable Base Platform Kernel. It establishes tenant isolation boundaries, user profile synchronization, NIST RBAC authorization, tamper-evident audit logging, and the master plugin registry.
 
-| Plugin ID | Module & Schema | Detailed Documentation | Domain Responsibilities |
+The Kernel consists of exactly 10 immutable tables:
+`public.profiles` • `public.tenants` • `public.roles` • `public.permissions` • `public.role_permissions` • `public.tenant_members` • `public.member_roles` • `public.tenant_invitations` • `public.audit_logs` • `public.system_plugins`
+
+> 📖 **Authoritative Specification**: For complete table schemas, column types, cryptographic constraints, and RLS policies, refer directly to the canonical [**Core Kernel Entity Directory in docs/architecture.md**](docs/architecture.md#2-core-kernel-entity-directory-10-foundational-tables) and the [**Core IAM Module Specification**](supabase/plugins/core-iam/README.md).
+
+---
+
+## 2. Modular Schema Plugin Catalog (Authoritative Router)
+
+All business domain capabilities are decoupled into independent PostgreSQL Schema Plugins under [supabase/plugins/](supabase/plugins/). Each plugin maintains its own schema, tables, and permissions without polluting `public`:
+
+| Plugin ID | Target Schema | Domain Responsibility | Authoritative Single Source of Truth |
 | :--- | :--- | :--- | :--- |
-| **`core-iam`** | System Core (`public`) | [**Core IAM Docs**](supabase/plugins/core-iam/README.md) | Identity sync, tenant boundary, RBAC, Claims Hook, Master Plugin Registry (`is_system = true`). |
-| **`storage`** | Media Storage (`media`) | [**Storage Docs**](supabase/plugins/storage/README.md) | File metadata (`media.assets`), private `tenant-assets` bucket (50MB), dual-layer path RLS `{tenant_id}/*`. |
-| **`subscriptions`** | SaaS Billing (`billing`) | [**Subscriptions Docs**](supabase/plugins/subscriptions/README.md) | SaaS tiers (Free, Pro, Enterprise), subscription state, and atomic usage meters (`billing.usage_meters`). |
-| **`webhooks`** | Events Outbox (`events`) | [**Webhooks Docs**](supabase/plugins/webhooks/README.md) | Transactional Outbox pattern (`events.outbox`), webhook targets, HMAC-SHA256 signing, delivery logs. |
-| **`automa`** | Automa Bridge (`automa`) | [**Automa Docs**](supabase/plugins/automa/README.md) | Visual node graph ASTs (`automa.workflows`), runner fleet registry, batch campaign runs, telemetry logs. |
+| **`core-iam`** | `public` | Multi-Tenant Identity, NIST RBAC Engine, $O(1)$ Claims Hook, Master Plugin Registry (`is_system = true`). | 🛡️ [**Core IAM Specification**](supabase/plugins/core-iam/README.md) |
+| **`storage`** | `media` | Multi-tenant media metadata catalog and isolated private storage bucket security (`tenant-assets`). | 📁 [**Storage Specification**](supabase/plugins/storage/README.md) |
+| **`subscriptions`** | `billing` | SaaS subscription lifecycle, billing tiers (Free, Pro, Enterprise), and atomic usage metering. | 💎 [**Subscriptions Specification**](supabase/plugins/subscriptions/README.md) |
+| **`webhooks`** | `events` | Transactional Outbox pattern, HMAC-SHA256 signing, and asynchronous webhook delivery log tracking. | ⚡ [**Webhooks Specification**](supabase/plugins/webhooks/README.md) |
+| **`automa`** | `automa` | Visual workflow ASTs, distributed runner fleet management, batch campaign runs, and telemetry streams. | 🤖 [**Automa Specification**](supabase/plugins/automa/README.md) |
+
+> 💡 **Maintainability Invariant**: Detailed table definitions, column types, indexes, RLS policies, and lifecycle scripts (`install.sql`, `seed.sql`, `uninstall.sql`) are maintained **exclusively** inside each plugin's dedicated README. Root documentation links directly to these sources to prevent documentation drift.
 
 ---
 

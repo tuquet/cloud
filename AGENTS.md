@@ -26,3 +26,13 @@ All AI agents operating in this repository MUST strictly adhere to [**`docs/term
 - **Strict ASCII Invariance:** All PowerShell and batch scripts in this repository MUST be strictly ASCII-encoded (no Vietnamese diacritics in code, comments, or output strings) to avoid Windows PowerShell 5.1 ANSI parsing issues.
 - **Reserved Characters:** Always quote strings containing reserved shell characters (such as `&`, `|`, `<`, `>`).
 - **Native Command Stderr Safety:** Always handle native CLI stderr streams safely when checking tool statuses.
+
+## 4. SOLID Documentation Architecture & Single Source of Truth (SSOT)
+To eliminate documentation drift and prevent stale specifications across repos:
+- **Single Responsibility Principle (SRP)**:
+  - Root `README.md` is an Architectural Facade, Quickstart, and Central Routing Hub. It MUST NOT duplicate database table definitions, column types, or plugin implementation details.
+  - `docs/architecture.md` is the authoritative source for system architecture, Kernel ERD, and universal extension contracts.
+  - `docs/terminology_dictionary.md` is the authoritative lexicon for entity definitions and naming rules.
+  - `supabase/plugins/<plugin_id>/README.md` is the exclusive single source of truth for that plugin's schema, tables, RLS policies, permissions, and lifecycle.
+- **Single Source of Truth (SSOT / DRY)**: Never copy-paste table definitions or schemas across files. Always use hyperlinked references to the single authoritative document.
+- **Open/Closed Principle (OCP)**: Adding or extending a plugin should only require adding a reference row in the catalog router of `README.md` and `docs/architecture.md`, never modifying or polluting existing core documentation.
