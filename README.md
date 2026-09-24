@@ -1,30 +1,31 @@
 # ☁️ Tuquet Cloud
 
 > **Omniverse Central Cloud BaaS & Multi-Tenant RBAC Hub**  
-> Nền tảng Backend-as-a-Service (BaaS) trung tâm cho toàn bộ hệ sinh thái Tuquet trên nền **Supabase (PostgreSQL)**, cung cấp dịch vụ Định danh (IAM), Phân quyền đa tổ chức (Multi-Tenant RBAC), Quản lý hạn ngạch (Subscriptions & Quota), Lưu trữ (Storage), và Hàng đợi sự kiện (Outbox & Webhooks).
+> Nền tảng Backend-as-a-Service (BaaS) trung tâm cho toàn bộ hệ sinh thái Tuquet trên nền tảng **Supabase (PostgreSQL 15+)**, cung cấp dịch vụ Định danh tập trung (IAM), Phân quyền đa tổ chức (Multi-Tenant RBAC), Quản lý gói cước & hạn ngạch (Subscriptions & Quota), Lưu trữ tệp (Media Storage), và Hàng đợi sự kiện (Transactional Outbox & Webhooks).
 
 ---
 
-## 📑 Mục Lục Tài Liệu
+## 📑 Mục Lục Tài Liệu (Documentation Sitemap)
 
 - 📊 **[Sơ đồ thực thể liên kết (ERD chi tiết)](docs/erd_diagram.md)**: Sơ đồ Mermaid đầy đủ, từ điển trường, ma trận quan hệ và ràng buộc khóa ngoại.
-- 🔬 **[Tài liệu nghiên cứu kiến trúc chuyên sâu](docs/supabase_multitenant_rbac_research.md)**: Phân tích so sánh các mô hình Multi-tenancy, giải quyết lỗi đệ quy RLS, kỹ thuật tối ưu hóa chỉ mục và Custom JWT Token Hook.
-- 📐 **[Tài liệu phân tích OpenAPI Specification](docs/openapi_export_analysis.md)**: Đánh giá RAM hệ thống, cơ chế tự động sinh OpenAPI Specs và sinh Client SDK.
-- 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: File OpenAPI 3.0.3 spec chuẩn mã hóa cho toàn bộ các endpoint Multi-tenant RBAC.
-- 🌐 **[Kế hoạch xử lý mạng bị chặn port (Supabase & Git Push)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm Cloudflare Tunnel + SOCKS5 Proxy qua VPS để vượt tường lửa.
+- 🔬 **[Nghiên cứu kiến trúc RLS & Custom Claims Hook](docs/supabase_multitenant_rbac_research.md)**: Phân tích kỹ thuật phòng vệ chống RLS Infinite Recursion và CWE-426 Search Path Hijacking.
+- 📐 **[Phân tích OpenAPI Specification](docs/openapi_export_analysis.md)**: Đánh giá RAM hệ thống, quy trình tự động sinh OpenAPI Specs và TypeScript Client SDK.
+- 📄 **[File OpenAPI Specification v3 JSON](docs/openapi_spec_rbac.json)**: Đặc tả API 3.0.3 chuẩn hóa cho toàn bộ các endpoint của hệ thống.
+- 🌐 **[Kế hoạch vượt tường lửa (Proxy Routing Plan)](docs/network_and_git_proxy_plan.md)**: Giải pháp đường hầm SOCKS5 Proxy (`127.0.0.1:1080`) vượt rào cản firewall.
 - 🤖 **[Quy tắc ứng xử cho AI Agents (AGENTS.md)](AGENTS.md)**: Bộ quy tắc tự động định tuyến mạng, SOCKS5 Proxy và chuẩn mã lệnh cho workspace.
 - 💾 **[Base Core SQL Migration (supabase/migrations/)](supabase/migrations/)**: Schema nền tảng cốt lõi (`20260920000001_base_platform_core.sql`) thiết lập IAM, Profiles, Multi-tenant RBAC, Custom JWT Token Hook, Audit Trail và Master Plugin Registry.
-- 🔌 **[Thư Viện Phân Hệ & Plugins (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng mở rộng được đóng gói dạng Module độc lập (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
-  - 🛡️ **[System Core: Multi-Tenant IAM & RBAC](supabase/plugins/core-iam/)**: Thành phần cốt lõi bất biến (`is_system = true`).
-  - 🤖 **[Plugin 1: Automa Cloud Bridge](supabase/plugins/automa/)**: Điều phối hạm đội tự động hóa phân tán kết nối với `tuquet-automa` (schema `automa`).
-  - 📁 **[Plugin 2: Media Storage Assets](supabase/plugins/storage/)**: Quản lý file metadata & Storage Bucket RLS phân lập theo Tenant (schema `media`).
-  - 💎 **[Plugin 3: Subscriptions & Quota](supabase/plugins/subscriptions/)**: Gói cước SaaS & Kiểm soát hạn ngạch tài nguyên (schema `billing`).
-  - ⚡ **[Plugin 4: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/)**: Hàng đợi sự kiện Transactional Outbox & Bắn Webhook HTTP (schema `events`).
-- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher: Admin, Member, Foreign), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ Plugins.
+- 🔌 **[Thư Viện Phân Hệ & Plugins Độc Lập (supabase/plugins/)](supabase/plugins/)**: Toàn bộ tính năng được đóng gói dạng Module chuẩn mực (`plugin.json`, `install.sql`, `uninstall.sql`, `README.md`):
+  - 🛡️ **[System Core: Multi-Tenant IAM & RBAC Engine](supabase/plugins/core-iam/README.md)**: Thành phần cốt lõi bất biến (`is_system = true`, schema `public`).
+  - 🤖 **[Plugin 1: Automa Cloud Bridge](supabase/plugins/automa/README.md)**: Điều phối hạm đội tự động hóa phân tán (schema `automa`).
+  - 📁 **[Plugin 2: Media Storage Assets](supabase/plugins/storage/README.md)**: Quản lý metadata tập tin & Storage Bucket RLS (schema `media`).
+  - 💎 **[Plugin 3: Subscriptions & Quota](supabase/plugins/subscriptions/README.md)**: Gói cước SaaS & Kiểm soát định mức tài nguyên (schema `billing`).
+  - ⚡ **[Plugin 4: Asynchronous Outbox & Webhooks](supabase/plugins/webhooks/README.md)**: Hàng đợi sự kiện Transactional Outbox & Bắn Webhook HTTP (schema `events`).
+- 🎛️ **[Dynamic Acceptance Studio (docs/acceptance_studio.html)](docs/acceptance_studio.html)**: Bàn nghiệm thu trực quan đa vai trò (Persona Switcher), kiểm thử cách ly Storage RLS, Quota và quản lý bật/tắt toàn bộ Plugins.
+- 🛠️ **[Script Cài Đặt Plugin Tự Động (scripts/plugins/apply_plugins.ps1)](scripts/plugins/apply_plugins.ps1)**: Tiện ích PowerShell cài đặt toàn bộ Plugin theo thứ tự chuẩn kiến trúc.
 
 ---
 
-## 1. Sơ Đồ ERD Trực Quan (Entity-Relationship Diagram)
+## 1. Sơ Đồ ERD Nền Tảng Cốt Lõi (Base Core IAM ERD)
 
 > 🚀 **Mở xem sơ đồ tương tác mượt mà (Pan, Zoom, Tìm kiếm)**: Mở file [**`docs/erd_viewer.html`**](docs/erd_viewer.html) trực tiếp trên trình duyệt hoặc qua lệnh `Simple Browser: Show` trong VS Code.
 
@@ -50,13 +51,12 @@ erDiagram
     PROFILES ||--o{ TENANT_MEMBERS : "user_id"
     PROFILES ||--o{ TENANT_INVITATIONS : "invited_by"
     PROFILES ||--o{ AUDIT_LOGS : "actor_id"
-    PROFILES ||--o{ PROJECTS : "created_by"
+    PROFILES ||--o{ SYSTEM_PLUGINS : "installed_by"
 
     TENANTS ||--o{ TENANT_MEMBERS : "tenant_id"
     TENANTS ||--o{ ROLES : "tenant_id (Nullable)"
     TENANTS ||--o{ TENANT_INVITATIONS : "tenant_id"
     TENANTS ||--o{ AUDIT_LOGS : "tenant_id"
-    TENANTS ||--o{ PROJECTS : "tenant_id"
 
     ROLES ||--o{ ROLE_PERMISSIONS : "role_id"
     PERMISSIONS ||--o{ ROLE_PERMISSIONS : "permission_id"
@@ -75,6 +75,7 @@ erDiagram
         string email
         string full_name
         string avatar_url
+        jsonb metadata
     }
 
     TENANTS {
@@ -96,13 +97,13 @@ erDiagram
     ROLES {
         uuid id PK
         uuid tenant_id FK "NULL = System Role, UUID = Custom Role"
-        string name "owner, admin, member, editor"
+        string name "owner, admin, member, viewer"
         string display_name
         boolean is_system
     }
 
     PERMISSIONS {
-        string id PK "tenants:update, projects:create"
+        string id PK "tenants:read, members:invite"
         string module
         string description
     }
@@ -129,7 +130,7 @@ erDiagram
     }
 
     AUDIT_LOGS {
-        uuid id PK
+        bigint id PK "Identity Clustered"
         uuid tenant_id FK
         uuid actor_id FK
         string action
@@ -137,98 +138,122 @@ erDiagram
         string entity_id
         jsonb old_values
         jsonb new_values
+        inet ip_address
     }
 
-    PROJECTS {
-        uuid id PK
-        uuid tenant_id FK
+    SYSTEM_PLUGINS {
+        string id PK "core-iam, automa, storage"
         string name
-        text description
-        uuid created_by FK
+        string version
+        string schema_name UK
+        enum status "installed | disabled | uninstalled"
+        boolean is_system "Immutable protection"
+        text_array dependencies
     }
 ```
 
 ---
 
-## 2. Tổng Quan Các Bảng Dữ Liệu (Data Dictionary Summary)
+## 2. Từ Điển Bảng Dữ Liệu Cốt Lõi (Core Data Dictionary)
 
-| Bảng | Vai Trò Kiến Trúc | Đặc Điểm Mở Rộng (Scalability) |
+Base Core IAM bao gồm 10 bảng nền tảng trong schema `public`:
+
+| Bảng | Vai Trò Kiến Trúc & Bảo Mật | Đặc Điểm Kỹ Thuật (Scalability Specs) |
 | :--- | :--- | :--- |
-| `profiles` | Hồ sơ người dùng ứng dụng | Tự động đồng bộ 1:1 từ `auth.users` qua database trigger. |
-| `tenants` | Ranh giới cô lập tổ chức / workspace | Hỗ trợ vanity `slug`, cấu hình mềm bằng `metadata (jsonb)`. |
-| `tenant_members` | Quản lý thành viên trong tổ chức | Ràng buộc Unique `(tenant_id, user_id)`, kiểm soát trạng thái `active/suspended`. |
-| `roles` | Danh mục vai trò | **Đột phá**: `tenant_id IS NULL` là vai trò hệ thống, `tenant_id = UUID` là vai trò tùy chỉnh riêng của từng Tenant (Enterprise feature). |
-| `permissions` | Quyền hạn nguyên tử | Khóa chính dạng chuỗi có ngữ nghĩa (`module:action`), dễ dàng tra cứu và kiểm tra. |
-| `role_permissions` | Bản đồ phân quyền nhiều - nhiều | Cấp quyền chi tiết cho từng vai trò. |
-| `member_roles` | Gán vai trò cho thành viên | Cho phép 1 thành viên có nhiều vai trò đồng thời (Multi-role). |
-| `tenant_invitations` | Quản lý lời mời tham gia | Lưu mã băm `token_hash` an toàn, có thời hạn tự động hết hạn (`expires_at`). |
-| `audit_logs` | Nhật ký an ninh & kiểm toán | Thiết kế sẵn sàng cho **PostgreSQL Declarative Partitioning** theo `tenant_id`. |
-| `projects` | Tài nguyên mẫu của Tenant | Minh họa áp dụng Row Level Security (RLS) triệt để theo `tenant_id`. |
+| **`profiles`** | Hồ sơ người dùng mở rộng | Đồng bộ 1:1 từ `auth.users` qua trigger an ninh `handle_new_user`. |
+| **`tenants`** | Ranh giới cô lập tổ chức / workspace | Khóa ngoại gốc (`tenant_id`) cho mọi bảng dữ liệu; vanity slug duy nhất. |
+| **`roles`** | Danh mục vai trò đa cấp | **Tối ưu B-tree**: Tách 2 Partial Unique Indexes (`tenant_id IS NULL` vs `tenant_id IS NOT NULL`), loại bỏ hack COALESCE. |
+| **`permissions`** | Từ điển quyền hạn nguyên tử | Khóa chính dạng chuỗi có ngữ nghĩa (`module:action`), dễ tra cứu và kiểm tra $O(1)$. |
+| **`role_permissions`** | Bản đồ phân quyền nhiều - nhiều | Cấp quyền chi tiết cho từng vai trò trong hệ thống. |
+| **`tenant_members`** | Quản lý thành viên trong tổ chức | Ràng buộc Unique `(tenant_id, user_id)`, kiểm soát trạng thái `active/suspended`. |
+| **`member_roles`** | Gán vai trò cho thành viên | Cho phép 1 thành viên sở hữu nhiều vai trò đồng thời (Multi-role support). |
+| **`tenant_invitations`** | Quản lý lời mời tham gia | Lưu mã băm `token_hash` an toàn, tự động hết hạn (`expires_at`). |
+| **`audit_logs`** | Nhật ký an ninh & kiểm toán | **Chuẩn DBA**: Sử dụng `BIGINT GENERATED ALWAYS AS IDENTITY` và kiểu mạng `INET`, triệt tiêu vỡ trang B-Tree. |
+| **`system_plugins`** | Bảng đăng ký mẹ (Master Registry) | Quản lý thông tin phiên bản, trạng thái và ngăn chặn gỡ bỏ nhầm phân hệ cốt lõi (`is_system = true`). |
 
 ---
 
-## 3. Các Điểm Sáng Về Hiệu Năng & Khả Năng Scale (Scalability Highlights)
+## 3. Các Trụ Cột Kỹ Thuật Đạt Chuẩn Enterprise (Architecture Highlights)
 
-### 3.1. Chống lỗi RLS Infinite Recursion bằng `SECURITY DEFINER`
-Không viết truy vấn đệ quy trực tiếp trong mệnh đề `USING(...)` của RLS. Toàn bộ logic kiểm tra thành viên và quyền hạn được trừu tượng hóa qua các hàm:
+### 3.1. Miễn Nhiễm Với RLS Infinite Recursion & CWE-426
+Toàn bộ logic kiểm tra quyền trong mệnh đề `USING(...)` của RLS được ủy thác cho các hàm trợ năng `SECURITY DEFINER`:
+- `public.get_user_tenant_ids()`
 - `public.is_tenant_member(_tenant_id)`
 - `public.has_tenant_permission(_tenant_id, _permission_id)`
 - `public.is_tenant_admin(_tenant_id)`
 
-Các hàm này có thuộc tính:
-- `SECURITY DEFINER`: Chạy dưới quyền hệ thống, không bị kích hoạt đệ quy RLS trên các bảng tra cứu.
-- `SET search_path = ''`: Miễn nhiễm hoàn toàn với tấn công chiếm quyền thực thi SQL.
+**Đặc tính kỹ thuật**:
+- `SET search_path = ''`: Khắc chế 100% tấn công Search Path Hijacking (CWE-426).
 - `STABLE`: PostgreSQL Query Planner tự động cache kết quả trong suốt câu lệnh SQL, tránh tính toán lặp từng dòng.
 
-### 3.2. Caching quyền qua Supabase Custom Access Token (JWT) Hook
-Đã định nghĩa sẵn hàm `public.custom_access_token_hook(event)`. Khi kích hoạt trong Dashboard của Supabase:
-- Thông tin `tenant_id` và các `roles` tương ứng sẽ được nhúng thẳng vào Claims của Access Token JWT.
-- Các chính sách RLS có thể truy xuất tức thì qua `(auth.jwt() ->> 'tenant_id')::uuid` với độ phức tạp $O(1)$, loại bỏ hoàn toàn các câu lệnh JOIN bảng khi tải cao.
+### 3.2. Caching Quyền Qua Custom Access Token (JWT) Hook & Chống Tràn Header
+Định nghĩa sẵn hàm `public.custom_access_token_hook(event)`:
+- Nhúng danh sách `tenant_id` và các `roles` vào Claims của Access Token JWT.
+- **Phòng vệ tràn Header (`LIMIT 25`)**: Giới hạn tối đa 25 tenant cho mỗi người dùng, đảm bảo kích thước JWT luôn <8KB, loại bỏ triệt để lỗi `431 Request Header Fields Too Large` ở tầng Gateway (Nginx/Cloudflare).
 
-### 3.3. Đánh chỉ mục hỗn hợp (Composite Indexes)
-Mọi bảng nghiệp vụ đều được đánh chỉ mục bắt đầu bằng `tenant_id` (ví dụ `(tenant_id, created_at DESC)`). Điều này đảm bảo:
-- Quá trình tìm kiếm luôn là **Index Scan / Index Only Scan**.
-- Triệt tiêu hoàn toàn rủi ro rò rỉ dữ liệu giữa các tenant (Cross-tenant leak).
-- Sẵn sàng chuyển đổi sang cấu trúc phân vùng bảng (**Table Partitioning**) khi dữ liệu đạt hàng chục đến hàng trăm triệu dòng.
+### 3.3. Tối Ưu B-Tree Index & Sẵn Sàng Cho Partitioning
+Mọi bảng nghiệp vụ đều được đánh chỉ mục hỗn hợp bắt đầu bằng `tenant_id` (ví dụ `(tenant_id, created_at DESC)`). Quá trình tìm kiếm luôn là **Index Scan / Index Only Scan**, triệt tiêu nguy cơ rò rỉ chéo dữ liệu và sẵn sàng cho **Table Partitioning** khi đạt hàng trăm triệu bản ghi.
 
 ---
 
-## 4. Hướng Dẫn Triển Khai Lên Supabase
-
-### Cách 1: Sử dụng Supabase Dashboard (Nhanh nhất)
-1. Truy cập vào dự án Supabase của bạn tại [supabase.com](https://supabase.com).
-2. Vào mục **SQL Editor** ở thanh menu bên trái.
-3. Tạo truy vấn mới và dán toàn bộ nội dung trong file [supabase/migrations/20260920000001_base_platform_core.sql](supabase/migrations/20260920000001_base_platform_core.sql).
-4. Nhấn **Run** (Chạy). Toàn bộ bảng, index, trigger, hàm helper, chính sách RLS và dữ liệu seed sẽ được tạo tự động.
-
-### Cách 2: Sử dụng Supabase CLI (Dành cho quy trình CI/CD)
-```bash
-# Đăng nhập Supabase CLI
-supabase login
-
-# Liên kết với project của bạn
-supabase link --project-ref <your-project-id>
-
-# Đẩy migration lên database
-supabase db push
-```
-
-### Cách 3: Kích hoạt Custom Access Token Hook (Tùy chọn tăng tốc)
-1. Trong Supabase Dashboard, chuyển tới **Authentication > Hooks**.
-2. Tìm mục **Custom Access Token (JWT)**.
-3. Chọn hàm `public.custom_access_token_hook` và lưu lại.
-
----
-
-## 5. Thư Viện Plugin Chuyên Biệt (Enterprise Plugin Catalog)
+## 4. Thư Viện Plugin Chuyên Biệt (Enterprise Plugin Catalog)
 
 Toàn bộ các phân hệ mở rộng của `tuquet-cloud` được đóng gói độc lập theo cấu trúc Plugin chuẩn mực tại thư mục [supabase/plugins/](supabase/plugins/), với schema chuyên biệt và vòng đời cài đặt/gỡ bỏ nguyên tử:
 
-| Plugin ID | Tên Module & Schema | Đường Dẫn Thư Mục | Mô Tả & Khả Năng Nghiệp Vụ |
+| Plugin ID | Tên Module & Schema | Tài Liệu Chi Tiết | Trách Nhiệm Nghiệp Vụ Chính |
 | :--- | :--- | :--- | :--- |
-| **`automa`** | Automa Cloud Bridge (`automa`) | [supabase/plugins/automa/](supabase/plugins/automa/) | Điều phối hạm đội tự động hóa, lưu trữ kịch bản Workflow, Runners, Campaign Runs và Schedules. |
-| **`storage`** | Media Storage Assets (`media`) | [supabase/plugins/storage/](supabase/plugins/storage/) | Quản lý metadata tập tin (`media.assets`), tích hợp Storage Bucket `tenant-assets` và RLS đa tổ chức. |
-| **`subscriptions`** | Subscriptions & Quota (`billing`) | [supabase/plugins/subscriptions/](supabase/plugins/subscriptions/) | Quản lý gói cước SaaS đa cấp độ, trạng thái thuê bao của từng Tenant, và đo lường hạn ngạch sử dụng. |
-| **`webhooks`** | Outbox & Webhooks (`events`) | [supabase/plugins/webhooks/](supabase/plugins/webhooks/) | Hàng đợi sự kiện Transactional Outbox và dịch vụ phát sóng Webhook HTTP độ tin cậy cao cho bên thứ ba. |
+| **`core-iam`** | System Core (`public`) | [**Tài liệu Core IAM**](supabase/plugins/core-iam/README.md) | Định danh, ranh giới đa tổ chức, RBAC, Claims Hook, Master Plugin Registry (`is_system = true`). |
+| **`automa`** | Automa Cloud Bridge (`automa`) | [**Tài liệu Automa**](supabase/plugins/automa/README.md) | Lưu trữ đồ thị AST Workflow, quản lý hạm đội máy trạm (Runners), chiến dịch chạy hàng loạt, và log vi mô. |
+| **`storage`** | Media Storage Assets (`media`) | [**Tài liệu Storage**](supabase/plugins/storage/README.md) | Metadata tệp (`media.assets`), cấu hình bucket `tenant-assets` (50MB), bảo mật Storage RLS 2 lớp theo path `{tenant_id}/*`. |
+| **`subscriptions`** | Subscriptions & Quota (`billing`) | [**Tài liệu Subscriptions**](supabase/plugins/subscriptions/README.md) | Quản lý gói cước SaaS (Free, Pro, Enterprise), theo dõi thuê bao, và đo lường hạn ngạch động (`billing.usage_meters`). |
+| **`webhooks`** | Outbox & Webhooks (`events`) | [**Tài liệu Webhooks**](supabase/plugins/webhooks/README.md) | Hàng đợi sự kiện Transactional Outbox, quản lý URL đích nhận, ký chữ ký HMAC-SHA256, và nhật ký đối soát lượt gọi. |
 
+---
 
+## 5. Hướng Dẫn Vận Hành & Khởi Động Môi Trường
+
+### Bước 1: Khởi Động Base Core (Mỗi Khi Reset Database)
+Mỗi khi chạy `supabase db reset`, Supabase CLI sẽ **tự động** áp dụng migration nền tảng duy nhất:
+```bash
+supabase db reset
+```
+*Kết quả:* Base Core IAM và bảng `system_plugins` được khởi tạo sạch sẽ 100% kèm dữ liệu quản trị viên ban đầu từ `supabase/seed.sql`.
+
+### Bước 2: Cài Đặt Các Plugin Nghiệp Vụ (Theo Thứ Tự Chuẩn Kiến Trúc)
+
+#### Cách A: Chạy 1 Lệnh Tự Động Hóa Duy Nhất (Khuyên Dùng)
+Sử dụng công cụ runner tự động hóa được tích hợp sẵn:
+```powershell
+# Cài đặt toàn bộ 4 Plugin theo đúng thứ tự (storage -> subscriptions -> webhooks -> automa + seed):
+.\scripts\plugins\apply_plugins.ps1 -Target local
+
+# Hoặc cài đặt từng Plugin cụ thể:
+.\scripts\plugins\apply_plugins.ps1 -Plugin storage -Target local
+```
+
+#### Cách B: Chạy Từng Lệnh Qua Supabase CLI
+```powershell
+# 1. Hạ tầng lưu trữ Media
+supabase db query --local -f supabase/plugins/storage/install.sql
+
+# 2. Quản lý hạn ngạch Subscriptions & Quota
+supabase db query --local -f supabase/plugins/subscriptions/install.sql
+
+# 3. Hạ tầng sự kiện Outbox & Webhooks
+supabase db query --local -f supabase/plugins/webhooks/install.sql
+
+# 4. Nghiệp vụ tự động hóa Automa & Dữ liệu mẫu
+supabase db query --local -f supabase/plugins/automa/install.sql
+supabase db query --local -f supabase/plugins/automa/seed.sql
+```
+
+#### Cách C: Trực Quan Hóa Qua Dynamic Acceptance Studio
+Mở tệp [**`docs/acceptance_studio.html`**](docs/acceptance_studio.html) trên trình duyệt hoặc qua Live Server để theo dõi trạng thái, chuyển đổi vai trò (Persona Switcher) và bấm nút **[➕ Install Plugin]** tương ứng.
+
+---
+
+## 6. Kích Hoạt Custom Access Token (JWT) Hook Trên Supabase Cloud
+1. Truy cập vào dự án tại [supabase.com](https://supabase.com).
+2. Chuyển tới mục **Authentication > Hooks**.
+3. Tìm mục **Custom Access Token (JWT)**.
+4. Chọn hàm `public.custom_access_token_hook` và lưu lại.

@@ -265,13 +265,11 @@ erDiagram
     PROFILES ||--o{ TENANT_MEMBERS : "user_id"
     PROFILES ||--o{ TENANT_INVITATIONS : "invited_by"
     PROFILES ||--o{ AUDIT_LOGS : "actor_id"
-    PROFILES ||--o{ PROJECTS : "created_by"
 
     TENANTS ||--o{ TENANT_MEMBERS : "tenant_id"
     TENANTS ||--o{ ROLES : "tenant_id"
     TENANTS ||--o{ TENANT_INVITATIONS : "tenant_id"
     TENANTS ||--o{ AUDIT_LOGS : "tenant_id"
-    TENANTS ||--o{ PROJECTS : "tenant_id"
     TENANTS ||--o{ MEDIA_ASSETS : "tenant_id"
     TENANTS ||--|| TENANT_SUBSCRIPTIONS : "tenant_id"
     TENANTS ||--o{ TENANT_USAGE_METERS : "tenant_id"
@@ -368,15 +366,18 @@ erDiagram
         uuid tenant_id FK "Tenant ID"
         uuid actor_id FK "Người thao tác"
         string action "create, update, delete"
-        string entity_type "projects, members"
+        string entity_type "members, roles, automa_campaigns"
     }
 
-    PROJECTS {
-        uuid id PK "Project UUID"
-        uuid tenant_id FK "Tenant ID (RLS)"
-        string name "Tên dự án"
-        uuid created_by FK "Profile ID"
-        timestamptz deleted_at "Soft Delete"
+    SYSTEM_PLUGINS {
+        text id PK "Plugin ID"
+        text name "Plugin Display Name"
+        text version "SemVer Version"
+        boolean is_installed "Installed Status"
+        boolean is_system "Immutable System Flag"
+        text schema_name "Postgres Schema"
+        text[] dependencies "Topological Deps"
+        timestamptz installed_at "Installed Timestamp"
     }
 
     MEDIA_ASSETS {
@@ -390,7 +391,7 @@ erDiagram
         string id PK "free | pro | enterprise"
         string name "Tên gói SaaS"
         int max_members "Max Members"
-        int max_projects "Max Projects"
+        int max_workflows "Max Workflows"
     }
 
     TENANT_SUBSCRIPTIONS {

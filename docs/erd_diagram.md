@@ -36,7 +36,6 @@ erDiagram
     PROFILES ||--o{ TENANT_MEMBERS : "user_id (thành viên)"
     PROFILES ||--o{ TENANT_INVITATIONS : "invited_by (người gửi lời mời)"
     PROFILES ||--o{ AUDIT_LOGS : "actor_id (người thực hiện thao tác)"
-    PROFILES ||--o{ PROJECTS : "created_by (người tạo tài nguyên)"
 
     %% ==========================================
     %% 2. TENANT BOUNDARY & GOVERNANCE
@@ -45,7 +44,6 @@ erDiagram
     TENANTS ||--o{ ROLES : "tenant_id (vai trò riêng của tenant, nullable)"
     TENANTS ||--o{ TENANT_INVITATIONS : "tenant_id (lời mời vào tenant)"
     TENANTS ||--o{ AUDIT_LOGS : "tenant_id (nhật ký hoạt động tenant)"
-    TENANTS ||--o{ PROJECTS : "tenant_id (dữ liệu thuộc tenant)"
     TENANTS ||--o{ MEDIA_ASSETS : "tenant_id (tài nguyên media)"
     TENANTS ||--|| TENANT_SUBSCRIPTIONS : "tenant_id (gói cước đăng ký)"
     TENANTS ||--o{ TENANT_USAGE_METERS : "tenant_id (đo lường sử dụng)"
@@ -176,11 +174,15 @@ erDiagram
         jsonb new_values "Dữ liệu sau khi sửa"
     }
 
-    PROJECTS {
-        uuid id PK "ID tài nguyên dự án"
-        uuid tenant_id FK "Thuộc tenant nào (RLS Boundary)"
-        string name "Tên dự án"
-        timestamptz deleted_at "Hỗ trợ Soft Delete"
+    SYSTEM_PLUGINS {
+        text id PK "Plugin ID (e.g. automa, storage, subscriptions, webhooks)"
+        text name "Tên hiển thị plugin"
+        text version "Phiên bản ngữ nghĩa SemVer"
+        boolean is_installed "Trạng thái kích hoạt"
+        boolean is_system "Cờ hệ thống bất biến (true = không thể gỡ)"
+        text schema_name "Postgres Schema cô lập"
+        text[] dependencies "Mảng phụ thuộc topo"
+        timestamptz installed_at "Thời điểm cài đặt"
     }
 
     MEDIA_ASSETS {
@@ -195,7 +197,7 @@ erDiagram
         string id PK "free | pro | enterprise"
         string name "Tên gói cước"
         int max_members "Giới hạn số thành viên"
-        int max_projects "Giới hạn số dự án"
+        int max_workflows "Giới hạn số quy trình automa"
         bigint max_storage_mb "Giới hạn dung lượng lưu trữ (MB)"
     }
 
@@ -299,7 +301,7 @@ erDiagram
 | `roles` | `member_roles` | `role_id -> roles.id` | **1 : N** | `RESTRICT`: Không cho phép xóa role nếu đang có thành viên nắm giữ vai trò này. |
 | `tenants` | `tenant_invitations`| `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Xóa tenant sẽ hủy bỏ tất cả thư mời đang chờ. |
 | `tenants` | `audit_logs` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Dữ liệu audit gắn chặt với vòng đời của tenant. |
-| `tenants` | `projects` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Dữ liệu nghiệp vụ bị cô lập hoàn toàn theo `tenant_id`. |
+| `system_plugins` | (standalone) | N/A | **Registry** | Master Plugin Registry bảo vệ bằng cờ `is_system = true`. |
 | `tenants` | `media_assets` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Toàn bộ metadata media gắn chặt theo tenant. |
 | `tenants` | `tenant_subscriptions`| `tenant_id -> tenants.id`| **1 : 1** | `CASCADE`: Mỗi tenant có 1 trạng thái thuê bao SaaS duy nhất. |
 | `tenants` | `automa_workflows` | `tenant_id -> tenants.id` | **1 : N** | `CASCADE`: Quy trình automation gắn liền với tenant. |
@@ -354,4 +356,4 @@ erDiagram
 2. **Khắc phục triệt để đệ quy RLS (No-Recursion Pattern)**:
    - Toàn bộ truy vấn bảo mật trong RLS được bọc qua các hàm `SECURITY DEFINER` và đánh dấu `STABLE`. Postgres sẽ chỉ tính toán quyền người dùng 1 lần duy nhất cho mỗi statement thay vì quét lặp từng dòng.
 3. **Sẵn sàng cho Sharding & Partitioning**:
-   - Trường `tenant_id` có mặt ở mọi bảng con và bảng liên kết (`automa_campaign_runs`, `automa_execution_logs`, `member_roles`, `projects`, `audit_logs`), giúp dễ dàng áp dụng tính năng **Declarative Table Partitioning theo HASH hoặc LIST** khi lượng dữ liệu lên đến hàng trăm triệu bản ghi.
+   - Trường `tenant_id` có mặt ở mọi bảng con và bảng liên kết (`automa_campaign_runs`, `automa_execution_logs`, `member_roles`, `audit_logs`), giúp dễ dàng áp dụng tính năng **Declarative Table Partitioning theo HASH hoặc LIST** khi lượng dữ liệu lên đến hàng trăm triệu bản ghi.
