@@ -15,7 +15,7 @@ flowchart TD
         TENANTS["Multi-Tenant Boundary (public.tenants)"]
         RBAC["NIST RBAC (roles, permissions, member_roles)"]
         JWT["Custom JWT Token Hook (O(1) Claims Engine)"]
-        AUDIT["Audit Trail (BIGINT IDENTITY, INET)"]
+        AUDIT["Tamper-Evident Audit Trail"]
         REGISTRY["Master Plugin Registry (system_plugins)"]
     end
 
@@ -63,7 +63,7 @@ flowchart TD
 - [x] **$O(1)$ JWT Access Token Hook & Zero-Recursion RLS:**
   - [x] `public.custom_access_token_hook` bakes active `tenant_id`, `roles`, and atomic `permissions` (`LIMIT 25`) into JWT `app_metadata`.
   - [x] Authorization helpers (`has_permission`, `is_tenant_member`, `is_tenant_admin`) marked `SECURITY DEFINER` and `STABLE`.
-- [x] **CWE-426 Protection (Search Path Hijacking):**
+- [x] **Hardened Security Definers (Privilege Escalation Protection):**
   - [x] 100% of functions, procedures, and triggers enforce `SET search_path = ''` with fully-qualified schema names.
 - [x] **Master Plugin Registry & Lifecycle Pipeline:**
   - [x] `public.system_plugins` tracks active plugins with `is_system` protection.
@@ -127,4 +127,4 @@ flowchart TD
 1. **Strict ASCII Invariance:** All PowerShell and automation scripts MUST use strict ASCII encoding to guarantee Windows PowerShell 5.1 compatibility.
 2. **Database-First & Zero Monolithic Clutter:** All application state is managed in PostgreSQL with schema separation. The `public` schema is reserved strictly for Core IAM.
 3. **Zero RLS Recursion:** Never evaluate circular subqueries inside RLS policies. Always leverage JWT claims synthesized by the Custom Access Token Hook.
-4. **CWE-426 Sanitization:** Every SQL function and procedure MUST declare `SET search_path = ''`.
+4. **Zero Privilege Escalation:** Every SQL function and procedure MUST declare `SET search_path = ''` to prevent search path hijacking.
