@@ -6,7 +6,7 @@
 DO $$
 DECLARE
     v_tbl TEXT;
-    v_expected_tables TEXT[] := ARRAY['plans', 'tenant_subscriptions', 'usage_metering'];
+    v_expected_tables TEXT[] := ARRAY['plans', 'subscriptions', 'usage_meters'];
     v_missing_tables TEXT[] := ARRAY[]::TEXT[];
 BEGIN
     RAISE NOTICE '>>> [TEST 1] Verifying schema billing and tables...';

@@ -20,8 +20,19 @@ $TestFiles = @(
     "tests/db/02_verify_automa_plugin.sql",
     "tests/db/03_verify_storage_plugin.sql",
     "tests/db/04_verify_subscriptions_plugin.sql",
-    "tests/db/05_verify_webhooks_plugin.sql"
+    "tests/db/05_verify_webhooks_plugin.sql",
+    "tests/db/06_verify_test_presets.sql"
 )
+
+# Ensure provision helper procedure is present for verification
+$helperFile = "tests/presets/sql/00_provision_helper.sql"
+if (Test-Path $helperFile) {
+    if ($Target -eq 'local') {
+        Get-Content $helperFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Null
+    } else {
+        & supabase db query "--$Target" -f $helperFile 2>&1 | Out-Null
+    }
+}
 
 foreach ($testFile in $TestFiles) {
     if (-not (Test-Path $testFile)) {

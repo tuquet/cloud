@@ -97,11 +97,14 @@ BEGIN
             jsonb_build_object('member_id', NEW.id, 'user_id', NEW.user_id, 'joined_at', NEW.joined_at)
         );
     ELSIF TG_OP = 'DELETE' THEN
-        PERFORM events.emit_event(
-            OLD.tenant_id, 
-            'member.removed', 
-            jsonb_build_object('member_id', OLD.id, 'user_id', OLD.user_id)
-        );
+        -- Only emit event if the tenant still exists (avoid FK violation on CASCADE tenant deletion)
+        IF EXISTS (SELECT 1 FROM public.tenants WHERE id = OLD.tenant_id) THEN
+            PERFORM events.emit_event(
+                OLD.tenant_id, 
+                'member.removed', 
+                jsonb_build_object('member_id', OLD.id, 'user_id', OLD.user_id)
+            );
+        END IF;
     END IF;
     RETURN NULL;
 END;

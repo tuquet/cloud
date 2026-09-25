@@ -1,0 +1,27 @@
+{
+  "$schema": "./schema/preset.schema.json",
+  "name": "tunyk",
+  "description": "Tunyk Owner Workspace Preset - 100% active test identity with owner tenant",
+  "user": {
+    "email": "tunyk.93@gmail.com",
+    "password": "Admin!12345",
+    "full_name": "Nguyen Dang Tu",
+    "avatar_url": "https://avatars.githubusercontent.com/u/tuquet",
+    "metadata": {
+      "preset": "tunyk",
+      "environment": "local"
+    }
+  },
+  "tenant": {
+    "slug": "tunyk-workspace",
+    "name": "Tunyk Enterprise Workspace",
+    "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=tunyk",
+    "plan": "pro",
+    "metadata": {
+      "region": "ap-southeast-1",
+      "preset": "tunyk",
+      "tier": "enterprise"
+    }
+  },
+  "role": "owner"
+}

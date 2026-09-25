@@ -18,7 +18,14 @@ TEST_FILES=(
     "tests/db/03_verify_storage_plugin.sql"
     "tests/db/04_verify_subscriptions_plugin.sql"
     "tests/db/05_verify_webhooks_plugin.sql"
+    "tests/db/06_verify_test_presets.sql"
 )
+
+# Ensure provision helper procedure is present for verification
+HELPER_FILE="tests/presets/sql/00_provision_helper.sql"
+if [[ -f "$HELPER_FILE" ]]; then
+    supabase db query "--$TARGET" -f "$HELPER_FILE" > /dev/null 2>&1 || true
+fi
 
 for test_file in "${TEST_FILES[@]}"; do
     if [[ ! -f "$test_file" ]]; then
