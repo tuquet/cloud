@@ -3,6 +3,7 @@
 -- Plugin ID: automa
 -- Version: 1.0.0
 -- Architecture: PostgreSQL Dedicated Schema Isolation (schema: automa)
+-- Dependencies: ["runners"]
 -- ============================================================================
 
 -- 1. Create Dedicated Schema & Grants
@@ -15,12 +16,6 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA automa GRANT ALL ON SEQUENCES TO authenticate
 -- 2. Enums in schema automa
 DO $$ BEGIN
     CREATE TYPE automa.workflow_status AS ENUM ('draft', 'published', 'archived');
-EXCEPTION
-    WHEN duplicate_object THEN null;
-END $$;
-
-DO $$ BEGIN
-    CREATE TYPE automa.runner_status AS ENUM ('offline', 'idle', 'running', 'busy', 'disconnected', 'maintenance');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -58,30 +53,7 @@ CREATE TABLE IF NOT EXISTS automa.workflows (
 
 COMMENT ON TABLE automa.workflows IS '[Plugin: automa] Visual flow graphs and AST node configurations';
 
--- 3.2. Runners
-CREATE TABLE IF NOT EXISTS automa.runners (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    name VARCHAR(128) NOT NULL,
-    machine_fingerprint VARCHAR(128) NOT NULL,
-    status automa.runner_status NOT NULL DEFAULT 'offline',
-    version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
-    os_info VARCHAR(128),
-    ip_address INET,
-    max_concurrency INT NOT NULL DEFAULT 1 CHECK (max_concurrency >= 1),
-    active_tasks INT NOT NULL DEFAULT 0 CHECK (active_tasks >= 0),
-    capabilities JSONB NOT NULL DEFAULT '["browser", "http", "gui"]'::jsonb,
-    last_heartbeat_at TIMESTAMPTZ,
-    registered_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT uq_automa_runner_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint),
-    CONSTRAINT uq_automa_runners_tenant_id UNIQUE (tenant_id, id)
-);
-
-COMMENT ON TABLE automa.runners IS '[Plugin: automa] Registered distributed Rust runner daemon nodes';
-
--- 3.3. Campaign Runs (Strict Multi-tenant boundary enforced via composite FK)
+-- 3.2. Campaign Runs (Consumes Compute Node from schema runners)
 CREATE TABLE IF NOT EXISTS automa.campaign_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -101,10 +73,10 @@ CREATE TABLE IF NOT EXISTS automa.campaign_runs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     CONSTRAINT fk_automa_campaign_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automa.workflows(tenant_id, id) ON DELETE SET NULL,
-    CONSTRAINT fk_automa_campaign_runner FOREIGN KEY (tenant_id, runner_id) REFERENCES automa.runners(tenant_id, id) ON DELETE SET NULL
+    CONSTRAINT fk_automa_campaign_runner FOREIGN KEY (tenant_id, runner_id) REFERENCES runners.devices(tenant_id, id) ON DELETE SET NULL
 );
 
--- 3.4. Execution Logs
+-- 3.3. Execution Logs
 CREATE TABLE IF NOT EXISTS automa.execution_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -117,7 +89,7 @@ CREATE TABLE IF NOT EXISTS automa.execution_logs (
     logged_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3.5. Schedules (Strict Multi-tenant boundary enforced via composite FK)
+-- 3.4. Schedules
 CREATE TABLE IF NOT EXISTS automa.schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -136,14 +108,12 @@ CREATE TABLE IF NOT EXISTS automa.schedules (
 
 -- 4. Composite Indexes
 CREATE INDEX IF NOT EXISTS idx_automa_workflows_tenant ON automa.workflows (tenant_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_automa_runners_tenant_status ON automa.runners (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_automa_campaigns_tenant ON automa.campaign_runs (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automa_logs_campaign ON automa.execution_logs (tenant_id, campaign_run_id, logged_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automa_schedules_tenant ON automa.schedules (tenant_id, is_active);
 
 -- 5. Row Level Security
 ALTER TABLE automa.workflows ENABLE ROW LEVEL SECURITY;
-ALTER TABLE automa.runners ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automa.campaign_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automa.execution_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automa.schedules ENABLE ROW LEVEL SECURITY;
@@ -155,14 +125,6 @@ CREATE POLICY "workflows_select" ON automa.workflows
 CREATE POLICY "workflows_manage" ON automa.workflows
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'automa:workflows:manage') OR public.is_tenant_admin(tenant_id));
-
-CREATE POLICY "runners_select" ON automa.runners
-    FOR SELECT TO authenticated
-    USING (public.is_tenant_member(tenant_id));
-
-CREATE POLICY "runners_manage" ON automa.runners
-    FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'automa:runners:manage') OR public.is_tenant_admin(tenant_id));
 
 CREATE POLICY "campaigns_select" ON automa.campaign_runs
     FOR SELECT TO authenticated
@@ -193,8 +155,6 @@ INSERT INTO public.permissions (id, module, description)
 VALUES 
     ('automa:workflows:read',   'automa', 'View workflows AST graphs'),
     ('automa:workflows:manage', 'automa', 'Create, edit, and delete workflows'),
-    ('automa:runners:read',     'automa', 'View registered runner nodes'),
-    ('automa:runners:manage',   'automa', 'Register and maintain runner nodes'),
     ('automa:campaigns:read',   'automa', 'View campaign runs and telemetry'),
     ('automa:campaigns:run',    'automa', 'Trigger workflow executions'),
     ('automa:campaigns:manage', 'automa', 'Configure campaign schedules'),
@@ -205,7 +165,7 @@ ON CONFLICT (id) DO UPDATE SET description = EXCLUDED.description;
 INSERT INTO public.role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM public.roles r
 CROSS JOIN (
-    VALUES ('automa:workflows:read'), ('automa:workflows:manage'), ('automa:runners:read'), ('automa:runners:manage'),
+    VALUES ('automa:workflows:read'), ('automa:workflows:manage'),
            ('automa:campaigns:read'), ('automa:campaigns:run'), ('automa:campaigns:manage'), ('automa:logs:read')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name IN ('owner', 'admin')
@@ -214,7 +174,7 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 INSERT INTO public.role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM public.roles r
 CROSS JOIN (
-    VALUES ('automa:workflows:read'), ('automa:runners:read'), ('automa:campaigns:read'), ('automa:campaigns:run'), ('automa:logs:read')
+    VALUES ('automa:workflows:read'), ('automa:campaigns:read'), ('automa:campaigns:run'), ('automa:logs:read')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -225,8 +185,8 @@ SELECT public.register_plugin(
     'Automa Cloud Bridge',
     '1.0.0',
     'automa',
-    ARRAY[]::TEXT[],
-    'Distributed browser automation coordinator, fleet runners, campaign runs, and telemetry',
+    ARRAY['runners']::TEXT[],
+    'Distributed browser automation coordinator, batch campaign runs, and telemetry',
     FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
 );
