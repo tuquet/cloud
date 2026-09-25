@@ -5,7 +5,7 @@
 
 [CmdletBinding()]
 param (
-    [ValidateSet('local', 'linked')]
+    [ValidateSet('local', 'dev', 'linked')]
     [string]$Target = 'local'
 )
 
@@ -33,7 +33,8 @@ if (Test-Path $helperFile) {
     if ($Target -eq 'local') {
         Get-Content $helperFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Null
     } else {
-        & supabase db query "--$Target" -f $helperFile 2>&1 | Out-Null
+        $targetFlag = if ($Target -eq 'dev') { 'linked' } else { $Target }
+        & supabase db query "--$targetFlag" -f $helperFile 2>&1 | Out-Null
     }
     $ErrorActionPreference = $prevEAP
 }
@@ -53,7 +54,8 @@ foreach ($testFile in $TestFiles) {
         Get-Content $testFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
         $exitCode = $LASTEXITCODE
     } else {
-        & supabase db query "--$Target" -f $testFile 2>&1 | Out-Host
+        $targetFlag = if ($Target -eq 'dev') { 'linked' } else { $Target }
+        & supabase db query "--$targetFlag" -f $testFile 2>&1 | Out-Host
         $exitCode = $LASTEXITCODE
     }
 

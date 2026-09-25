@@ -6,7 +6,7 @@
 
 [CmdletBinding()]
 param (
-    [ValidateSet('local', 'linked')]
+    [ValidateSet('local', 'dev', 'linked')]
     [string]$Target = 'local',
 
     [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'runners', 'automa')]
@@ -64,7 +64,8 @@ foreach ($item in $TargetPlugins) {
         Get-Content $sqlFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
         $exitCode = $LASTEXITCODE
     } else {
-        $cmdArgs = @('db', 'query', "--$Target", '-f', $sqlFile)
+        $targetFlag = if ($Target -eq 'dev') { 'linked' } else { $Target }
+        $cmdArgs = @('db', 'query', "--$targetFlag", '-f', $sqlFile)
         & supabase @cmdArgs 2>&1 | Out-Host
         $exitCode = $LASTEXITCODE
     }
@@ -88,7 +89,8 @@ foreach ($item in $TargetPlugins) {
             if ($Target -eq 'local') {
                 Get-Content $seedFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
             } else {
-                & supabase db query "--$Target" -f $seedFile 2>&1 | Out-Host
+                $targetFlag = if ($Target -eq 'dev') { 'linked' } else { $Target }
+                & supabase db query "--$targetFlag" -f $seedFile 2>&1 | Out-Host
             }
             $ErrorActionPreference = $prevEAP
             Write-Host "    [OK] Sample data applied for $pluginId" -ForegroundColor Green
