@@ -319,6 +319,11 @@ BEGIN
 END;
 $$;
 
+-- Cấp quyền thực thi an toàn cho GoTrue Auth Daemon
+GRANT USAGE ON SCHEMA public TO supabase_auth_admin;
+GRANT EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) TO supabase_auth_admin;
+REVOKE EXECUTE ON FUNCTION public.custom_access_token_hook(jsonb) FROM authenticated, anon, public;
+
 -- ============================================================================
 -- 5. PLUGIN LIFECYCLE RPCs (ĐỘNG CƠ QUẢN LÝ VÒNG ĐỜI PLUGIN)
 -- ============================================================================
@@ -433,6 +438,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = ''
 AS $$
 BEGIN
     NEW.updated_at = timezone('utc'::text, now());

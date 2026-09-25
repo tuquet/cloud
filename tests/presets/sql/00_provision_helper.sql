@@ -3,6 +3,7 @@
 -- Description: Stored procedure for atomic, idempotent provisioning of test
 --              identities in auth.users, auth.identities, public.profiles,
 --              public.tenants, public.tenant_members, and public.member_roles.
+-- Architecture: Strictly compliant with CWE-426 (SET search_path = '')
 -- ============================================================================
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -23,7 +24,7 @@ CREATE OR REPLACE FUNCTION public.provision_test_identity(
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth, extensions
+SET search_path = ''
 AS $$
 DECLARE
     v_user_id UUID;
@@ -41,14 +42,14 @@ BEGIN
         RAISE EXCEPTION 'Password is required';
     END IF;
 
-    -- Encrypt password with Blowfish bcrypt (cost 10)
-    v_encrypted_pwd := crypt(p_password, gen_salt('bf', 10));
+    -- Encrypt password with Blowfish bcrypt (cost 10) via extensions schema
+    v_encrypted_pwd := extensions.crypt(p_password, extensions.gen_salt('bf', 10));
 
     -- 2. Find or Create User in auth.users
     SELECT id INTO v_user_id FROM auth.users WHERE email = lower(trim(p_email)) LIMIT 1;
 
     IF v_user_id IS NULL THEN
-        v_user_id := gen_random_uuid();
+        v_user_id := extensions.gen_random_uuid();
         INSERT INTO auth.users (
             id,
             instance_id,
@@ -116,7 +117,7 @@ BEGIN
         created_at,
         updated_at
     ) VALUES (
-        gen_random_uuid(),
+        extensions.gen_random_uuid(),
         v_user_id::text,
         v_user_id,
         jsonb_build_object('sub', v_user_id::text, 'email', lower(trim(p_email))),
@@ -155,7 +156,7 @@ BEGIN
         SELECT id INTO v_tenant_id FROM public.tenants WHERE slug = lower(trim(p_tenant_slug)) LIMIT 1;
 
         IF v_tenant_id IS NULL THEN
-            v_tenant_id := gen_random_uuid();
+            v_tenant_id := extensions.gen_random_uuid();
             INSERT INTO public.tenants (
                 id,
                 slug,
@@ -188,7 +189,7 @@ BEGIN
         WHERE tenant_id = v_tenant_id AND user_id = v_user_id LIMIT 1;
 
         IF v_member_id IS NULL THEN
-            v_member_id := gen_random_uuid();
+            v_member_id := extensions.gen_random_uuid();
             INSERT INTO public.tenant_members (
                 id,
                 tenant_id,
@@ -222,6 +223,12 @@ BEGIN
                 v_tenant_id
             )
             ON CONFLICT (member_id, role_id) DO NOTHING;
+
+            -- Prune extraneous role if assigned by trigger and differs from requested role
+            IF p_role_name <> 'owner' THEN
+                DELETE FROM public.member_roles
+                WHERE member_id = v_member_id AND role_id <> v_role_id;
+            END IF;
         END IF;
 
         -- 8. Optional: Setup billing subscription if billing schema is installed
@@ -265,7 +272,7 @@ CREATE OR REPLACE FUNCTION public.provision_test_preset(p_preset JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, auth, extensions
+SET search_path = ''
 AS $$
 BEGIN
     RETURN public.provision_test_identity(

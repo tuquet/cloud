@@ -13,7 +13,9 @@ BEGIN
     -- Check if auth.users exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
         INSERT INTO auth.users (
-            id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+            id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+            raw_app_meta_data, raw_user_meta_data, created_at, updated_at,
+            confirmation_token, recovery_token, email_change_token_new, email_change
         )
         VALUES 
             (
@@ -22,12 +24,16 @@ BEGIN
                 'authenticated',
                 'authenticated',
                 'admin@tuquet.dev',
-                crypt('tuquet123!', gen_salt('bf')),
+                crypt('tuquet123!', gen_salt('bf', 10)),
                 now(),
                 '{"provider":"email","providers":["email"]}'::jsonb,
                 '{"full_name":"Nguyen Dang Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
                 now(),
-                now()
+                now(),
+                '',
+                '',
+                '',
+                ''
             ),
             (
                 v_member_id,
@@ -35,14 +41,53 @@ BEGIN
                 'authenticated',
                 'authenticated',
                 'member@tuquet.dev',
-                crypt('tuquet123!', gen_salt('bf')),
+                crypt('tuquet123!', gen_salt('bf', 10)),
                 now(),
                 '{"provider":"email","providers":["email"]}'::jsonb,
                 '{"full_name":"Collaborator Dev","avatar_url":""}'::jsonb,
                 now(),
-                now()
+                now(),
+                '',
+                '',
+                '',
+                ''
             )
-        ON CONFLICT (id) DO NOTHING;
+        ON CONFLICT (id) DO UPDATE SET
+            encrypted_password = EXCLUDED.encrypted_password,
+            email_confirmed_at = COALESCE(auth.users.email_confirmed_at, EXCLUDED.email_confirmed_at),
+            confirmation_token = '',
+            recovery_token = '',
+            email_change_token_new = '',
+            email_change = '',
+            updated_at = now();
+
+        -- Ensure matching auth identities for password authentication
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'identities') THEN
+            INSERT INTO auth.identities (
+                id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+            ) VALUES 
+                (
+                    gen_random_uuid(),
+                    v_admin_id::text,
+                    v_admin_id,
+                    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@tuquet.dev'),
+                    'email',
+                    now(),
+                    now(),
+                    now()
+                ),
+                (
+                    gen_random_uuid(),
+                    v_member_id::text,
+                    v_member_id,
+                    jsonb_build_object('sub', v_member_id::text, 'email', 'member@tuquet.dev'),
+                    'email',
+                    now(),
+                    now(),
+                    now()
+                )
+            ON CONFLICT (provider_id, provider) DO NOTHING;
+        END IF;
     END IF;
 
     -- Ensure profiles exist (in case auth trigger is bypassed in test runners)
