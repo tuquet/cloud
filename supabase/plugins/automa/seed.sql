@@ -20,23 +20,3 @@ VALUES
         'a0000000-0000-0000-0000-000000000001'
     )
 ON CONFLICT (id) DO NOTHING;
-
-INSERT INTO automa.runners (
-    id, tenant_id, name, machine_fingerprint, status, version, os_info, ip_address, max_concurrency, active_tasks, capabilities, last_heartbeat_at
-)
-VALUES
-    (
-        'd0000000-0000-0000-0000-000000000001',
-        'b0000000-0000-0000-0000-000000000001',
-        'Worker-Desktop-Node-01',
-        'hwid-win11-a83f9e2b10c94d3',
-        'idle',
-        '1.0.4',
-        'Windows 11 Pro 64-bit',
-        '192.168.1.150',
-        4,
-        0,
-        '["browser", "http", "gui"]'::jsonb,
-        now()
-    )
-ON CONFLICT (tenant_id, machine_fingerprint) DO NOTHING;

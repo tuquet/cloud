@@ -8,7 +8,7 @@ DECLARE
     v_missing_tables TEXT[] := ARRAY[]::TEXT[];
     v_tbl TEXT;
     v_expected_tables TEXT[] := ARRAY[
-        'workflows', 'runners', 'campaign_runs', 'execution_logs', 'schedules'
+        'workflows', 'campaign_runs', 'execution_logs', 'schedules'
     ];
     v_rls_disabled TEXT[] := ARRAY[]::TEXT[];
 BEGIN
@@ -30,10 +30,10 @@ BEGIN
     IF array_length(v_missing_tables, 1) > 0 THEN
         RAISE EXCEPTION 'FAILED: Missing tables in schema automa: %', v_missing_tables;
     ELSE
-        RAISE NOTICE ' [PASS] All 5 Automa Tables exist in schema automa.';
+        RAISE NOTICE ' [PASS] All 4 Automa Tables exist in schema automa.';
     END IF;
 
-    -- Verify RLS is enabled on all 5 tables
+    -- Verify RLS is enabled on all 4 tables
     RAISE NOTICE '>>> [TEST 2] Verifying Row Level Security (RLS) enforcement...';
     FOREACH v_tbl IN ARRAY v_expected_tables LOOP
         IF NOT EXISTS (
@@ -62,9 +62,9 @@ BEGIN
 
     -- Verify Atomic Permissions
     RAISE NOTICE '>>> [TEST 4] Verifying Automa Atomic Permissions...';
-    IF (SELECT count(*) FROM public.permissions WHERE module = 'automa') < 8 THEN
-        RAISE EXCEPTION 'FAILED: Fewer than 8 automa permissions registered in public.permissions!';
+    IF (SELECT count(*) FROM public.permissions WHERE module = 'automa') < 6 THEN
+        RAISE EXCEPTION 'FAILED: Fewer than 6 automa permissions registered in public.permissions!';
     ELSE
-        RAISE NOTICE ' [PASS] All 8 Automa permissions registered successfully.';
+        RAISE NOTICE ' [PASS] All 6 Automa permissions registered successfully.';
     END IF;
 END $$;

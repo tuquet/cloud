@@ -169,6 +169,31 @@ $$;
 
 GRANT EXECUTE ON FUNCTION runners.heartbeat TO authenticated, anon, service_role;
 
+-- 5.3. Public Facade for seamless PostgREST RPC routing
+CREATE OR REPLACE FUNCTION public.enroll_device(
+    p_machine_fingerprint VARCHAR(128),
+    p_name VARCHAR(128),
+    p_os_info VARCHAR(128) DEFAULT NULL,
+    p_cpu_cores INT DEFAULT 1,
+    p_ram_mb INT DEFAULT 1024,
+    p_capabilities JSONB DEFAULT '[]'::jsonb,
+    p_metadata JSONB DEFAULT '{}'::jsonb,
+    p_enrollment_token TEXT DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN runners.enroll_device(
+        p_machine_fingerprint, p_name, p_os_info, p_cpu_cores, p_ram_mb,
+        p_capabilities, p_metadata, p_enrollment_token
+    );
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.enroll_device TO authenticated, anon, service_role;
+
 -- 6. Register Permissions into Base Core Dictionary
 INSERT INTO public.permissions (id, module, description)
 VALUES 

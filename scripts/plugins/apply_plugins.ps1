@@ -9,7 +9,7 @@ param (
     [ValidateSet('local', 'linked')]
     [string]$Target = 'local',
 
-    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'automa')]
+    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'runners', 'automa')]
     [string]$Plugin = 'all',
 
     [ValidateSet('install', 'uninstall')]
@@ -20,11 +20,12 @@ param (
 
 $ErrorActionPreference = 'Stop'
 
-# Define canonical installation order (Infrastructure -> Billing -> Events -> Business Domain)
+# Define canonical installation order (Infrastructure -> Billing -> Events -> Compute Grid -> Business Domain)
 $CanonicalOrder = @(
     @{ Id = 'storage';       Install = 'supabase/plugins/storage/install.sql';       Uninstall = 'supabase/plugins/storage/uninstall.sql';       Desc = 'Media Storage Assets (schema: media)' },
     @{ Id = 'subscriptions'; Install = 'supabase/plugins/subscriptions/install.sql'; Uninstall = 'supabase/plugins/subscriptions/uninstall.sql'; Desc = 'Subscriptions & Quota (schema: billing)' },
     @{ Id = 'webhooks';      Install = 'supabase/plugins/webhooks/install.sql';      Uninstall = 'supabase/plugins/webhooks/uninstall.sql';      Desc = 'Asynchronous Outbox & Webhooks (schema: events)' },
+    @{ Id = 'runners';       Install = 'supabase/plugins/runners/install.sql';       Uninstall = 'supabase/plugins/runners/uninstall.sql';       Desc = 'Runners & Compute Fleet (schema: runners)' },
     @{ Id = 'automa';        Install = 'supabase/plugins/automa/install.sql';        Uninstall = 'supabase/plugins/automa/uninstall.sql';        Desc = 'Automa Cloud Bridge (schema: automa)' }
 )
 
@@ -77,9 +78,9 @@ foreach ($item in $TargetPlugins) {
 
     Write-Host "    [OK] Successfully applied $sqlFile" -ForegroundColor Green
 
-    # Apply seed data for automa if requested during install
-    if ($Action -eq 'install' -and $pluginId -eq 'automa' -and $WithSeed) {
-        $seedFile = 'supabase/plugins/automa/seed.sql'
+    # Apply seed data if available and requested during install
+    if ($Action -eq 'install' -and ($pluginId -eq 'automa' -or $pluginId -eq 'runners') -and $WithSeed) {
+        $seedFile = "supabase/plugins/$pluginId/seed.sql"
         if (Test-Path $seedFile) {
             Write-Host "    --> Applying sample data: $seedFile" -ForegroundColor DarkYellow
             $prevEAP = $ErrorActionPreference
@@ -90,7 +91,7 @@ foreach ($item in $TargetPlugins) {
                 & supabase db query "--$Target" -f $seedFile 2>&1 | Out-Host
             }
             $ErrorActionPreference = $prevEAP
-            Write-Host "    [OK] Sample data applied for automa" -ForegroundColor Green
+            Write-Host "    [OK] Sample data applied for $pluginId" -ForegroundColor Green
         }
     }
 }
