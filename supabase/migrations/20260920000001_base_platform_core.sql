@@ -199,8 +199,20 @@ CREATE INDEX IF NOT EXISTS idx_system_plugins_schema ON public.system_plugins(sc
 CREATE INDEX IF NOT EXISTS idx_system_plugins_is_system ON public.system_plugins(is_system);
 
 -- ============================================================================
--- 4. HÀM TRỢ NĂNG BẢO MẬT & TRÁNH ĐỆ QUY RLS (SECURITY DEFINER HELPERS)
--- ============================================================================
+-- 4.0. Safe UUID Type Cast Helper (Prevents unhandled runtime syntax errors on malformed input)
+CREATE OR REPLACE FUNCTION public.safe_cast_uuid(val text)
+RETURNS UUID
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = ''
+AS $$
+BEGIN
+    RETURN val::uuid;
+EXCEPTION
+    WHEN invalid_text_representation THEN
+        RETURN NULL;
+END;
+$$;
 
 CREATE OR REPLACE FUNCTION public.get_user_tenant_ids()
 RETURNS SETOF UUID
@@ -288,6 +300,11 @@ DECLARE
     claims JSONB;
     user_tenants JSONB;
 BEGIN
+    -- Null safety: If not an authenticated user event, return untouched
+    IF event->>'user_id' IS NULL OR event->'claims' IS NULL THEN
+        RETURN event;
+    END IF;
+
     SELECT COALESCE(
         jsonb_agg(
             jsonb_build_object(
@@ -516,6 +533,312 @@ CREATE TRIGGER on_tenant_created_assign_owner
     AFTER INSERT ON public.tenants
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_tenant_owner();
 
+-- 6.5. Invitation Acceptance RPC (Enables invited users to join tenants securely)
+CREATE OR REPLACE FUNCTION public.accept_invitation(p_token text)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_user_id UUID;
+    v_user_email TEXT;
+    v_invitation RECORD;
+    v_member_id UUID;
+    v_token_hash TEXT;
+BEGIN
+    v_user_id := auth.uid();
+    IF v_user_id IS NULL THEN
+        RAISE EXCEPTION 'Authentication required to accept invitation';
+    END IF;
+
+    -- Fetch verified email from auth.users (single source of truth)
+    SELECT email INTO v_user_email FROM auth.users WHERE id = v_user_id;
+
+    -- Compute SHA-256 hash of token to match token_hash
+    v_token_hash := pg_catalog.encode(extensions.digest(p_token, 'sha256'), 'hex');
+
+    SELECT * INTO v_invitation
+    FROM public.tenant_invitations
+    WHERE (token_hash = v_token_hash OR token_hash = p_token)
+      AND status = 'pending'
+      AND expires_at > timezone('utc'::text, now())
+      AND lower(trim(email)) = lower(trim(v_user_email))
+    FOR UPDATE;
+
+    IF v_invitation.id IS NULL THEN
+        RAISE EXCEPTION 'Invalid, expired, or unauthorized invitation token';
+    END IF;
+
+    -- Set session flag so enforce_rbac_owner_guards permits authorized role assignment
+    PERFORM set_config('app.invitation_acceptance', 'true', true);
+
+    INSERT INTO public.tenant_members (tenant_id, user_id, status)
+    VALUES (v_invitation.tenant_id, v_user_id, 'active')
+    ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = 'active', updated_at = timezone('utc'::text, now())
+    RETURNING id INTO v_member_id;
+
+    IF v_invitation.role_id IS NOT NULL THEN
+        INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+        VALUES (v_member_id, v_invitation.role_id, v_invitation.tenant_id)
+        ON CONFLICT (member_id, role_id) DO NOTHING;
+    END IF;
+
+    UPDATE public.tenant_invitations
+    SET status = 'accepted'
+    WHERE id = v_invitation.id;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'tenant_id', v_invitation.tenant_id,
+        'member_id', v_member_id,
+        'role_id', v_invitation.role_id
+    );
+END;
+$$;
+
+-- 6.6. RBAC Owner Tampering & Hostile Takeover Prevention Guard
+CREATE OR REPLACE FUNCTION public.enforce_rbac_owner_guards()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_owner_role_id UUID;
+    v_caller_is_owner BOOLEAN;
+    v_remaining_owners INT;
+    v_target_is_owner BOOLEAN;
+    v_is_initial_tenant_owner BOOLEAN := false;
+    v_is_invitation_acceptance BOOLEAN := false;
+BEGIN
+    SELECT id INTO v_owner_role_id FROM public.roles WHERE tenant_id IS NULL AND name = 'owner' LIMIT 1;
+
+    -- Allow initial owner assignment when creating a brand new tenant
+    IF TG_OP = 'INSERT' AND NEW.tenant_id IS NOT NULL THEN
+        v_is_initial_tenant_owner := EXISTS (
+            SELECT 1 FROM public.tenants t
+            WHERE t.id = NEW.tenant_id
+              AND t.created_by = auth.uid()
+              AND NOT EXISTS (
+                  SELECT 1 FROM public.member_roles mr
+                  WHERE mr.tenant_id = NEW.tenant_id
+                    AND mr.role_id = v_owner_role_id
+              )
+        );
+    END IF;
+
+    v_is_invitation_acceptance := (COALESCE(current_setting('app.invitation_acceptance', true), 'false') = 'true');
+
+    -- Check if caller is authenticated owner or system/trigger internal bypass
+    v_caller_is_owner := (
+        (COALESCE(auth.jwt() ->> 'role', '') = 'service_role')
+        OR (auth.uid() IS NULL)
+        OR v_is_invitation_acceptance
+        OR v_is_initial_tenant_owner
+        OR EXISTS (
+            SELECT 1 FROM public.member_roles mr
+            JOIN public.tenant_members tm ON tm.id = mr.member_id
+            WHERE tm.tenant_id = COALESCE(NEW.tenant_id, OLD.tenant_id)
+              AND tm.user_id = auth.uid()
+              AND mr.role_id = v_owner_role_id
+        )
+    );
+
+    IF TG_TABLE_NAME = 'member_roles' THEN
+        -- Prevent non-owners from granting owner role
+        IF TG_OP = 'INSERT' AND NEW.role_id = v_owner_role_id THEN
+            IF NOT COALESCE(v_caller_is_owner, false) THEN
+                RAISE EXCEPTION 'Privilege Escalation Blocked: Only an existing owner can grant the owner role.'
+                    USING ERRCODE = '42501';
+            END IF;
+        END IF;
+
+        -- Prevent revoking owner role if it is the last owner of active tenant
+        IF TG_OP = 'DELETE' AND OLD.role_id = v_owner_role_id THEN
+            -- If parent tenant itself is being deleted, permit cascade delete
+            IF NOT EXISTS (SELECT 1 FROM public.tenants WHERE id = OLD.tenant_id) THEN
+                RETURN OLD;
+            END IF;
+
+            IF NOT COALESCE(v_caller_is_owner, false) THEN
+                RAISE EXCEPTION 'Privilege Escalation Blocked: Only an owner can revoke the owner role.'
+                    USING ERRCODE = '42501';
+            END IF;
+
+            SELECT count(1) INTO v_remaining_owners
+            FROM public.member_roles
+            WHERE tenant_id = OLD.tenant_id
+              AND role_id = v_owner_role_id
+              AND member_id <> OLD.member_id;
+
+            IF v_remaining_owners = 0 AND EXISTS (SELECT 1 FROM public.tenants WHERE id = OLD.tenant_id) THEN
+                RAISE EXCEPTION 'Orphaned Tenant Blocked: Cannot remove the last owner of a tenant. Transfer ownership first.'
+                    USING ERRCODE = '23514';
+            END IF;
+        END IF;
+        RETURN COALESCE(NEW, OLD);
+
+    ELSIF TG_TABLE_NAME = 'tenant_members' THEN
+        IF TG_OP = 'DELETE' THEN
+            -- If parent tenant itself is being deleted, permit cascade delete
+            IF NOT EXISTS (SELECT 1 FROM public.tenants WHERE id = OLD.tenant_id) THEN
+                RETURN OLD;
+            END IF;
+
+            SELECT EXISTS (
+                SELECT 1 FROM public.member_roles
+                WHERE member_id = OLD.id AND role_id = v_owner_role_id
+            ) INTO v_target_is_owner;
+
+            IF v_target_is_owner THEN
+                IF NOT COALESCE(v_caller_is_owner, false) THEN
+                    RAISE EXCEPTION 'Hostile Takeover Blocked: Only an owner can remove an owner from a tenant.'
+                        USING ERRCODE = '42501';
+                END IF;
+
+                SELECT count(1) INTO v_remaining_owners
+                FROM public.member_roles
+                WHERE tenant_id = OLD.tenant_id
+                  AND role_id = v_owner_role_id
+                  AND member_id <> OLD.id;
+
+                IF v_remaining_owners = 0 AND EXISTS (SELECT 1 FROM public.tenants WHERE id = OLD.tenant_id) THEN
+                    RAISE EXCEPTION 'Orphaned Tenant Blocked: Cannot delete the last owner of a tenant.'
+                        USING ERRCODE = '23514';
+                END IF;
+            END IF;
+        END IF;
+        RETURN OLD;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_guard_member_roles ON public.member_roles;
+CREATE TRIGGER trigger_guard_member_roles
+    BEFORE INSERT OR DELETE ON public.member_roles
+    FOR EACH ROW EXECUTE FUNCTION public.enforce_rbac_owner_guards();
+
+DROP TRIGGER IF EXISTS trigger_guard_tenant_members ON public.tenant_members;
+CREATE TRIGGER trigger_guard_tenant_members
+    BEFORE DELETE ON public.tenant_members
+    FOR EACH ROW EXECUTE FUNCTION public.enforce_rbac_owner_guards();
+
+-- 6.7. Cross-Tenant Role & Member Assignment Invariant Guard
+CREATE OR REPLACE FUNCTION public.validate_member_role_assignment()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_member_tenant_id UUID;
+    v_role_tenant_id UUID;
+BEGIN
+    SELECT tenant_id INTO v_member_tenant_id
+    FROM public.tenant_members
+    WHERE id = NEW.member_id;
+
+    IF v_member_tenant_id IS NULL OR v_member_tenant_id <> NEW.tenant_id THEN
+        RAISE EXCEPTION 'Cross-Tenant Member Assignment Blocked: Member % does not belong to tenant %', NEW.member_id, NEW.tenant_id
+            USING ERRCODE = '23503';
+    END IF;
+
+    SELECT tenant_id INTO v_role_tenant_id
+    FROM public.roles
+    WHERE id = NEW.role_id;
+
+    IF v_role_tenant_id IS NOT NULL AND v_role_tenant_id <> NEW.tenant_id THEN
+        RAISE EXCEPTION 'Cross-Tenant Role Assignment Blocked: Role % belongs to tenant %, not %', NEW.role_id, v_role_tenant_id, NEW.tenant_id
+            USING ERRCODE = '23503';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_validate_member_role ON public.member_roles;
+CREATE TRIGGER trigger_validate_member_role
+    BEFORE INSERT OR UPDATE ON public.member_roles
+    FOR EACH ROW EXECUTE FUNCTION public.validate_member_role_assignment();
+
+-- 6.8. Tenant Invitation Validation Guard
+CREATE OR REPLACE FUNCTION public.validate_tenant_invitation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_owner_role_id UUID;
+    v_role_tenant_id UUID;
+    v_caller_is_owner BOOLEAN;
+BEGIN
+    SELECT id INTO v_owner_role_id FROM public.roles WHERE tenant_id IS NULL AND name = 'owner' LIMIT 1;
+
+    SELECT tenant_id INTO v_role_tenant_id FROM public.roles WHERE id = NEW.role_id;
+    IF v_role_tenant_id IS NOT NULL AND v_role_tenant_id <> NEW.tenant_id THEN
+        RAISE EXCEPTION 'Cross-Tenant Role Blocked: Role does not belong to tenant %', NEW.tenant_id
+            USING ERRCODE = '23503';
+    END IF;
+
+    IF NEW.role_id = v_owner_role_id THEN
+        v_caller_is_owner := (
+            COALESCE(auth.jwt() ->> 'role', '') = 'service_role'
+            OR auth.uid() IS NULL
+            OR EXISTS (
+                SELECT 1 FROM public.member_roles mr
+                JOIN public.tenant_members tm ON tm.id = mr.member_id
+                WHERE tm.tenant_id = NEW.tenant_id
+                  AND tm.user_id = auth.uid()
+                  AND mr.role_id = v_owner_role_id
+            )
+        );
+
+        IF NOT COALESCE(v_caller_is_owner, false) THEN
+            RAISE EXCEPTION 'Privilege Escalation Blocked: Only an existing owner can invite an owner.'
+                USING ERRCODE = '42501';
+        END IF;
+    END IF;
+
+    IF TG_OP = 'INSERT' AND NEW.expires_at <= timezone('utc'::text, now()) THEN
+        RAISE EXCEPTION 'Invalid Expiration: expires_at must be in the future.'
+            USING ERRCODE = '23514';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_validate_invitation ON public.tenant_invitations;
+CREATE TRIGGER trigger_validate_invitation
+    BEFORE INSERT OR UPDATE ON public.tenant_invitations
+    FOR EACH ROW EXECUTE FUNCTION public.validate_tenant_invitation();
+
+-- 6.9. Protect Profile Email Spoofing
+CREATE OR REPLACE FUNCTION public.protect_profile_email()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    IF NEW.email IS DISTINCT FROM OLD.email THEN
+        IF auth.uid() IS NOT NULL AND COALESCE(auth.jwt() ->> 'role', '') <> 'service_role' THEN
+            NEW.email := OLD.email;
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trigger_protect_profile_email ON public.profiles;
+CREATE TRIGGER trigger_protect_profile_email
+    BEFORE UPDATE ON public.profiles
+    FOR EACH ROW EXECUTE FUNCTION public.protect_profile_email();
+
 -- ============================================================================
 -- 7. BẬT VÀ THIẾT LẬP CHÍNH SÁCH BẢO MẬT (ROW LEVEL SECURITY - RLS)
 -- ============================================================================
@@ -598,9 +921,9 @@ CREATE POLICY "Admins can update membership status"
     USING (public.has_tenant_permission(tenant_id, 'members:update'))
     WITH CHECK (public.has_tenant_permission(tenant_id, 'members:update'));
 
-CREATE POLICY "Admins can remove members"
+CREATE POLICY "Admins or members themselves can remove membership"
     ON public.tenant_members FOR DELETE TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'members:delete'));
+    USING (public.has_tenant_permission(tenant_id, 'members:delete') OR user_id = (SELECT auth.uid()));
 
 CREATE POLICY "Members can view roles assigned to members in the same tenant"
     ON public.member_roles FOR SELECT TO authenticated
@@ -624,26 +947,22 @@ CREATE POLICY "Authorized members can cancel invitations"
     USING (public.has_tenant_permission(tenant_id, 'members:invite'))
     WITH CHECK (public.has_tenant_permission(tenant_id, 'members:invite'));
 
+CREATE POLICY "Authorized members can delete invitations"
+    ON public.tenant_invitations FOR DELETE TO authenticated
+    USING (public.has_tenant_permission(tenant_id, 'members:invite'));
+
 CREATE POLICY "Authorized members can view audit logs"
     ON public.audit_logs FOR SELECT TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'audit:read'));
 
--- Chính sách RLS cho System Plugins
+-- Chính sách RLS cho System Plugins (Chỉ service_role có quyền thay đổi catalog plugin hệ thống)
 CREATE POLICY "system_plugins_select_all" ON public.system_plugins
     FOR SELECT TO authenticated
     USING (TRUE);
 
 CREATE POLICY "system_plugins_manage_admin" ON public.system_plugins
     FOR ALL TO authenticated
-    USING (
-        auth.jwt() ->> 'role' = 'service_role'
-        OR EXISTS (
-            SELECT 1 FROM public.roles r
-            JOIN public.member_roles mr ON mr.role_id = r.id
-            JOIN public.tenant_members tm ON tm.id = mr.member_id
-            WHERE tm.user_id = auth.uid() AND r.name = 'owner'
-        )
-    );
+    USING (COALESCE(auth.jwt() ->> 'role', '') = 'service_role');
 
 -- ============================================================================
 -- 8. SEED DATA MẪU (PERMISSIONS & DEFAULT SYSTEM ROLES & CORE REGISTRATION)

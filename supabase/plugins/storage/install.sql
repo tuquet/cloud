@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS media.assets (
     mime_type TEXT NOT NULL,
     file_size_bytes BIGINT NOT NULL CHECK (file_size_bytes >= 0),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL DEFAULT auth.uid(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -43,6 +43,11 @@ CREATE POLICY "assets_insert" ON media.assets
     FOR INSERT TO authenticated
     WITH CHECK (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id));
 
+CREATE POLICY "assets_update" ON media.assets
+    FOR UPDATE TO authenticated
+    USING (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id))
+    WITH CHECK (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id));
+
 CREATE POLICY "assets_delete" ON media.assets
     FOR DELETE TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:delete') OR public.is_tenant_admin(tenant_id));
@@ -60,17 +65,23 @@ BEGIN
         DROP POLICY IF EXISTS "storage_objects_select_tenant" ON storage.objects;
         CREATE POLICY "storage_objects_select_tenant" ON storage.objects
             FOR SELECT TO authenticated
-            USING (bucket_id = 'tenant-assets' AND (storage.foldername(name))[1]::uuid IN (SELECT public.get_user_tenant_ids()));
+            USING (bucket_id = 'tenant-assets' AND public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids()));
 
         DROP POLICY IF EXISTS "storage_objects_insert_tenant" ON storage.objects;
         CREATE POLICY "storage_objects_insert_tenant" ON storage.objects
             FOR INSERT TO authenticated
-            WITH CHECK (bucket_id = 'tenant-assets' AND public.has_tenant_permission((storage.foldername(name))[1]::uuid, 'media:upload'));
+            WITH CHECK (bucket_id = 'tenant-assets' AND public.has_tenant_permission(public.safe_cast_uuid((storage.foldername(name))[1]), 'media:upload'));
+
+        DROP POLICY IF EXISTS "storage_objects_update_tenant" ON storage.objects;
+        CREATE POLICY "storage_objects_update_tenant" ON storage.objects
+            FOR UPDATE TO authenticated
+            USING (bucket_id = 'tenant-assets' AND public.has_tenant_permission(public.safe_cast_uuid((storage.foldername(name))[1]), 'media:upload'))
+            WITH CHECK (bucket_id = 'tenant-assets' AND public.has_tenant_permission(public.safe_cast_uuid((storage.foldername(name))[1]), 'media:upload'));
 
         DROP POLICY IF EXISTS "storage_objects_delete_tenant" ON storage.objects;
         CREATE POLICY "storage_objects_delete_tenant" ON storage.objects
             FOR DELETE TO authenticated
-            USING (bucket_id = 'tenant-assets' AND public.has_tenant_permission((storage.foldername(name))[1]::uuid, 'media:delete'));
+            USING (bucket_id = 'tenant-assets' AND public.has_tenant_permission(public.safe_cast_uuid((storage.foldername(name))[1]), 'media:delete'));
     END IF;
 END $$;
 

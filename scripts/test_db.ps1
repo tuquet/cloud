@@ -27,11 +27,14 @@ $TestFiles = @(
 # Ensure provision helper procedure is present for verification
 $helperFile = "tests/presets/sql/00_provision_helper.sql"
 if (Test-Path $helperFile) {
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
     if ($Target -eq 'local') {
         Get-Content $helperFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Null
     } else {
         & supabase db query "--$Target" -f $helperFile 2>&1 | Out-Null
     }
+    $ErrorActionPreference = $prevEAP
 }
 
 foreach ($testFile in $TestFiles) {

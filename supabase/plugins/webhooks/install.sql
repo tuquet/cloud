@@ -38,11 +38,11 @@ CREATE INDEX IF NOT EXISTS idx_events_outbox_tenant ON events.outbox (tenant_id)
 CREATE TABLE IF NOT EXISTS events.subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    target_url TEXT NOT NULL,
+    target_url TEXT NOT NULL CHECK (target_url ~* '^https?://[^\s]+$'),
     secret TEXT NOT NULL,
     event_types TEXT[] NOT NULL DEFAULT ARRAY['*'],
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
+    created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL DEFAULT auth.uid(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
@@ -73,6 +73,12 @@ AS $$
 DECLARE
     v_event_id UUID;
 BEGIN
+    -- Enforce tenant membership authorization for authenticated caller
+    IF auth.uid() IS NOT NULL AND NOT public.is_tenant_member(_tenant_id) THEN
+        RAISE EXCEPTION 'Access denied: Caller is not a member of tenant %', _tenant_id
+            USING ERRCODE = '42501';
+    END IF;
+
     INSERT INTO events.outbox (tenant_id, event_type, payload, status, created_at)
     VALUES (_tenant_id, _event_type, _payload, 'pending', timezone('utc'::text, now()))
     RETURNING id INTO v_event_id;

@@ -52,7 +52,8 @@ CREATE TABLE IF NOT EXISTS automa.workflows (
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    deleted_at TIMESTAMPTZ DEFAULT NULL
+    deleted_at TIMESTAMPTZ DEFAULT NULL,
+    CONSTRAINT uq_automa_workflows_tenant_id UNIQUE (tenant_id, id)
 );
 
 COMMENT ON TABLE automa.workflows IS '[Plugin: automa] Visual flow graphs and AST node configurations';
@@ -74,17 +75,18 @@ CREATE TABLE IF NOT EXISTS automa.runners (
     registered_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT uq_automa_runner_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint)
+    CONSTRAINT uq_automa_runner_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint),
+    CONSTRAINT uq_automa_runners_tenant_id UNIQUE (tenant_id, id)
 );
 
 COMMENT ON TABLE automa.runners IS '[Plugin: automa] Registered distributed Rust runner daemon nodes';
 
--- 3.3. Campaign Runs
+-- 3.3. Campaign Runs (Strict Multi-tenant boundary enforced via composite FK)
 CREATE TABLE IF NOT EXISTS automa.campaign_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    workflow_id UUID REFERENCES automa.workflows(id) ON DELETE SET NULL,
-    runner_id UUID REFERENCES automa.runners(id) ON DELETE SET NULL,
+    workflow_id UUID,
+    runner_id UUID,
     name VARCHAR(255) NOT NULL,
     status automa.campaign_status NOT NULL DEFAULT 'pending',
     total_tasks INT NOT NULL DEFAULT 0 CHECK (total_tasks >= 0),
@@ -97,7 +99,9 @@ CREATE TABLE IF NOT EXISTS automa.campaign_runs (
     ended_at TIMESTAMPTZ,
     triggered_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT fk_automa_campaign_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automa.workflows(tenant_id, id) ON DELETE SET NULL,
+    CONSTRAINT fk_automa_campaign_runner FOREIGN KEY (tenant_id, runner_id) REFERENCES automa.runners(tenant_id, id) ON DELETE SET NULL
 );
 
 -- 3.4. Execution Logs
@@ -113,11 +117,11 @@ CREATE TABLE IF NOT EXISTS automa.execution_logs (
     logged_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3.5. Schedules
+-- 3.5. Schedules (Strict Multi-tenant boundary enforced via composite FK)
 CREATE TABLE IF NOT EXISTS automa.schedules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    workflow_id UUID NOT NULL REFERENCES automa.workflows(id) ON DELETE CASCADE,
+    workflow_id UUID NOT NULL,
     name VARCHAR(128) NOT NULL,
     cron_expression VARCHAR(64) NOT NULL,
     timezone VARCHAR(64) NOT NULL DEFAULT 'UTC',
@@ -126,7 +130,8 @@ CREATE TABLE IF NOT EXISTS automa.schedules (
     next_run_at TIMESTAMPTZ,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    CONSTRAINT fk_automa_schedules_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automa.workflows(tenant_id, id) ON DELETE CASCADE
 );
 
 -- 4. Composite Indexes
@@ -168,6 +173,14 @@ CREATE POLICY "campaigns_run" ON automa.campaign_runs
     USING (public.has_tenant_permission(tenant_id, 'automa:campaigns:run') OR public.is_tenant_admin(tenant_id));
 
 CREATE POLICY "logs_select" ON automa.execution_logs
+    FOR SELECT TO authenticated
+    USING (public.is_tenant_member(tenant_id));
+
+CREATE POLICY "logs_insert" ON automa.execution_logs
+    FOR INSERT TO authenticated
+    WITH CHECK (public.has_tenant_permission(tenant_id, 'automa:campaigns:run') OR public.is_tenant_admin(tenant_id));
+
+CREATE POLICY "schedules_select" ON automa.schedules
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 

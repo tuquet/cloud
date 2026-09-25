@@ -107,10 +107,19 @@ BEGIN
         SELECT COUNT(*) INTO v_current_count FROM public.tenant_members WHERE tenant_id = _tenant_id AND status = 'active';
         RETURN (v_current_count + _increment) <= v_max_members;
     ELSIF _metric_name = 'monthly_runs' THEN
-        SELECT COALESCE(current_value, 0) INTO v_current_count FROM billing.usage_meters WHERE tenant_id = _tenant_id AND metric_name = 'monthly_runs';
+        SELECT 
+            CASE 
+                WHEN timezone('utc'::text, now()) >= reset_at THEN 0 
+                ELSE COALESCE(current_value, 0) 
+            END INTO v_current_count 
+        FROM billing.usage_meters 
+        WHERE tenant_id = _tenant_id AND metric_name = 'monthly_runs';
+
+        IF v_current_count IS NULL THEN v_current_count := 0; END IF;
         RETURN (v_current_count + _increment) <= v_max_monthly_runs;
     ELSIF _metric_name = 'storage_mb' THEN
         SELECT COALESCE(current_value, 0) INTO v_current_count FROM billing.usage_meters WHERE tenant_id = _tenant_id AND metric_name = 'storage_mb';
+        IF v_current_count IS NULL THEN v_current_count := 0; END IF;
         RETURN (v_current_count + _increment) <= v_max_storage_mb;
     END IF;
 
@@ -131,10 +140,23 @@ AS $$
 DECLARE
     v_new_val BIGINT;
 BEGIN
-    INSERT INTO billing.usage_meters (tenant_id, metric_name, current_value, updated_at)
-    VALUES (_tenant_id, _metric_name, _increment, timezone('utc'::text, now()))
+    INSERT INTO billing.usage_meters (tenant_id, metric_name, current_value, reset_at, updated_at)
+    VALUES (
+        _tenant_id,
+        _metric_name,
+        _increment,
+        (date_trunc('month', timezone('utc'::text, now())) + INTERVAL '1 month'),
+        timezone('utc'::text, now())
+    )
     ON CONFLICT (tenant_id, metric_name) DO UPDATE SET
-        current_value = billing.usage_meters.current_value + _increment,
+        current_value = CASE 
+            WHEN timezone('utc'::text, now()) >= billing.usage_meters.reset_at THEN EXCLUDED.current_value
+            ELSE billing.usage_meters.current_value + EXCLUDED.current_value
+        END,
+        reset_at = CASE 
+            WHEN timezone('utc'::text, now()) >= billing.usage_meters.reset_at THEN (date_trunc('month', timezone('utc'::text, now())) + INTERVAL '1 month')
+            ELSE billing.usage_meters.reset_at
+        END,
         updated_at = timezone('utc'::text, now())
     RETURNING current_value INTO v_new_val;
 
@@ -149,6 +171,10 @@ ALTER TABLE billing.usage_meters ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "plans_select" ON billing.plans FOR SELECT TO authenticated USING (is_active = TRUE);
 CREATE POLICY "subscriptions_select" ON billing.subscriptions FOR SELECT TO authenticated USING (public.is_tenant_member(tenant_id));
+CREATE POLICY "subscriptions_manage" ON billing.subscriptions
+    FOR UPDATE TO authenticated
+    USING (public.has_tenant_permission(tenant_id, 'subscriptions:manage') OR public.is_tenant_admin(tenant_id))
+    WITH CHECK (public.has_tenant_permission(tenant_id, 'subscriptions:manage') OR public.is_tenant_admin(tenant_id));
 CREATE POLICY "meters_select" ON billing.usage_meters FOR SELECT TO authenticated USING (public.is_tenant_member(tenant_id));
 
 -- 6. Permissions

