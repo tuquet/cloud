@@ -146,6 +146,26 @@ Install all first-party plugins or pick individual modules for your product need
 .\scripts\plugins\apply_plugins.ps1 -Plugin storage -Target local
 ```
 
+### Step 3: Connect from Client in 30 Seconds
+Connect your application using `@supabase/supabase-js` with automatic schema routing:
+
+```typescript
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient('https://<project-ref>.supabase.co', '<anon-key>');
+
+// 1. Query user tenants with sub-millisecond O(1) authorization
+const { data: tenants } = await supabase
+  .from('tenants')
+  .select('id, name, slug');
+
+// 2. Query any business plugin with isolated schema routing
+const { data: assets } = await supabase
+  .schema('media')
+  .from('assets')
+  .select('id, original_name, file_size_bytes');
+```
+
 ---
 
 ## 4. Production Deployment & Token Hook
