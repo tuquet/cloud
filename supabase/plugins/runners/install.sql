@@ -194,6 +194,23 @@ $$;
 
 GRANT EXECUTE ON FUNCTION public.enroll_device TO authenticated, anon, service_role;
 
+CREATE OR REPLACE FUNCTION public.heartbeat(
+    p_device_id UUID,
+    p_device_token TEXT,
+    p_active_jobs INT DEFAULT 0,
+    p_telemetry JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    RETURN runners.heartbeat(p_device_id, p_device_token, p_active_jobs, p_telemetry);
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.heartbeat TO authenticated, anon, service_role;
+
 -- 6. Register Permissions into Base Core Dictionary
 INSERT INTO public.permissions (id, module, description)
 VALUES 
