@@ -82,40 +82,34 @@ ON CONFLICT (id) DO NOTHING;
 -- Member 1: admin@tuquet.dev in acme-corp (owner)
 INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
 VALUES ('e0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'active')
-ON CONFLICT (tenant_id, user_id) DO NOTHING;
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
 
 INSERT INTO public.member_roles (member_id, role_id, tenant_id)
-VALUES (
-    'e0000000-0000-0000-0000-000000000001',
-    '00000000-0000-0000-0000-000000000001', -- owner
-    'b0000000-0000-0000-0000-000000000001'
-)
+SELECT tm.id, '00000000-0000-0000-0000-000000000001', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000001' AND tm.user_id = 'a0000000-0000-0000-0000-000000000001'
 ON CONFLICT (member_id, role_id) DO NOTHING;
 
 -- Member 2: member@tuquet.dev in acme-corp (member)
 INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
 VALUES ('e0000000-0000-0000-0000-000000000002', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000002', 'active')
-ON CONFLICT (tenant_id, user_id) DO NOTHING;
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
 
 INSERT INTO public.member_roles (member_id, role_id, tenant_id)
-VALUES (
-    'e0000000-0000-0000-0000-000000000002',
-    '00000000-0000-0000-0000-000000000003', -- member
-    'b0000000-0000-0000-0000-000000000001'
-)
+SELECT tm.id, '00000000-0000-0000-0000-000000000003', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000001' AND tm.user_id = 'a0000000-0000-0000-0000-000000000002'
 ON CONFLICT (member_id, role_id) DO NOTHING;
 
 -- Member 3: admin@tuquet.dev in personal-dev (owner)
 INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
 VALUES ('e0000000-0000-0000-0000-000000000003', 'b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000001', 'active')
-ON CONFLICT (tenant_id, user_id) DO NOTHING;
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
 
 INSERT INTO public.member_roles (member_id, role_id, tenant_id)
-VALUES (
-    'e0000000-0000-0000-0000-000000000003',
-    '00000000-0000-0000-0000-000000000001', -- owner
-    'b0000000-0000-0000-0000-000000000002'
-)
+SELECT tm.id, '00000000-0000-0000-0000-000000000001', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000002' AND tm.user_id = 'a0000000-0000-0000-0000-000000000001'
 ON CONFLICT (member_id, role_id) DO NOTHING;
 
 -- 4. Subscription Tier Seed (Optional - Only runs when subscriptions plugin is installed)

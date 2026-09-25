@@ -214,5 +214,6 @@ SELECT public.register_plugin(
     'automa',
     ARRAY[]::TEXT[],
     'Distributed browser automation coordinator, fleet runners, campaign runs, and telemetry',
+    FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
 );

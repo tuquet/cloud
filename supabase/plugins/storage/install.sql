@@ -15,7 +15,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA media GRANT ALL ON FUNCTIONS TO authenticated
 CREATE TABLE IF NOT EXISTS media.assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
+    project_id UUID DEFAULT NULL,
     file_path TEXT NOT NULL,
     bucket_name TEXT NOT NULL DEFAULT 'tenant-assets',
     original_name TEXT NOT NULL,
@@ -101,5 +101,6 @@ SELECT public.register_plugin(
     'media',
     ARRAY[]::TEXT[],
     'Multi-tenant file metadata management and isolated Supabase Storage bucket RLS policies',
+    FALSE,
     '{"bucket": "tenant-assets", "max_file_size_mb": 50}'::jsonb
 );

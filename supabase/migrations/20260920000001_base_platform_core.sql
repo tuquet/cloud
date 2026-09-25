@@ -11,6 +11,17 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Đảm bảo các schema ứng dụng cốt lõi tồn tại cho PostgREST và Plugin Engine
+CREATE SCHEMA IF NOT EXISTS automa;
+CREATE SCHEMA IF NOT EXISTS media;
+CREATE SCHEMA IF NOT EXISTS billing;
+CREATE SCHEMA IF NOT EXISTS events;
+
+GRANT USAGE ON SCHEMA automa TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA media TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA billing TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA events TO anon, authenticated, service_role;
+
 -- ============================================================================
 -- 1. ENUMS & KIỂU DỮ LIỆU CỐT LÕI
 -- ============================================================================

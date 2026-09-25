@@ -53,7 +53,7 @@ BEGIN
     -- Verify Master Plugin Registry Entry
     RAISE NOTICE '>>> [TEST 3] Verifying Plugin Registry entry...';
     IF NOT EXISTS (
-        SELECT 1 FROM public.system_plugins WHERE id = 'automa' AND is_installed = true
+        SELECT 1 FROM public.system_plugins WHERE id = 'automa' AND status = 'installed'
     ) THEN
         RAISE EXCEPTION 'FAILED: Plugin automa is not registered as installed in public.system_plugins!';
     ELSE

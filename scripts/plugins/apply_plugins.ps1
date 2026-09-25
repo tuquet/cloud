@@ -47,13 +47,17 @@ foreach ($item in $TargetPlugins) {
 
     Write-Host "`n--> Installing Plugin: [$pluginId] - $desc" -ForegroundColor Yellow
 
-    $cmdArgs = @('db', 'query', "--$Target", '-f', $installFile)
-    
     $prevEAP = $ErrorActionPreference
     $ErrorActionPreference = 'SilentlyContinue'
-    
-    & supabase @cmdArgs 2>&1 | Out-Host
-    $exitCode = $LASTEXITCODE
+
+    if ($Target -eq 'local') {
+        Get-Content $installFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
+        $exitCode = $LASTEXITCODE
+    } else {
+        $cmdArgs = @('db', 'query', "--$Target", '-f', $installFile)
+        & supabase @cmdArgs 2>&1 | Out-Host
+        $exitCode = $LASTEXITCODE
+    }
     
     $ErrorActionPreference = $prevEAP
 
@@ -71,7 +75,11 @@ foreach ($item in $TargetPlugins) {
             Write-Host "    --> Applying sample data: $seedFile" -ForegroundColor DarkYellow
             $prevEAP = $ErrorActionPreference
             $ErrorActionPreference = 'SilentlyContinue'
-            & supabase db query "--$Target" -f $seedFile 2>&1 | Out-Host
+            if ($Target -eq 'local') {
+                Get-Content $seedFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
+            } else {
+                & supabase db query "--$Target" -f $seedFile 2>&1 | Out-Host
+            }
             $ErrorActionPreference = $prevEAP
             Write-Host "    [OK] Sample data applied for automa" -ForegroundColor Green
         }

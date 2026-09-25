@@ -147,5 +147,6 @@ SELECT public.register_plugin(
     'events',
     ARRAY[]::TEXT[],
     'Transactional Outbox pattern & Outbound Webhook Subscriptions',
+    FALSE,
     '{"max_retries": 5}'::jsonb
 );
