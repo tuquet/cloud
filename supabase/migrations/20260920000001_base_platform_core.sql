@@ -483,15 +483,45 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+    v_full_name TEXT;
+    v_workspace_name TEXT;
+    v_slug TEXT;
+    v_avatar_url TEXT;
 BEGIN
+    v_full_name := COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', '');
+    v_avatar_url := COALESCE(NEW.raw_user_meta_data->>'avatar_url', '');
+
+    -- 1. Create or update profile
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
-    VALUES (
-        NEW.id,
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'avatar_url', '')
-    )
-    ON CONFLICT (id) DO NOTHING;
+    VALUES (NEW.id, NEW.email, v_full_name, v_avatar_url)
+    ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        full_name = CASE WHEN EXCLUDED.full_name <> '' THEN EXCLUDED.full_name ELSE public.profiles.full_name END,
+        avatar_url = CASE WHEN EXCLUDED.avatar_url <> '' THEN EXCLUDED.avatar_url ELSE public.profiles.avatar_url END;
+
+    -- 2. Auto-create default personal workspace/tenant for new user
+    IF NOT EXISTS (
+        SELECT 1 FROM public.tenant_members tm
+        JOIN public.member_roles mr ON mr.member_id = tm.id
+        JOIN public.roles r ON r.id = mr.role_id
+        WHERE tm.user_id = NEW.id AND r.name = 'owner'
+    ) THEN
+        v_workspace_name := CASE 
+            WHEN v_full_name <> '' THEN v_full_name || '''s Workspace'
+            WHEN NEW.email IS NOT NULL AND NEW.email <> '' THEN split_part(NEW.email, '@', 1) || '''s Workspace'
+            ELSE 'Personal Workspace'
+        END;
+
+        v_slug := lower(regexp_replace(COALESCE(NULLIF(split_part(NEW.email, '@', 1), ''), 'user'), '[^a-zA-Z0-9]', '', 'g'))
+                  || '-' || substr(md5(random()::text || clock_timestamp()::text), 1, 6);
+
+        -- Inserting into tenants with created_by triggers on_tenant_created_assign_owner,
+        -- which automatically adds NEW.id to tenant_members and assigns the 'owner' role.
+        INSERT INTO public.tenants (name, slug, created_by, status)
+        VALUES (v_workspace_name, v_slug, NEW.id, 'active');
+    END IF;
+
     RETURN NEW;
 END;
 $$;
