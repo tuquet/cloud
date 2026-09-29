@@ -7,11 +7,11 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 
-const SUPABASE_URL = "http://127.0.0.1:54321";
-const SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU";
-const TENANT_ID = "b0000000-0000-0000-0000-000000000001";
-const WORKFLOW_PATH = "C:\\Users\\ndtu6\\Repository\\tuquet-runner\\fixtures\\test_browser_workflow.json";
-const JOB_FILE = "C:\\Users\\ndtu6\\Repository\\tuquet-runner\\fixtures\\job_browser_automation.json";
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://dswhacsoaxgpfnkaxnhz.supabase.co";
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzd2hhY3NvYXhncGZua2F4bmh6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDI5MTMzNywiZXhwIjoyMTA1ODY3MzM3fQ.-QTQbzf9SqCu9TKtgHibUXJHO-FB-hibcNeOlDt5iJk";
+const TENANT_ID = process.env.SUPABASE_TENANT_ID || "b0000000-0000-0000-0000-000000000001";
+const WORKFLOW_PATH = "C:\\Users\\ndtu6\\Repository\\tuquet\\runner\\fixtures\\test_browser_workflow.json";
+const JOB_FILE = "C:\\Users\\ndtu6\\Repository\\tuquet\\runner\\fixtures\\job_browser_automation.json";
 
 async function main() {
     console.log("================================================================================");

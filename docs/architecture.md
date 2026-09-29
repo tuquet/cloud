@@ -351,15 +351,15 @@ Under the **KISS & YAGNI** principles, Tuquet Cloud **does not store static, dea
 
 ### 6.1. Fetch Live OpenAPI Specification On-Demand
 ```bash
-# Local Supabase instance (Port 54321)
-curl.exe -s -H "Accept: application/openapi+json" http://127.0.0.1:54321/rest/v1/ -o openapi.json
+# Production Supabase Cloud instance (tuquet-cloud)
+curl.exe -s -H "apikey: <anon-key>" -H "Accept: application/openapi+json" https://dswhacsoaxgpfnkaxnhz.supabase.co/rest/v1/ -o openapi.json
 
-# Cloud Supabase instance
-curl.exe -s -H "apikey: <anon-key>" -H "Accept: application/openapi+json" https://<project-ref>.supabase.co/rest/v1/ -o openapi.json
+# Local Supabase instance (Port 54321 - if running)
+curl.exe -s -H "Accept: application/openapi+json" http://127.0.0.1:54321/rest/v1/ -o openapi.json
 ```
 
 ### 6.2. Generate Strongly-Typed TypeScript Client SDK
 ```bash
-# Generate types directly from the local running database
-supabase gen types typescript --local > types/supabase.ts
+# Generate types directly from linked production database
+supabase gen types typescript --linked > types/supabase.ts
 ```
