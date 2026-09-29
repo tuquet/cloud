@@ -1,0 +1,37 @@
+name: CI (Supabase DB Tests & Lint)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Supabase Tests & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase Local Engine
+        run: supabase start
+
+      - name: Lint Database Migrations
+        run: supabase db lint
+
+      - name: Run pgTAP Database Tests
+        run: supabase test db
