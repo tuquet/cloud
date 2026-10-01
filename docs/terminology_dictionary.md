@@ -1,6 +1,6 @@
 # Terminology Dictionary & Anti-Hallucination Lexicon
 
-> **Supreme Purpose**: This document serves as the **Single Source of Truth (SSOT)** for all technical terminology, domain entities, database naming conventions, and architectural contracts within `tuquet-cloud` and across the broader Tuquet ecosystem (`tuquet-lib`, `tuquet-automa`, `tuquet-cloud`, `tuquet-scoop-bucket`).  
+> **Supreme Purpose**: This document serves as the **Single Source of Truth (SSOT)** for all technical terminology, domain entities, database naming conventions, and architectural contracts within `tuquet-cloud` and across the broader Tuquet ecosystem (`cli`, `runner`, `automa`, `lib`, `cloud`, `scoop-bucket`, `skills`, `claude-agy`).  
 > All technical documentation, SQL routines, migrations, API DTOs, client SDK code, and AI Agents **MUST adhere 100%** to this lexicon to completely eradicate **Terminology Hallucination** and ambiguous concept mixing.
 
 ---
@@ -9,12 +9,12 @@
 
 1. **One Concept - One Canonical Identifier**: Every technical entity possesses exactly one standardized identifier in database schemas and documentation. Never use informal synonyms interchangeably for the same table, column, or architecture boundary.
 2. **Zero Forbidden Terms**: Any terms designated as forbidden or ambiguous in the Lexicon Matrix MUST NEVER appear in SQL schemas, API DTOs, or architectural documentation.
-3. **Data Layer vs Presentation Layer Separation**: Database entity identifiers (`tenants`, `profiles`, `runners`) are immutable. User-facing display labels (e.g., "Workspace", "Company", "Worker Node") belong strictly to the UI Presentation Layer and must always cite the underlying canonical database entity in technical documentation.
+3. **Data Layer vs Presentation Layer Separation**: Database entity identifiers (`tenants`, `profiles`, `runners`, `devices`) are immutable. User-facing display labels (e.g., "Workspace", "Company", "Worker Node") belong strictly to the UI Presentation Layer and must always cite the underlying canonical database entity in technical documentation.
 4. **Transparent Casing & Key Conventions**:
-   - PostgreSQL Schemas: lowercase singular `snake_case` (`public`, `media`, `billing`, `events`, `automa`).
-   - PostgreSQL Tables: lowercase plural `snake_case` (`tenants`, `profiles`, `roles`, `permissions`, `assets`, `plans`, `workflows`, `runners`).
-   - Primary Keys: always named `id`. Foreign keys referencing `<table>`: always named `<table>_id` (e.g. `tenant_id`, `user_id`, `role_id`, `workflow_id`).
-5. **Standardized Capability Permissions**: All atomic permission codes (`permission_id`) MUST strictly adhere to the 3-segment convention: `<module>:<resource>:<action>` (e.g. `automa:campaigns:run`, `media:assets:upload`, `billing:plans:view`).
+   - PostgreSQL Schemas: lowercase singular `snake_case` (`public`, `media`, `billing`, `events`, `automa`, `runners`).
+   - PostgreSQL Tables: lowercase plural `snake_case` (`tenants`, `profiles`, `roles`, `permissions`, `assets`, `plans`, `workflows`, `devices`, `node_browsers`).
+   - Primary Keys: always named `id`. Foreign keys referencing `<table>`: always named `<table>_id` (e.g. `tenant_id`, `user_id`, `role_id`, `device_id`, `workflow_id`).
+5. **Standardized Capability Permissions**: All atomic permission codes (`permission_id`) MUST strictly adhere to the 3-segment convention: `<module>:<resource>:<action>` (e.g. `automa:campaigns:run`, `media:assets:upload`, `billing:plans:view`, `runners:devices:enroll`).
 
 ---
 
@@ -33,8 +33,8 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 | **`Member Role`** | `public.member_roles` | ❌ *User Role*, *Role Assignment* | Many-to-many bridge assigning roles to a tenant member within a specific tenant. |
 | **`Plugin`** | `public.system_plugins` | ❌ *Module*, *Extension*, *Addon*, *Package* | Autonomous database module with a dedicated folder `supabase/plugins/<id>/` and PostgreSQL schema. |
 | **`Storage`** | `media.assets` & `tenant-assets` | ❌ *Vault*, *Media Bucket*, *File Drive* | Cloud media asset storage service. The term "Vault" is **FORBIDDEN** in cloud services. |
-| **`Browser`** | `automa.runners` / `*.browser.json` | ❌ *Profile*, *Browser Profile*, *Anti-detect Profile* | Isolated anti-detect virtual browser container. Calling a browser instance a "Profile" is **FORBIDDEN**. |
-| **`Runner`** | `automa.runners` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Execution workstation node (Desktop OS or Cloud VPS running the Rust daemon from `apps/core`). |
+| **`Browser`** | `runners.node_browsers` / `*.browser.json` | ❌ *Profile*, *Browser Profile*, *Anti-detect Profile* | Isolated anti-detect virtual browser container on local workstation disk. Calling a browser instance a "Profile" is **FORBIDDEN** to prevent confusion with `public.profiles`. |
+| **`Device / Runner`** | `runners.devices` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Physical workstation, laptop, or edge node running Tuquet CLI (`tuquet`) or Runner (`tqr`) reporting heartbeats and telemetry to Tuquet Cloud. |
 | **`Workflow`** | `automa.workflows` | ❌ *Script*, *Flowchart*, *Automation Pipeline* | Visual node graph AST automation workflow compatible with VueFlow graph JSON. |
 | **`Campaign Run`** | `automa.campaign_runs` | ❌ *Batch Job*, *Execution*, *Run Task* | Execution session of an automation campaign dispatched across distributed runners. |
 | **`Execution Log`** | `automa.execution_logs` | ❌ *Audit Log*, *System Log*, *Trace File* | Telemetry stream recording block-level execution events during an automation run. |
@@ -162,16 +162,17 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 
 ---
 
-### 3.6. Distributed Automa Cloud Bridge Domain
+### 3.6. Distributed Fleet & Automa Cloud Bridge Domain
 
-1. **`Workflow` (`automa.workflows`)**:
-   - Visual automation graph AST JSON compatible with VueFlow and Chrome Extension runners.
-2. **`Runner` (`automa.runners`)**:
-   - Execution machine node (Desktop Workstation or Cloud VPS running the Axum daemon).
+1. **`Device / Runner` (`runners.devices`)**:
+   - Execution machine node (Desktop Workstation, Laptop, or Cloud VPS running the Tuquet CLI `tuquet` or `tqr` engine).
    - Calling runners "Workers", "Bots", or "Agent Nodes" is strictly **FORBIDDEN**.
-3. **`Browser` (Anti-Detect Browser Invariant)**:
-   - Isolated browser environment (`*.browser.json`) with distinct fingerprint, proxy, cookie jar, and local storage.
+2. **`Node Browser` (`runners.node_browsers`)**:
+   - Node-local isolated browser container (`*.browser.json`) with distinct fingerprint, proxy, cookie jar, and local storage.
    - Invariant: Calling an anti-detect browser instance a "Profile" is strictly **FORBIDDEN** to prevent confusion with `public.profiles`.
+   - Node-Local Resource Affinity: Full browser user data directories (`userDataDir`) reside strictly on the local workstation disk; only metadata and status (`idle`, `running`, `error`) are synced to the cloud.
+3. **`Workflow` (`automa.workflows`)**:
+   - Visual automation graph AST JSON compatible with VueFlow and Chrome Extension runners.
 4. **`Campaign Run` (`automa.campaign_runs`)**:
    - Execution session dispatching an automation workflow across one or more runners.
 5. **`Execution Log` (`automa.execution_logs`)**:
