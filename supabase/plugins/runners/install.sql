@@ -51,10 +51,12 @@ CREATE INDEX IF NOT EXISTS idx_runners_devices_heartbeat ON runners.devices (las
 -- 4. Row Level Security
 ALTER TABLE runners.devices ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "devices_select" ON runners.devices;
 CREATE POLICY "devices_select" ON runners.devices
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "devices_manage" ON runners.devices;
 CREATE POLICY "devices_manage" ON runners.devices
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'runners:devices:manage') OR public.is_tenant_admin(tenant_id));

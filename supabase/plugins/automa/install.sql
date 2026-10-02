@@ -118,34 +118,42 @@ ALTER TABLE automa.campaign_runs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automa.execution_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automa.schedules ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "workflows_select" ON automa.workflows;
 CREATE POLICY "workflows_select" ON automa.workflows
     FOR SELECT TO authenticated
     USING (deleted_at IS NULL AND public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "workflows_manage" ON automa.workflows;
 CREATE POLICY "workflows_manage" ON automa.workflows
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'automa:workflows:manage') OR public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "campaigns_select" ON automa.campaign_runs;
 CREATE POLICY "campaigns_select" ON automa.campaign_runs
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "campaigns_run" ON automa.campaign_runs;
 CREATE POLICY "campaigns_run" ON automa.campaign_runs
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'automa:campaigns:run') OR public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "logs_select" ON automa.execution_logs;
 CREATE POLICY "logs_select" ON automa.execution_logs
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "logs_insert" ON automa.execution_logs;
 CREATE POLICY "logs_insert" ON automa.execution_logs
     FOR INSERT TO authenticated
     WITH CHECK (public.has_tenant_permission(tenant_id, 'automa:campaigns:run') OR public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "schedules_select" ON automa.schedules;
 CREATE POLICY "schedules_select" ON automa.schedules
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "schedules_manage" ON automa.schedules;
 CREATE POLICY "schedules_manage" ON automa.schedules
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'automa:campaigns:manage') OR public.is_tenant_admin(tenant_id));
