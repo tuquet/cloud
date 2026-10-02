@@ -48,14 +48,27 @@ for item in "${CANONICAL_PLUGINS[@]}"; do
 
     echo ""
     echo "--> ${ACTION^}ing Plugin: [$plugin_id] - $desc"
-    supabase db query "--$TARGET" -f "$sql_file"
+    if [[ "$TARGET" == "local" ]]; then
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [[ -n "$DB_CONTAINER" ]]; then
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$sql_file"
+        else
+            supabase db query "--$TARGET" -f "$sql_file"
+        fi
+    else
+        supabase db query "--$TARGET" -f "$sql_file"
+    fi
     echo "    [OK] Successfully applied $sql_file"
 
     if [[ "$ACTION" == "install" && ("$plugin_id" == "automa" || "$plugin_id" == "runners") && "$WITH_SEED" == "true" ]]; then
         seed_file="supabase/plugins/$plugin_id/seed.sql"
         if [[ -f "$seed_file" ]]; then
             echo "    --> Applying sample data: $seed_file"
-            supabase db query "--$TARGET" -f "$seed_file"
+            if [[ "$TARGET" == "local" && -n "${DB_CONTAINER:-}" ]]; then
+                docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$seed_file"
+            else
+                supabase db query "--$TARGET" -f "$seed_file"
+            fi
             echo "    [OK] Sample data applied for $plugin_id"
         fi
     fi

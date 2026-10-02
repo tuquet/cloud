@@ -25,7 +25,16 @@ TEST_FILES=(
 # Ensure provision helper procedure is present for verification
 HELPER_FILE="tests/presets/sql/00_provision_helper.sql"
 if [[ -f "$HELPER_FILE" ]]; then
-    supabase db query "--$TARGET" -f "$HELPER_FILE" > /dev/null 2>&1 || true
+    if [[ "$TARGET" == "local" ]]; then
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [[ -n "$DB_CONTAINER" ]]; then
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres < "$HELPER_FILE" > /dev/null 2>&1 || true
+        else
+            supabase db query "--$TARGET" -f "$HELPER_FILE" > /dev/null 2>&1 || true
+        fi
+    else
+        supabase db query "--$TARGET" -f "$HELPER_FILE" > /dev/null 2>&1 || true
+    fi
 fi
 
 for test_file in "${TEST_FILES[@]}"; do
@@ -36,7 +45,16 @@ for test_file in "${TEST_FILES[@]}"; do
 
     echo ""
     echo "--> Running Test: $test_file"
-    supabase db query "--$TARGET" -f "$test_file"
+    if [[ "$TARGET" == "local" ]]; then
+        DB_CONTAINER=$(docker ps --filter "name=supabase_db" --format "{{.Names}}" | head -n 1)
+        if [[ -n "$DB_CONTAINER" ]]; then
+            docker exec -i "$DB_CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$test_file"
+        else
+            supabase db query "--$TARGET" -f "$test_file"
+        fi
+    else
+        supabase db query "--$TARGET" -f "$test_file"
+    fi
 done
 
 echo ""
