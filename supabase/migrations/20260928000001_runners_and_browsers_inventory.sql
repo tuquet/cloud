@@ -401,8 +401,8 @@ CREATE TABLE IF NOT EXISTS automa.workflows (
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    CONSTRAINT uq_automa_workflows_tenant_local UNIQUE (tenant_id, local_id)
+    CONSTRAINT uq_automa_workflows_tenant_local UNIQUE (tenant_id, local_id),
+    CONSTRAINT uq_automa_workflows_tenant_id UNIQUE (tenant_id, id)
 );
 
 CREATE INDEX IF NOT EXISTS idx_automa_workflows_tenant ON automa.workflows (tenant_id);

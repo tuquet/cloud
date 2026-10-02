@@ -51,6 +51,12 @@ CREATE TABLE IF NOT EXISTS automa.workflows (
     CONSTRAINT uq_automa_workflows_tenant_id UNIQUE (tenant_id, id)
 );
 
+DO $$ BEGIN
+    ALTER TABLE automa.workflows ADD CONSTRAINT uq_automa_workflows_tenant_id UNIQUE (tenant_id, id);
+EXCEPTION
+    WHEN duplicate_table OR duplicate_object THEN null;
+END $$;
+
 COMMENT ON TABLE automa.workflows IS '[Plugin: automa] Visual flow graphs and AST node configurations';
 
 -- 3.2. Campaign Runs (Consumes Compute Node from schema runners)
