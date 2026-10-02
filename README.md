@@ -1,30 +1,28 @@
-# ☁️ Tuquet Cloud
-
 <div align="center">
+  <img src="./assets/logo.svg" width="76" height="76" alt="Cloud Logo" />
+  <h1>Cloud</h1>
+  <p><strong>The Enterprise Multi-Tenant Foundation for Supabase &amp; PostgreSQL 15+</strong></p>
 
-### The Enterprise Multi-Tenant Foundation for Supabase
+  <p>
+    <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-181818?style=flat&logo=supabase&logoColor=3ECF8E" alt="Supabase" /></a>
+    <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-15+-316192?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
+    <a href="https://github.com/tuquet/scoop-bucket"><img src="https://img.shields.io/badge/Scoop-tuquet%2Fscoop--bucket-blue.svg" alt="Scoop Bucket" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
+  </p>
 
-[![Supabase](https://img.shields.io/badge/Supabase-181818?style=for-the-badge&logo=supabase&logoColor=3ECF8E)](https://supabase.com)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15+-316192?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Architecture](https://img.shields.io/badge/Architecture-Modular_Schema_Plugins-blueviolet?style=for-the-badge)](#-modular-business-plugin-catalog)
-[![Security](https://img.shields.io/badge/Security-Enterprise_Ready-success?style=for-the-badge)](#-business-value--architectural-advantages)
-[![Documentation](https://img.shields.io/badge/Docs-SOLID_SSOT-blue?style=for-the-badge)](#-solid-documentation-architecture)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
-
-<p align="center">
-  <b>Launch secure, scalable multi-tenant SaaS applications in days, not months.</b><br/>
-  Turnkey organization hierarchy, enterprise role-based access control, sub-millisecond authorization, and an extensible modular plugin ecosystem built on Supabase & PostgreSQL 15+.
-</p>
-
+  <p>
+    <b>Launch secure, scalable multi-tenant SaaS applications in days, not months.</b><br/>
+    Turnkey organization hierarchy, enterprise role-based access control, sub-millisecond authorization, and an extensible modular plugin ecosystem.
+  </p>
 </div>
 
 ---
 
 ## 🚀 Business Value & Architectural Advantages
 
-Building multi-tenant SaaS backends from scratch often leads to costly architectural rewrites, database bottlenecks, and security vulnerabilities as customer traffic grows. Tuquet Cloud eliminates these risks from day one:
+Building multi-tenant SaaS backends from scratch often leads to costly architectural rewrites, database bottlenecks, and security vulnerabilities as customer traffic grows. Cloud eliminates these risks from day one:
 
-| SaaS Growth Challenge | The Tuquet Cloud Business Solution | Strategic Impact |
+| SaaS Growth Challenge | The Solution | Strategic Impact |
 | :--- | :--- | :--- |
 | **Escalating Cloud Costs & Slow Queries**<br/>Evaluating permissions on every row query causes CPU spikes and slows response times under heavy traffic. | **Sub-Millisecond Token Authorization**<br/>Pre-aggregates tenant permissions directly into the user's security token, bypassing expensive repetitive database checks. | **10x Traffic Capacity**<br/>Lower database compute costs and instant response times for end users. |
 | **Monolithic Codebase & Slow Feature Delivery**<br/>Dumping every new business feature into a single shared database schema creates risky migrations and slows delivery. | **Modular Pluggable Schemas**<br/>Keeps the core platform immutable. Activate domain plugins (file storage, billing, webhooks, automation) on demand. | **Faster Time to Market**<br/>Build and deploy new capabilities independently with zero risk to core stability. |
@@ -35,7 +33,7 @@ Building multi-tenant SaaS backends from scratch often leads to costly architect
 
 ## 🏛️ Micro-Kernel Architecture
 
-Tuquet Cloud decouples the **Immutable Platform Core** from **Dynamic Business Plugins**:
+The platform architecture decouples the **Immutable Platform Core** from **Dynamic Business Plugins**:
 
 ```mermaid
 flowchart TD
@@ -177,6 +175,32 @@ To enable sub-millisecond authorization on Supabase Cloud:
 
 ---
 
+## 🌐 Ecosystem
+
+Part of the **Automation & Agent Ecosystem**:
+
+- [Automa](https://github.com/tuquet/automa) — Native Chrome/Edge Desktop UI Automation Browser.
+- [Runner](https://github.com/tuquet/runner) — High-Performance Distributed Process Supervision Engine in Rust.
+- [Browser](https://github.com/tuquet/browser) — High-Performance Headless Web Scraping & Stealth Automation Core.
+- [Cloud](https://github.com/tuquet/cloud) — Enterprise Orchestration & Real-time Task Control Plane.
+- [CLI](https://github.com/tuquet/cli) — Developer Ergonomic CLI & Unified Command Center.
+- [Lib](https://github.com/tuquet/lib) — Monorepo for Shared Enterprise UI & Utilities (`vue-ui`, `vue-table`, `md-export`, `extension-runner`, `lunar`).
+- [Scoop Bucket](https://github.com/tuquet/scoop-bucket) — Official Windows Scoop Distribution Channel.
+
+---
+
 ## 📄 License
 
 Released under the [MIT License](LICENSE). Open-source and production-ready for commercial and community use.
+
+---
+
+<div align="center">
+  <samp>
+    <a href="https://tuquet.github.io">Portfolio</a> •
+    <a href="https://tuquet.github.io/cv">CV &amp; Resume</a> •
+    <a href="https://tuquet.github.io/automa">Automa Studio</a> •
+    <a href="https://tuquet.github.io/lib">Component Lab</a> •
+    <a href="https://github.com/tuquet/scoop-bucket">Scoop Bucket</a>
+  </samp>
+</div>
