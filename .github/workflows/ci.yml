@@ -30,6 +30,9 @@ jobs:
       - name: Start Supabase Local Engine
         run: supabase start
 
+      - name: Install All Plugins
+        run: bash scripts/plugins/apply_plugins.sh local all install true
+
       - name: Lint Database Migrations
         run: supabase db lint
 
