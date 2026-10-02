@@ -57,6 +57,12 @@ EXCEPTION
     WHEN duplicate_table OR duplicate_object THEN null;
 END $$;
 
+ALTER TABLE automa.workflows ADD COLUMN IF NOT EXISTS status automa.workflow_status NOT NULL DEFAULT 'draft';
+ALTER TABLE automa.workflows ADD COLUMN IF NOT EXISTS graph_data JSONB NOT NULL DEFAULT '{"nodes": [], "edges": []}'::jsonb;
+ALTER TABLE automa.workflows ADD COLUMN IF NOT EXISTS variables JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE automa.workflows ADD COLUMN IF NOT EXISTS settings JSONB NOT NULL DEFAULT '{}'::jsonb;
+ALTER TABLE automa.workflows ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ DEFAULT NULL;
+
 COMMENT ON TABLE automa.workflows IS '[Plugin: automa] Visual flow graphs and AST node configurations';
 
 -- 3.2. Campaign Runs (Consumes Compute Node from schema runners)
