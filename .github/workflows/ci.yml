@@ -33,5 +33,5 @@ jobs:
       - name: Lint Database Migrations
         run: supabase db lint
 
-      - name: Run pgTAP Database Tests
-        run: supabase test db
+      - name: Run Database Tests
+        run: bash scripts/test_db.sh local
