@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./assets/logo.svg" width="76" height="76" alt="Cloud Logo" />
+  <img src="https://tuquet.github.io/icons/cloud.svg" width="76" height="76" alt="Cloud Logo" />
   <h1>Cloud</h1>
   <p><strong>The Enterprise Multi-Tenant Foundation for Supabase &amp; PostgreSQL 15+</strong></p>
 
