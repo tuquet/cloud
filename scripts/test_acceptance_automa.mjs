@@ -68,12 +68,14 @@ async function main() {
     console.log(`      Status:         ${createdRun.status.toUpperCase()}`);
     console.log(`      Target Driver:  automa (Chromium CDP Sandbox)`);
 
-    // 3. Execute via tqr run
-    console.log(`\n[3/5] Executing job via tqr run with real-time log ingestion to Supabase...`);
+    // 3. Execute via tuquet runner run
+    console.log(`\n[3/5] Executing job via runner run with real-time log ingestion to Supabase...`);
     const startTime = Date.now();
     let runnerStdout = "";
 
-    const tqrProcess = spawn("tqr.exe", ["run", JOB_FILE], {
+    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
+    const runnerArgs = ["runner", "run", JOB_FILE];
+    const tqrProcess = spawn(runnerBin, runnerArgs, {
         shell: false,
         stdio: ["ignore", "pipe", "pipe"]
     });

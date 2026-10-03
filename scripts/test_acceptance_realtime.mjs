@@ -66,12 +66,14 @@ async function main() {
     console.log(`      Status:         ${createdRun.status.toUpperCase()}`);
     console.log(`      Target Driver:  agent (claude-agy)`);
 
-    // 3. Execute via tqr (Real-time Execution & Log Streaming)
-    console.log(`\n[3/5] Executing job via tqr (claude-agy driver) with real-time log ingestion...`);
+    // 3. Execute via tuquet runner (Real-time Execution & Log Streaming)
+    console.log(`\n[3/5] Executing job via runner (claude-agy driver) with real-time log ingestion...`);
     const startTime = Date.now();
     let runnerStdout = "";
 
-    const tqrProcess = spawn("tqr.exe", ["exec", "-d", "agent", "-p", promptText], {
+    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
+    const runnerArgs = ["runner", "exec", "-d", "agent", "-p", promptText];
+    const tqrProcess = spawn(runnerBin, runnerArgs, {
         shell: false,
         stdio: ["ignore", "pipe", "pipe"]
     });
