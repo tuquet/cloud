@@ -136,12 +136,12 @@ supabase db reset
 ### Step 2: Install Business Plugins
 Install all first-party plugins or pick individual modules for your product needs:
 
-```powershell
+```console
 # Install all first-party plugins in canonical topological order:
-.\scripts\plugins\apply_plugins.ps1 -Target local
+./scripts/plugins/apply_plugins.sh -Target local
 
 # Or install an individual business plugin (e.g. storage):
-.\scripts\plugins\apply_plugins.ps1 -Plugin storage -Target local
+./scripts/plugins/apply_plugins.sh -Plugin storage -Target local
 ```
 
 ### Step 3: Connect from Client in 30 Seconds
