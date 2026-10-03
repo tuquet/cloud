@@ -34,7 +34,7 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 | **`Plugin`** | `public.system_plugins` | ❌ *Module*, *Extension*, *Addon*, *Package* | Autonomous database module with a dedicated folder `supabase/plugins/<id>/` and PostgreSQL schema. |
 | **`Storage`** | `media.assets` & `tenant-assets` | ❌ *Vault*, *Media Bucket*, *File Drive* | Cloud media asset storage service. The term "Vault" is **FORBIDDEN** in cloud services. |
 | **`Browser`** | `runners.node_browsers` / `*.browser.json` | ❌ *Profile*, *Browser Profile*, *Anti-detect Profile* | Isolated anti-detect virtual browser container on local workstation disk. Calling a browser instance a "Profile" is **FORBIDDEN** to prevent confusion with `public.profiles`. |
-| **`Device / Runner`** | `runners.devices` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Physical workstation, laptop, or edge node running Tuquet CLI (`tuquet`) or Runner (`tqr`) reporting heartbeats and telemetry to Tuquet Cloud. |
+| **`Device / Runner`** | `runners.devices` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Physical workstation, laptop, or edge node running Tuquet CLI master (`tuquet`) or Runner (`runner`) reporting heartbeats and telemetry to Tuquet Cloud. |
 | **`Workflow`** | `automa.workflows` | ❌ *Script*, *Flowchart*, *Automation Pipeline* | Visual node graph AST automation workflow compatible with VueFlow graph JSON. |
 | **`Campaign Run`** | `automa.campaign_runs` | ❌ *Batch Job*, *Execution*, *Run Task* | Execution session of an automation campaign dispatched across distributed runners. |
 | **`Execution Log`** | `automa.execution_logs` | ❌ *Audit Log*, *System Log*, *Trace File* | Telemetry stream recording block-level execution events during an automation run. |
@@ -165,7 +165,7 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 ### 3.6. Distributed Fleet & Automa Cloud Bridge Domain
 
 1. **`Device / Runner` (`runners.devices`)**:
-   - Execution machine node (Desktop Workstation, Laptop, or Cloud VPS running the Tuquet CLI `tuquet` or `tqr` engine).
+   - Execution machine node (Desktop Workstation, Laptop, or Cloud VPS running the Tuquet master CLI `tuquet` or standalone `runner` engine).
    - Calling runners "Workers", "Bots", or "Agent Nodes" is strictly **FORBIDDEN**.
 2. **`Node Browser` (`runners.node_browsers`)**:
    - Node-local isolated browser container (`*.browser.json`) with distinct fingerprint, proxy, cookie jar, and local storage.

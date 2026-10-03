@@ -5,7 +5,7 @@
 **Version:** `1.0.0`
 
 ## 📖 Overview
-The `runners` plugin acts as the universal compute infrastructure foundation for Tuquet Cloud. It manages physical workstations, edge nodes, and cloud runner daemons running `tqr` (Tuquet Runner in Rust).
+The `runners` plugin acts as the universal compute infrastructure foundation for Tuquet Cloud. It manages physical workstations, edge nodes, and cloud runner daemons running `runner` (Runner in Rust).
 
 ## 🏛️ Schema Architecture
 - **`runners.devices`**: Multi-tenant registry of enrolled physical workstations and cloud worker nodes.

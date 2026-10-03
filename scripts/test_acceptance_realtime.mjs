@@ -1,5 +1,5 @@
 // ============================================================================
-// TUQUET E2E ACCEPTANCE TEST: REALTIME SUPABASE -> TQR -> CLAUDE-AGY
+// TUQUET E2E ACCEPTANCE TEST: REALTIME SUPABASE -> RUNNER -> CLAUDE-AGY
 // ============================================================================
 
 import { spawn } from "node:child_process";
@@ -13,13 +13,13 @@ const TENANT_ID = process.env.SUPABASE_TENANT_ID || "b0000000-0000-0000-0000-000
 
 async function main() {
     console.log("================================================================================");
-    console.log(" [ACCEPTANCE TEST] Supabase Realtime <-> tqr <-> claude-agy Closed Loop");
+    console.log(" [ACCEPTANCE TEST] Supabase Realtime <-> runner <-> claude-agy Closed Loop");
     console.log("================================================================================");
 
     // 1. Verify Device Identity
     const configPath = join(homedir(), ".tuquet", "config", ".identity.json");
     if (!existsSync(configPath)) {
-        throw new Error(`Device identity not found at ${configPath}. Run 'tqr enroll' first.`);
+        throw new Error(`Device identity not found at ${configPath}. Run 'tuquet runner enroll' first.`);
     }
 
     const identity = JSON.parse(readFileSync(configPath, "utf-8"));
@@ -73,7 +73,7 @@ async function main() {
 
     const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
     const runnerArgs = ["runner", "exec", "-d", "agent", "-p", promptText];
-    const tqrProcess = spawn(runnerBin, runnerArgs, {
+    const runnerProcess = spawn(runnerBin, runnerArgs, {
         shell: false,
         stdio: ["ignore", "pipe", "pipe"]
     });
@@ -103,10 +103,10 @@ async function main() {
         }
     };
 
-    tqrProcess.stdout.on("data", async (chunk) => {
+    runnerProcess.stdout.on("data", async (chunk) => {
         const text = chunk.toString();
         runnerStdout += text;
-        process.stdout.write(`      [tqr-stream] ${text}`);
+        process.stdout.write(`      [runner-stream] ${text}`);
         for (const line of text.split("\n")) {
             if (line.trim()) {
                 await streamLogsToSupabase(line);
@@ -114,21 +114,21 @@ async function main() {
         }
     });
 
-    tqrProcess.stderr.on("data", async (chunk) => {
+    runnerProcess.stderr.on("data", async (chunk) => {
         const text = chunk.toString();
-        process.stderr.write(`      [tqr-stderr] ${text}`);
+        process.stderr.write(`      [runner-stderr] ${text}`);
         await streamLogsToSupabase(text, "warn");
     });
 
     const exitCode = await new Promise((resolve) => {
-        tqrProcess.on("close", resolve);
+        runnerProcess.on("close", resolve);
     });
 
     const durationMs = Date.now() - startTime;
-    console.log(`\n      tqr finished with exit code ${exitCode} in ${durationMs}ms`);
+    console.log(`\n      runner finished with exit code ${exitCode} in ${durationMs}ms`);
 
     if (exitCode !== 0) {
-        throw new Error(`tqr execution failed with exit code ${exitCode}`);
+        throw new Error(`runner execution failed with exit code ${exitCode}`);
     }
 
     // 4. Update Supabase automa.campaign_runs to completed
@@ -196,7 +196,7 @@ async function main() {
     }
 
     console.log("\n================================================================================");
-    console.log(" [ACCEPTANCE PASSED 100%] Supabase <-> tqr <-> claude-agy IS FULLY OPERATIONAL!");
+    console.log(" [ACCEPTANCE PASSED 100%] Supabase <-> runner <-> claude-agy IS FULLY OPERATIONAL!");
     console.log("================================================================================");
 }
 

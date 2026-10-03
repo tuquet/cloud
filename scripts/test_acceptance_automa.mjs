@@ -1,5 +1,5 @@
 // ============================================================================
-// TUQUET E2E ACCEPTANCE TEST: REALTIME SUPABASE -> TQR -> AUTOMA BROWSER WORKFLOW
+// TUQUET E2E ACCEPTANCE TEST: REALTIME SUPABASE -> RUNNER -> AUTOMA BROWSER WORKFLOW
 // ============================================================================
 
 import { spawn } from "node:child_process";
@@ -10,18 +10,18 @@ import { homedir } from "node:os";
 const SUPABASE_URL = process.env.SUPABASE_URL || "https://dswhacsoaxgpfnkaxnhz.supabase.co";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRzd2hhY3NvYXhncGZua2F4bmh6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MDI5MTMzNywiZXhwIjoyMTA1ODY3MzM3fQ.-QTQbzf9SqCu9TKtgHibUXJHO-FB-hibcNeOlDt5iJk";
 const TENANT_ID = process.env.SUPABASE_TENANT_ID || "b0000000-0000-0000-0000-000000000001";
-const WORKFLOW_PATH = "C:\\Users\\ndtu6\\Repository\\tuquet\\runner\\fixtures\\test_browser_workflow.json";
-const JOB_FILE = "C:\\Users\\ndtu6\\Repository\\tuquet\\runner\\fixtures\\job_browser_automation.json";
+const WORKFLOW_PATH = process.env.WORKFLOW_PATH || join(homedir(), "tuquet", "runner", "fixtures", "test_browser_workflow.json");
+const JOB_FILE = process.env.JOB_FILE || join(homedir(), "tuquet", "runner", "fixtures", "job_browser_automation.json");
 
 async function main() {
     console.log("================================================================================");
-    console.log(" [ACCEPTANCE TEST] Supabase Realtime <-> tqr <-> Automa Browser Closed Loop");
+    console.log(" [ACCEPTANCE TEST] Supabase Realtime <-> runner <-> Automa Browser Closed Loop");
     console.log("================================================================================");
 
     // 1. Verify Device Identity
     const configPath = join(homedir(), ".tuquet", "config", ".identity.json");
     if (!existsSync(configPath)) {
-        throw new Error(`Device identity not found at ${configPath}. Run 'tqr enroll' first.`);
+        throw new Error(`Device identity not found at ${configPath}. Run 'tuquet runner enroll' first.`);
     }
 
     const identity = JSON.parse(readFileSync(configPath, "utf-8"));
@@ -75,7 +75,7 @@ async function main() {
 
     const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
     const runnerArgs = ["runner", "run", JOB_FILE];
-    const tqrProcess = spawn(runnerBin, runnerArgs, {
+    const runnerProcess = spawn(runnerBin, runnerArgs, {
         shell: false,
         stdio: ["ignore", "pipe", "pipe"]
     });
@@ -105,10 +105,10 @@ async function main() {
         }
     };
 
-    tqrProcess.stdout.on("data", async (chunk) => {
+    runnerProcess.stdout.on("data", async (chunk) => {
         const text = chunk.toString();
         runnerStdout += text;
-        process.stdout.write(`      [tqr-stream] ${text}`);
+        process.stdout.write(`      [runner-stream] ${text}`);
         for (const line of text.split("\n")) {
             if (line.trim()) {
                 await streamLogsToSupabase(line);
@@ -116,21 +116,21 @@ async function main() {
         }
     });
 
-    tqrProcess.stderr.on("data", async (chunk) => {
+    runnerProcess.stderr.on("data", async (chunk) => {
         const text = chunk.toString();
-        process.stderr.write(`      [tqr-stderr] ${text}`);
+        process.stderr.write(`      [runner-stderr] ${text}`);
         await streamLogsToSupabase(text, "warn");
     });
 
     const exitCode = await new Promise((resolve) => {
-        tqrProcess.on("close", resolve);
+        runnerProcess.on("close", resolve);
     });
 
     const durationMs = Date.now() - startTime;
-    console.log(`\n      tqr finished with exit code ${exitCode} in ${durationMs}ms`);
+    console.log(`\n      runner finished with exit code ${exitCode} in ${durationMs}ms`);
 
     if (exitCode !== 0) {
-        throw new Error(`tqr execution failed with exit code ${exitCode}`);
+        throw new Error(`runner execution failed with exit code ${exitCode}`);
     }
 
     // 4. Update Supabase automa.campaign_runs to completed
@@ -197,7 +197,7 @@ async function main() {
     }
 
     console.log("\n================================================================================");
-    console.log(" [ACCEPTANCE PASSED 100%] Supabase <-> tqr <-> Automa Browser IS FULLY OPERATIONAL!");
+    console.log(" [ACCEPTANCE PASSED 100%] Supabase <-> runner <-> Automa Browser IS FULLY OPERATIONAL!");
     console.log("================================================================================");
 }
 
