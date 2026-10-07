@@ -1,0 +1,26 @@
+{
+  "$schema": "./schema/preset.schema.json",
+  "name": "collaborator",
+  "description": "Collaborator Member Preset - standard member invited to workspace",
+  "user": {
+    "email": "collaborator@tuquet.dev",
+    "password": "DevPass!12345",
+    "full_name": "Collaborator Dev",
+    "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=collab",
+    "metadata": {
+      "preset": "collaborator",
+      "department": "engineering"
+    }
+  },
+  "tenant": {
+    "slug": "collaborator-sandbox",
+    "name": "Collaborator Sandbox Workspace",
+    "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=collab-ws",
+    "plan": "free",
+    "metadata": {
+      "region": "ap-southeast-1",
+      "preset": "collaborator"
+    }
+  },
+  "role": "member"
+}

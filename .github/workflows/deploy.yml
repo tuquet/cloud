@@ -1,0 +1,169 @@
+name: Deploy Database to Supabase Cloud
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/plugins/**'
+      - 'supabase/config.toml'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Deployment action to perform'
+        required: true
+        default: 'push_migrations'
+        type: choice
+        options:
+          - 'push_migrations'
+          - 'full_deploy'
+          - 'apply_plugins'
+          - 'dry_run'
+      project_ref:
+        description: 'Supabase project ref'
+        required: false
+        default: 'dswhacsoaxgpfnkaxnhz'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to Cloud (${{ inputs.project_ref || 'dswhacsoaxgpfnkaxnhz' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      PROJECT_REF: ${{ inputs.project_ref || secrets.SUPABASE_PROJECT_ID || 'dswhacsoaxgpfnkaxnhz' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: Link Supabase Project
+        run: |
+          echo "Linking to Supabase project $PROJECT_REF..."
+          if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            supabase link --project-ref "$PROJECT_REF" --password "$SUPABASE_DB_PASSWORD"
+          else
+            supabase link --project-ref "$PROJECT_REF"
+          fi
+
+      - name: Execute Deployment
+        run: |
+          set -e
+          ACTION="${{ inputs.action || 'push_migrations' }}"
+          echo "Executing deployment action: $ACTION"
+          case "$ACTION" in
+            "push_migrations")
+              echo "==> Pushing migrations to linked project..."
+              if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+                supabase db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
+              else
+                supabase db push --linked --include-all
+              fi
+              ;;
+            "dry_run")
+              echo "==> Running migration dry run..."
+              if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+                supabase db push --linked --dry-run --password "$SUPABASE_DB_PASSWORD"
+              else
+                supabase db push --linked --dry-run
+              fi
+              ;;
+            "apply_plugins")
+              echo "==> Applying all business plugins..."
+              bash scripts/plugins/apply_plugins.sh linked all install true
+              ;;
+            "full_deploy")
+              echo "==> Step 1: Pushing database migrations..."
+              if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+                supabase db push --linked --include-all --password "$SUPABASE_DB_PASSWORD"
+              else
+                supabase db push --linked --include-all
+              fi
+              echo "==> Step 2: Applying business plugins & seed data..."
+              bash scripts/plugins/apply_plugins.sh linked all install true
+              ;;
+            *)
+              echo "Unknown action: $ACTION"
+              exit 1
+              ;;
+          esac
+
+      - name: Reload PostgREST Schema Cache
+        if: success()
+        run: |
+          echo "==> Reloading PostgREST Schema Cache..."
+          supabase db query --linked "NOTIFY pgrst, 'reload schema';" || true
+
+      - name: Verify Migration State
+        if: always()
+        run: |
+          echo "==> Checking migration status..."
+          if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            supabase migration list --linked --password "$SUPABASE_DB_PASSWORD" || true
+          else
+            supabase migration list --linked || true
+          fi
+
+      - name: Generate TypeScript Definitions
+        if: success()
+        run: |
+          mkdir -p types
+          echo "==> Generating TypeScript definitions from Supabase Cloud..."
+          supabase gen types typescript --linked --schema public,runners,automa,billing,events,media > types/database.types.ts
+          echo "==> Generated $(wc -l < types/database.types.ts) lines of TypeScript definitions."
+
+      - name: Upload TypeScript Types Artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-database-types
+          path: types/database.types.ts
+          retention-days: 30
+
+      - name: Commit Generated Types
+        if: success()
+        run: |
+          git config user.name "tuquet-bot[bot]"
+          git config user.email "bot@tuquet.dev"
+          if [[ -n $(git status --porcelain types/database.types.ts) ]]; then
+            git add types/database.types.ts
+            git commit -m "chore(types): auto-generate database.types.ts from cloud schema [skip ci]"
+            git push origin main
+            echo "Generated types committed and pushed to main."
+          else
+            echo "No changes in database types."
+          fi
+
+      - name: Post-Deployment Smoke Test
+        if: success()
+        run: |
+          echo "==> Running Cloud Gateway Smoke Test..."
+          node scripts/testing/smoke_test_cloud.mjs
+
+  notify:
+    name: Notify Telegram
+    needs: [deploy]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram Notification
+        uses: tuquet/bot@main
+        with:
+          bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat-id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          status: ${{ needs.deploy.result }}

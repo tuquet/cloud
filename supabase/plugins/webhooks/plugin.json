@@ -1,0 +1,17 @@
+{
+  "id": "webhooks",
+  "name": "Transactional Outbox & Webhooks",
+  "version": "1.0.0",
+  "schema": "events",
+  "description": "Transactional event outbox for reliable async processing and outbound webhook dispatching",
+  "dependencies": [],
+  "tables": [
+    "events.outbox",
+    "events.subscriptions",
+    "events.deliveries"
+  ],
+  "permissions": [
+    "webhooks:manage",
+    "outbox:read"
+  ]
+}

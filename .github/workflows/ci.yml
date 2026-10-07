@@ -1,0 +1,69 @@
+name: CI (Supabase DB Tests & Lint)
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - 'diagrams/**'
+      - 'CHEATSHEET.md'
+      - 'LICENSE'
+      - 'AGENTS.md'
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.vscode/**'
+      - 'diagrams/**'
+      - 'CHEATSHEET.md'
+      - 'LICENSE'
+      - 'AGENTS.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Supabase Tests & Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.119.0
+
+      - name: Start Supabase Local Engine
+        run: supabase start
+
+      - name: Install All Plugins
+        run: bash scripts/plugins/apply_plugins.sh local all install true
+
+      - name: Lint Database Migrations
+        run: supabase db lint
+
+      - name: Run Database Tests
+        run: bash scripts/test_db.sh local
+
+  notify:
+    name: Notify Telegram
+    needs: [test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Telegram Notification
+        uses: tuquet/bot@main
+        with:
+          bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          chat-id: ${{ secrets.TELEGRAM_CHAT_ID }}
+          status: ${{ needs.test.result }}

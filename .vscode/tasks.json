@@ -1,0 +1,109 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "supabase start",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["start"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "supabase stop",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["stop"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "supabase status",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["status"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "supabase db reset",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["db", "reset"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "apply plugins",
+      "type": "shell",
+      "command": "powershell.exe",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}/scripts/plugins/apply_plugins.ps1"
+      ],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "supabase db push",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["db", "push"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "supabase gen types",
+      "type": "shell",
+      "command": "supabase",
+      "args": ["gen", "types", "typescript", "--local"],
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

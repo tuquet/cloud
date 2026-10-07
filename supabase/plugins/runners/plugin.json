@@ -1,0 +1,20 @@
+{
+  "id": "runners",
+  "name": "Runners & Compute Fleet",
+  "version": "1.0.0",
+  "schema": "runners",
+  "description": "Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, and live telemetry",
+  "dependencies": [],
+  "tables": [
+    "runners.devices",
+    "runners.node_browsers",
+    "runners.proxies"
+  ],
+  "permissions": [
+    "runners:devices:read",
+    "runners:devices:manage",
+    "runners:devices:enroll",
+    "runners:proxies:read",
+    "runners:proxies:manage"
+  ]
+}

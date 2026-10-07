@@ -1,0 +1,18 @@
+{
+  "id": "subscriptions",
+  "name": "Subscriptions & Quota Metering",
+  "version": "1.0.0",
+  "schema": "billing",
+  "description": "SaaS Subscription Tiers, Tenant Subscription state, Usage Metering, and Quota Triggers",
+  "dependencies": [],
+  "tables": [
+    "billing.plans",
+    "billing.subscriptions",
+    "billing.usage_meters"
+  ],
+  "permissions": [
+    "subscriptions:read",
+    "subscriptions:manage",
+    "quota:read"
+  ]
+}

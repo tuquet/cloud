@@ -1,0 +1,38 @@
+{
+  "id": "core-iam",
+  "name": "Multi-Tenant IAM & RBAC Engine",
+  "version": "1.0.0",
+  "schema": "public",
+  "is_system": true,
+  "description": "Base Core Identity, Multi-tenancy boundary, and Role-Based Access Control Platform",
+  "dependencies": [],
+  "tables": [
+    "public.profiles",
+    "public.tenants",
+    "public.roles",
+    "public.permissions",
+    "public.role_permissions",
+    "public.tenant_members",
+    "public.member_roles",
+    "public.tenant_invitations",
+    "public.audit_logs",
+    "public.system_plugins"
+  ],
+  "permissions": [
+    "tenants:read",
+    "tenants:update",
+    "tenants:delete",
+    "members:read",
+    "members:invite",
+    "members:update",
+    "members:manage",
+    "members:delete",
+    "roles:read",
+    "roles:manage",
+    "billing:read",
+    "billing:manage",
+    "audit:read",
+    "plugins:read",
+    "plugins:manage"
+  ]
+}
