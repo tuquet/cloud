@@ -6,8 +6,15 @@
   <p>
     <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-181818?style=flat&logo=supabase&logoColor=3ECF8E" alt="Supabase" /></a>
     <a href="https://www.postgresql.org/"><img src="https://img.shields.io/badge/PostgreSQL-15+-316192?style=flat&logo=postgresql&logoColor=white" alt="PostgreSQL" /></a>
-    <a href="https://github.com/tuquet/scoop-bucket"><img src="https://img.shields.io/badge/Scoop-tuquet%2Fscoop--bucket-blue.svg" alt="Scoop Bucket" /></a>
+    <a href="https://tuquet.github.io/docs/features/cloud"><img src="https://img.shields.io/badge/Docs-VitePress%20Portal-blue.svg" alt="Documentation" /></a>
+    <a href="https://github.com/tuquet/scoop-bucket"><img src="https://img.shields.io/badge/Scoop-specter-brightgreen.svg" alt="Scoop Bucket" /></a>
+    <a href="https://github.com/tuquet/skills/blob/main/skills/specter-cloud/SKILL.md"><img src="https://img.shields.io/badge/Skill-%2Fspecter--cloud-purple.svg" alt="Specter Cloud Skill" /></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
+  </p>
+
+  <p>
+    <a href="https://tuquet.github.io/docs/features/cloud"><strong>📖 Read Full Documentation in Portal &rarr;</strong></a> •
+    <a href="https://github.com/tuquet/skills/blob/main/skills/specter-cloud/SKILL.md"><strong>⚡ Operational Skill Reference (`/specter-cloud`) &rarr;</strong></a>
   </p>
 
   <p>
@@ -189,6 +196,14 @@ Part of the **Automation & Agent Ecosystem**:
 - [CLI](https://github.com/tuquet/cli) — Developer Ergonomic CLI & Unified Command Center.
 - [Lib](https://github.com/tuquet/lib) — Monorepo for Shared Enterprise UI & Utilities (`vue-ui`, `vue-table`, `md-export`, `extension-runner`, `lunar`).
 - [Scoop Bucket](https://github.com/tuquet/scoop-bucket) — Official Windows Scoop Distribution Channel.
+
+---
+
+## 📖 Comprehensive Documentation
+
+For complete multi-tenant database schemas, sub-millisecond RBAC guides, and Supabase integration runbooks, visit the official **Specter Documentation Portal**:
+
+👉 **[https://tuquet.github.io/docs/features/cloud](https://tuquet.github.io/docs/features/cloud)**
 
 ---
 
