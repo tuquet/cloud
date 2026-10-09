@@ -4,4 +4,4 @@
 
 For official user-facing, operator, and deployment documentation, see the **Central Documentation Hub**:
 
-👉 **[https://specter.tuquet.com/cloud/](https://specter.tuquet.com/cloud/)**
+👉 **[https://docs.tuquet.com/en/specter/cloud/](https://docs.tuquet.com/en/specter/cloud/)**
