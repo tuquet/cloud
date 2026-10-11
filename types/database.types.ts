@@ -179,95 +179,6 @@ export type Database = {
           },
         ]
       }
-      table_rows: {
-        Row: {
-          created_at: string
-          data: Json
-          id: string
-          row_index: number
-          table_id: string
-          tenant_id: string
-        }
-        Insert: {
-          created_at?: string
-          data?: Json
-          id?: string
-          row_index?: number
-          table_id: string
-          tenant_id: string
-        }
-        Update: {
-          created_at?: string
-          data?: Json
-          id?: string
-          row_index?: number
-          table_id?: string
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "table_rows_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "tables"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      tables: {
-        Row: {
-          columns: Json
-          created_at: string
-          id: string
-          name: string
-          tenant_id: string
-          updated_at: string
-        }
-        Insert: {
-          columns?: Json
-          created_at?: string
-          id?: string
-          name: string
-          tenant_id: string
-          updated_at?: string
-        }
-        Update: {
-          columns?: Json
-          created_at?: string
-          id?: string
-          name?: string
-          tenant_id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      variables: {
-        Row: {
-          created_at: string
-          id: string
-          key: string
-          tenant_id: string
-          updated_at: string
-          value: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          key: string
-          tenant_id: string
-          updated_at?: string
-          value?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          key?: string
-          tenant_id?: string
-          updated_at?: string
-          value?: string
-        }
-        Relationships: []
-      }
       workflows: {
         Row: {
           created_at: string
@@ -614,6 +525,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      claim_outbox_batch: {
+        Args: { p_batch_size?: number }
+        Returns: {
+          event_type: string
+          id: string
+          payload: Json
+          retry_count: number
+          tenant_id: string
+        }[]
+      }
       emit_event: {
         Args: { _event_type: string; _payload?: Json; _tenant_id: string }
         Returns: string
@@ -639,7 +560,6 @@ export type Database = {
           metadata: Json
           mime_type: string
           original_name: string
-          project_id: string | null
           tenant_id: string
           updated_at: string
         }
@@ -653,7 +573,6 @@ export type Database = {
           metadata?: Json
           mime_type: string
           original_name: string
-          project_id?: string | null
           tenant_id: string
           updated_at?: string
         }
@@ -667,7 +586,6 @@ export type Database = {
           metadata?: Json
           mime_type?: string
           original_name?: string
-          project_id?: string | null
           tenant_id?: string
           updated_at?: string
         }
@@ -1139,19 +1057,6 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
-      enroll_device: {
-        Args: {
-          p_capabilities?: Json
-          p_cpu_cores?: number
-          p_enrollment_token?: string
-          p_machine_fingerprint: string
-          p_metadata?: Json
-          p_name: string
-          p_os_info?: string
-          p_ram_mb?: number
-        }
-        Returns: Json
-      }
       get_installed_plugins: {
         Args: never
         Returns: {
@@ -1168,6 +1073,10 @@ export type Database = {
         }[]
       }
       get_user_tenant_ids: { Args: never; Returns: string[] }
+      has_permission: {
+        Args: { requested_permission: string }
+        Returns: boolean
+      }
       has_tenant_permission: {
         Args: { _permission_id: string; _tenant_id: string }
         Returns: boolean
@@ -1186,6 +1095,15 @@ export type Database = {
       list_browsers: {
         Args: { p_device_id?: string; p_device_token?: string }
         Returns: Json
+      }
+      reap_stale_browser_locks: {
+        Args: { p_stale_interval?: string }
+        Returns: {
+          browser_name: string
+          dead_device_id: string
+          reaped_browser_id: string
+          tenant_id: string
+        }[]
       }
       register_plugin: {
         Args: {
@@ -1213,9 +1131,15 @@ export type Database = {
         }
         Returns: Json
       }
-      report_browser_inventory: {
-        Args: { p_browsers: Json; p_device_id: string; p_device_token: string }
-        Returns: Json
+      resolve_plugin_dependencies: {
+        Args: { p_target_plugins: string[] }
+        Returns: {
+          install_order: number
+          is_installed: boolean
+          plugin_id: string
+          plugin_name: string
+          schema_name: string
+        }[]
       }
       safe_cast_uuid: { Args: { val: string }; Returns: string }
       unregister_plugin: { Args: { p_id: string }; Returns: undefined }
@@ -1407,157 +1331,117 @@ export type Database = {
         Row: {
           browser_type: string
           created_at: string
-          current_job_id: string | null
           device_id: string
+          executable_path: string | null
           id: string
+          is_active: boolean
           last_seen_at: string
-          local_id: string
+          local_profile_id: string
           metadata: Json
           name: string
-          proxy: string | null
-          proxy_id: string | null
-          status: string
           tenant_id: string
-          timezone: string | null
-          updated_at: string
-          user_agent: string | null
+          user_data_dir: string
         }
         Insert: {
           browser_type?: string
           created_at?: string
-          current_job_id?: string | null
           device_id: string
+          executable_path?: string | null
           id?: string
+          is_active?: boolean
           last_seen_at?: string
-          local_id: string
+          local_profile_id: string
           metadata?: Json
           name: string
-          proxy?: string | null
-          proxy_id?: string | null
-          status?: string
           tenant_id: string
-          timezone?: string | null
-          updated_at?: string
-          user_agent?: string | null
+          user_data_dir: string
         }
         Update: {
           browser_type?: string
           created_at?: string
-          current_job_id?: string | null
           device_id?: string
+          executable_path?: string | null
           id?: string
+          is_active?: boolean
           last_seen_at?: string
-          local_id?: string
+          local_profile_id?: string
           metadata?: Json
           name?: string
-          proxy?: string | null
-          proxy_id?: string | null
-          status?: string
           tenant_id?: string
-          timezone?: string | null
-          updated_at?: string
-          user_agent?: string | null
+          user_data_dir?: string
         }
         Relationships: [
           {
-            foreignKeyName: "node_browsers_device_id_fkey"
-            columns: ["device_id"]
+            foreignKeyName: "fk_runners_node_browsers_device"
+            columns: ["tenant_id", "device_id"]
             isOneToOne: false
             referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "node_browsers_proxy_id_fkey"
-            columns: ["proxy_id"]
-            isOneToOne: false
-            referencedRelation: "proxies"
-            referencedColumns: ["id"]
+            referencedColumns: ["tenant_id", "id"]
           },
         ]
       }
       proxies: {
         Row: {
-          assigned_browser_id: string | null
-          assigned_device_id: string | null
           city: string | null
           country_code: string | null
           created_at: string
+          error_count: number
           host: string
           id: string
+          ip_address: unknown
+          is_residential: boolean
           last_checked_at: string | null
           latency_ms: number | null
-          metadata: Json
-          name: string
           password_hash: string | null
           port: number
-          protocol: Database["runners"]["Enums"]["proxy_protocol"]
-          proxy_type: Database["runners"]["Enums"]["proxy_type"]
-          status: Database["runners"]["Enums"]["proxy_status"]
-          tags: Json
+          protocol: string
+          status: string
+          tags: string[]
           tenant_id: string
           updated_at: string
           username: string | null
         }
         Insert: {
-          assigned_browser_id?: string | null
-          assigned_device_id?: string | null
           city?: string | null
           country_code?: string | null
           created_at?: string
+          error_count?: number
           host: string
           id?: string
+          ip_address?: unknown
+          is_residential?: boolean
           last_checked_at?: string | null
           latency_ms?: number | null
-          metadata?: Json
-          name: string
           password_hash?: string | null
           port: number
-          protocol?: Database["runners"]["Enums"]["proxy_protocol"]
-          proxy_type?: Database["runners"]["Enums"]["proxy_type"]
-          status?: Database["runners"]["Enums"]["proxy_status"]
-          tags?: Json
+          protocol?: string
+          status?: string
+          tags?: string[]
           tenant_id: string
           updated_at?: string
           username?: string | null
         }
         Update: {
-          assigned_browser_id?: string | null
-          assigned_device_id?: string | null
           city?: string | null
           country_code?: string | null
           created_at?: string
+          error_count?: number
           host?: string
           id?: string
+          ip_address?: unknown
+          is_residential?: boolean
           last_checked_at?: string | null
           latency_ms?: number | null
-          metadata?: Json
-          name?: string
           password_hash?: string | null
           port?: number
-          protocol?: Database["runners"]["Enums"]["proxy_protocol"]
-          proxy_type?: Database["runners"]["Enums"]["proxy_type"]
-          status?: Database["runners"]["Enums"]["proxy_status"]
-          tags?: Json
+          protocol?: string
+          status?: string
+          tags?: string[]
           tenant_id?: string
           updated_at?: string
           username?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "proxies_assigned_browser_id_fkey"
-            columns: ["assigned_browser_id"]
-            isOneToOne: false
-            referencedRelation: "node_browsers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "proxies_assigned_device_id_fkey"
-            columns: ["assigned_device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -1569,15 +1453,6 @@ export type Database = {
           p_browser_id: string
           p_device_id: string
           p_device_token: string
-        }
-        Returns: Json
-      }
-      claim_proxy: {
-        Args: {
-          p_browser_id?: string
-          p_country_code?: string
-          p_device_id: string
-          p_protocol?: string
         }
         Returns: Json
       }
@@ -1619,6 +1494,19 @@ export type Database = {
         }
         Returns: Json
       }
+      list_browsers: {
+        Args: { p_device_id?: string; p_device_token?: string }
+        Returns: Json
+      }
+      reap_stale_browser_locks: {
+        Args: { p_stale_interval?: string }
+        Returns: {
+          browser_name: string
+          dead_device_id: string
+          reaped_browser_id: string
+          tenant_id: string
+        }[]
+      }
       release_browser: {
         Args: {
           p_browser_id: string
@@ -1632,29 +1520,9 @@ export type Database = {
         }
         Returns: Json
       }
-      report_browser_inventory: {
-        Args: { p_browsers: Json; p_device_id: string; p_device_token: string }
-        Returns: Json
-      }
-      report_proxy_health: {
-        Args: {
-          p_error?: string
-          p_latency_ms: number
-          p_proxy_id: string
-          p_status?: string
-        }
-        Returns: Json
-      }
-      sync_proxies: {
-        Args: { p_device_id: string; p_device_token: string; p_proxies: Json }
-        Returns: Json
-      }
     }
     Enums: {
       device_status: "offline" | "idle" | "busy" | "maintenance" | "disabled"
-      proxy_protocol: "http" | "https" | "socks5"
-      proxy_status: "active" | "dead" | "slow" | "banned" | "testing"
-      proxy_type: "datacenter" | "residential" | "mobile" | "isp"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1826,9 +1694,6 @@ export const Constants = {
   runners: {
     Enums: {
       device_status: ["offline", "idle", "busy", "maintenance", "disabled"],
-      proxy_protocol: ["http", "https", "socks5"],
-      proxy_status: ["active", "dead", "slow", "banned", "testing"],
-      proxy_type: ["datacenter", "residential", "mobile", "isp"],
     },
   },
 } as const
