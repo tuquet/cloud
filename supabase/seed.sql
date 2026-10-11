@@ -26,11 +26,11 @@ BEGIN
                 '00000000-0000-0000-0000-000000000000',
                 'authenticated',
                 'authenticated',
-                'admin@tuquet.dev',
-                extensions.crypt('tuquet123!', extensions.gen_salt('bf', 10)),
+                'admin@tuquet.com',
+                extensions.crypt('Tuquet1102@', extensions.gen_salt('bf', 10)),
                 now(),
                 '{"provider":"email","providers":["email"]}'::jsonb,
-                '{"full_name":"Nguyen Dang Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
+                '{"full_name":"Nguyen Dinh Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
                 now(),
                 now(),
                 '',
@@ -107,7 +107,7 @@ BEGIN
                     gen_random_uuid(),
                     v_admin_id::text,
                     v_admin_id,
-                    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@tuquet.dev'),
+                    jsonb_build_object('sub', v_admin_id::text, 'email', 'admin@tuquet.com'),
                     'email',
                     now(),
                     now(),
@@ -150,11 +150,12 @@ BEGIN
     -- Ensure profiles exist (in case auth trigger is bypassed in test runners)
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
     VALUES 
-        (v_admin_id, 'admin@tuquet.dev', 'Nguyen Dang Tu', 'https://avatars.githubusercontent.com/u/tuquet'),
+        (v_admin_id, 'admin@tuquet.com', 'Nguyen Dinh Tu', 'https://avatars.githubusercontent.com/u/tuquet'),
         (v_member_id, 'member@tuquet.dev', 'Collaborator Dev', ''),
         (v_test_id, 'test@tuquet.com', 'Specter QA Tester', ''),
         (v_specter_id, 'test@specter.tuquet.com', 'Specter Test Runner', '')
     ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
         full_name = EXCLUDED.full_name,
         avatar_url = EXCLUDED.avatar_url;
 END $$;
@@ -164,9 +165,9 @@ INSERT INTO public.tenants (id, slug, name, avatar_url, status, metadata, create
 VALUES
     (
         'b0000000-0000-0000-0000-000000000001',
-        'acme-corp',
-        'Acme Corporation',
-        'https://api.dicebear.com/7.x/identicon/svg?seed=acme',
+        'nguyen-dinh-tu',
+        'Nguyen Dinh Tu',
+        'https://api.dicebear.com/7.x/identicon/svg?seed=nguyendinhtu',
         'active',
         '{"plan": "pro", "region": "ap-southeast-1"}'::jsonb,
         'a0000000-0000-0000-0000-000000000001'
@@ -180,7 +181,9 @@ VALUES
         '{"plan": "free", "region": "ap-southeast-1"}'::jsonb,
         'a0000000-0000-0000-0000-000000000001'
     )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET
+    name = EXCLUDED.name,
+    slug = EXCLUDED.slug;
 
 -- 3. Tenant Memberships & Roles
 -- Member 1: admin@tuquet.dev in acme-corp (owner)
