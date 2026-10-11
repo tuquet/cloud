@@ -1,7 +1,7 @@
 {
   "$schema": "./schema/preset.schema.json",
   "name": "tunyk",
-  "description": "Tunyk Owner Workspace Preset - 100% active test identity with owner tenant",
+  "description": "Tunyk Owner Tenant Preset - 100% active test identity with owner tenant",
   "user": {
     "email": "tunyk.93@gmail.com",
     "password": "Admin!12345",
@@ -13,8 +13,8 @@
     }
   },
   "tenant": {
-    "slug": "tunyk-workspace",
-    "name": "Tunyk Enterprise Workspace",
+    "slug": "tunyk-tenant",
+    "name": "Tunyk Enterprise Tenant",
     "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=tunyk",
     "plan": "pro",
     "metadata": {

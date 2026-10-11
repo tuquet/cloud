@@ -78,9 +78,10 @@ Audit log recording every webhook dispatch attempt:
 
 ---
 
-## 4. Emitting Events (RPC Function)
+## 4. Emitting & Claiming Events (Data Engine Queue API)
 
-Any stored procedure, database trigger, or backend service can emit events into the outbox atomically:
+### 4.1. Emitting Events (`events.emit_event`)
+Any stored procedure, database trigger, or backend service can emit events into the outbox atomically. Emitting also signals background workers instantly via `pg_notify('events_outbox_channel', ...)`:
 
 ```sql
 SELECT events.emit_event(
@@ -89,6 +90,17 @@ SELECT events.emit_event(
     _payload => '{"campaign_id": "c101", "total_tasks": 50, "status": "success"}'::jsonb
 );
 ```
+
+### 4.2. Atomic Non-Blocking Worker Claim (`events.claim_outbox_batch`)
+Background workers claim batches of pending events with zero lock contention via `FOR UPDATE SKIP LOCKED`:
+
+```sql
+-- Worker claims 20 events atomically and marks status = 'processing'
+SELECT * FROM events.claim_outbox_batch(20);
+```
+
+### 4.3. High-Throughput BRIN Indexing
+Both `events.outbox` and `events.deliveries` utilize PostgreSQL **BRIN Indexes** on `created_at` to minimize RAM footprint while supporting rapid sequential queue scanning.
 
 ### Core Built-in Events:
 * `member.joined`: Automatically emitted when a new user joins a tenant.

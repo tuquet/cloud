@@ -122,6 +122,7 @@ CREATE TABLE IF NOT EXISTS automa.schedules (
 CREATE INDEX IF NOT EXISTS idx_automa_workflows_tenant ON automa.workflows (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automa_campaigns_tenant ON automa.campaign_runs (tenant_id, status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automa_logs_campaign ON automa.execution_logs (tenant_id, campaign_run_id, logged_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automa_logs_logged_at_brin ON automa.execution_logs USING brin (logged_at);
 CREATE INDEX IF NOT EXISTS idx_automa_schedules_tenant ON automa.schedules (tenant_id, is_active);
 
 -- 5. Row Level Security

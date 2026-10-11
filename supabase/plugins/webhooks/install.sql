@@ -34,6 +34,7 @@ COMMENT ON TABLE events.outbox IS '[Plugin: webhooks] Transactional event queue 
 
 CREATE INDEX IF NOT EXISTS idx_events_outbox_status ON events.outbox (status, created_at) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_events_outbox_tenant ON events.outbox (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_events_outbox_created_brin ON events.outbox USING brin (created_at);
 
 CREATE TABLE IF NOT EXISTS events.subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -59,7 +60,9 @@ CREATE TABLE IF NOT EXISTS events.deliveries (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
--- 3. Event Helper & Automatic Core Triggers
+CREATE INDEX IF NOT EXISTS idx_events_deliveries_created_brin ON events.deliveries USING brin (created_at);
+
+-- 3. Event Helper, Worker Queue Claim & Automatic Core Triggers
 CREATE OR REPLACE FUNCTION events.emit_event(
     _tenant_id UUID,
     _event_type TEXT,
@@ -83,9 +86,49 @@ BEGIN
     VALUES (_tenant_id, _event_type, _payload, 'pending', timezone('utc'::text, now()))
     RETURNING id INTO v_event_id;
 
+    -- Signal background workers via zero-latency NOTIFY
+    PERFORM pg_notify('events_outbox_channel', v_event_id::text);
+
     RETURN v_event_id;
 END;
 $$;
+
+-- 3.1. High-Performance Atomic Worker Batch Claim (FOR UPDATE SKIP LOCKED)
+CREATE OR REPLACE FUNCTION events.claim_outbox_batch(
+    p_batch_size INT DEFAULT 20
+)
+RETURNS TABLE (
+    id UUID,
+    tenant_id UUID,
+    event_type TEXT,
+    payload JSONB,
+    retry_count INT
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    RETURN QUERY
+    WITH pending_events AS (
+        SELECT o.id
+        FROM events.outbox o
+        WHERE o.status = 'pending'
+        ORDER BY o.created_at ASC
+        LIMIT p_batch_size
+        FOR UPDATE SKIP LOCKED
+    )
+    UPDATE events.outbox o
+    SET 
+        status = 'processing',
+        processed_at = timezone('utc'::text, now())
+    FROM pending_events pe
+    WHERE o.id = pe.id
+    RETURNING o.id, o.tenant_id, o.event_type, o.payload, o.retry_count;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION events.claim_outbox_batch(INT) TO service_role;
 
 COMMENT ON FUNCTION events.emit_event IS '[Plugin: webhooks] Programmatic API to enqueue domain events into the Transactional Outbox';
 

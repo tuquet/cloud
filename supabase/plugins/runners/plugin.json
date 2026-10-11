@@ -3,18 +3,21 @@
   "name": "Runners & Compute Fleet",
   "version": "1.0.0",
   "schema": "runners",
-  "description": "Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, and live telemetry",
-  "dependencies": [],
+  "description": "Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, central cloud browsers, and live telemetry",
+  "dependencies": ["core-iam"],
   "tables": [
     "runners.devices",
-    "runners.node_browsers",
-    "runners.proxies"
+    "runners.proxies",
+    "runners.browsers",
+    "runners.node_browsers"
   ],
   "permissions": [
     "runners:devices:read",
     "runners:devices:manage",
     "runners:devices:enroll",
     "runners:proxies:read",
-    "runners:proxies:manage"
+    "runners:proxies:manage",
+    "runners:browsers:read",
+    "runners:browsers:manage"
   ]
 }

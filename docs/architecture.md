@@ -239,10 +239,11 @@ flowchart TD
 > - Subscriptions ERD: [`supabase/plugins/subscriptions/README.md`](../supabase/plugins/subscriptions/README.md)
 > - Webhooks ERD: [`supabase/plugins/webhooks/README.md`](../supabase/plugins/webhooks/README.md)
 > - Automa ERD: [`supabase/plugins/automa/README.md`](../supabase/plugins/automa/README.md)
+> - Runners ERD: [`supabase/plugins/runners/README.md`](../supabase/plugins/runners/README.md)
 
 ---
 
-## 4. Zero-Trust Security & Performance Model
+## 4. Zero-Trust Security & High-Performance Data Engine Model
 
 ### 4.1. Custom Access Token Hook ($O(1)$ RLS Lookups)
 In naive multi-tenant Supabase implementations, RLS policies execute circular subqueries on `tenant_members` and `role_permissions` for every single queried row. This causes **RLS Infinite Recursion** and pegging CPU to 100%.
@@ -251,7 +252,7 @@ Tuquet Cloud solves this at the protocol level:
 1. `public.custom_access_token_hook` runs when Supabase Auth issues a JWT.
 2. It fetches the user's active `tenant_id`, aggregated role names (`roles`), and atomic capabilities (`permissions`, capped at **25 items** to prevent JWT header bloat).
 3. These claims are baked directly into `auth.jwt() -> 'app_metadata'`.
-4. RLS policies evaluate in **$\sim 1\mu s$** via direct JSON path lookup:
+4. RLS policies evaluate in **$\sim 1\mu s$** via direct JSON path lookup with safe table fallback:
    ```sql
    CREATE POLICY "tenant_isolation_policy" ON media.assets
    FOR ALL TO authenticated
@@ -280,6 +281,18 @@ $$;
 SET search_path = ''
 ```
 Every object lookup within SQL routines uses fully-qualified names (`public.profiles`, `public.tenants`, `extensions.gen_random_uuid()`), eliminating schema search-path hijacking vulnerabilities.
+
+### 4.4. High-Throughput Append-Only BRIN Indexing
+High-write telemetry tables (`automa.execution_logs`, `events.outbox`, `events.deliveries`, `runners.browsers`, `public.audit_logs`) leverage **BRIN (Block Range Indexes)** on `created_at` / `logged_at`. BRIN indexes occupy **<1% of the storage and RAM of B-Trees**, avoiding cache pool eviction while maintaining microsecond range scans.
+
+### 4.5. High-Concurrency Queue Processing (`FOR UPDATE SKIP LOCKED` + `pg_notify`)
+The Transactional Outbox engine (`events.outbox`) uses `SELECT ... FOR UPDATE SKIP LOCKED` via `events.claim_outbox_batch(...)`. This allows concurrent background worker threads to claim batches of pending webhooks without row lock contention. Real-time workers are signaled via `pg_notify('events_outbox_channel', ...)` without expensive busy-polling.
+
+### 4.6. Migration Wizard DAG Topological Sort Engine
+The Core Kernel exposes `public.resolve_plugin_dependencies(p_target_plugins TEXT[])` which calculates the exact topological installation order (DAG) using SQL Recursive CTEs against `public.system_plugins`. This allows enterprise Migration Wizards to provision custom, tailored plugin combinations on-demand without manual ordering.
+
+### 4.7. Dead Lease Reaper Engine
+The Compute Grid engine exposes `runners.reap_stale_browser_locks()` (and `public.reap_stale_browser_locks`) to automatically transition browser profiles back to `idle` if a workstation crashes or loses network connectivity (correlated with `runners.devices.last_heartbeat_at`).
 
 ---
 

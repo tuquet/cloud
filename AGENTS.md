@@ -5,18 +5,18 @@ All AI agents operating in this repository MUST strictly adhere to [**`docs/term
 - **Tenancy Boundary**: The canonical database entity is **`Tenant`** (`public.tenants`, `tenant_id`). NEVER name tables, columns, or foreign keys as `Workspace`, `Organization`, `Team`, or `Project`.
 - **User vs Profile**: Identity is **`User`** (`auth.users`); public metadata is **`Profile`** (`public.profiles`). Never link foreign keys directly to `auth.users` from domain tables; always link to `public.profiles(id)`.
 - **Role vs Permission**: Roles live in `public.roles`. Permissions are atomic strings `<module>:<resource>:<action>` in `public.permissions`. Permissions are NEVER assigned directly to users/members; they are mapped via `role_permissions` and assigned via `member_roles`.
-- **Plugin Taxonomy**: Distinct autonomous database modules are **`Plugins`** (`public.system_plugins`). Distinct isolated schemas: `media`, `billing`, `events`, `automa`. Terms `Module`, `Extension`, or `Addon` are FORBIDDEN in database schema and backend documentation.
+- **Plugin Taxonomy**: Distinct autonomous database modules are **`Plugins`** (`public.system_plugins`). Distinct isolated schemas: `media`, `billing`, `events`, `runners`, `automa`. Terms `Module`, `Extension`, or `Addon` are FORBIDDEN in database schema and backend documentation.
 - **Storage vs Vault**: Cloud media storage is **`Storage`** (`media.assets`, bucket `tenant-assets`). The term `Vault` is FORBIDDEN in cloud services.
-- **Automa Domain Terms**:
-  - Execution Nodes: **`Runner`** (`automa.runners`). Terms `Worker` or `Bot` are FORBIDDEN.
-  - Virtual Browsers: **`Browser`** (`*.browser.json`). Terms `Profile` or `Member` are FORBIDDEN in browser context.
+- **Automa & Runners Domain Terms**:
+  - Execution Nodes: **`Runner`** (`runners.devices`, `automa.runners`). Terms `Worker` or `Bot` are FORBIDDEN.
+  - Virtual Browsers: **`Browser`** (`runners.browsers`, `*.browser.json`). Terms `Profile` or `Member` are FORBIDDEN in browser context.
   - Automation Graphs: **`Workflow`** (`automa.workflows`).
   - Runtime Dispatches: **`Campaign Run`** (`automa.campaign_runs`).
   - Telemetry Streams: **`Execution Log`** (`automa.execution_logs`).
 - **Event Dispatch**: Use **`Transactional Outbox`** (`events.outbox`) and **`Webhooks`** (`events.subscriptions`, `events.deliveries`). Hallucinating external message brokers (Kafka, RabbitMQ, Redis BullMQ) is strictly FORBIDDEN.
 
 ## 2. PostgreSQL & Supabase Architecture Invariants
-- **Base Kernel & Plugin Isolation**: Schema `public` is reserved strictly for the Base Platform Core IAM. All on-demand features MUST reside in their dedicated isolated schemas (`media`, `billing`, `events`, `automa`).
+- **Base Kernel & Plugin Isolation**: Schema `public` is reserved strictly for the Base Platform Core IAM. All on-demand features MUST reside in their dedicated isolated schemas (`media`, `billing`, `events`, `runners`, `automa`).
 - **FORBIDDEN Monolithic Coupling**: Agents MUST NEVER inject plugin tables into the `public` schema or draw monolithic static ERD diagrams that combine plugin tables with the Core Kernel ERD. All plugin-specific ERDs MUST reside exclusively inside their own `supabase/plugins/<plugin_id>/README.md`.
 - **O(1) RLS via Custom Access Token Hook**: Security policies MUST leverage claims (`tenant_id`, `roles`, `permissions`) injected into the JWT by `public.custom_access_token_hook`. Never write circular subqueries on `tenant_members` in RLS policies.
 - **No-Recursion Pattern**: All security query helpers MUST be marked `SECURITY DEFINER` and `STABLE`.

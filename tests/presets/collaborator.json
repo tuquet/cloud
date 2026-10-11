@@ -1,7 +1,7 @@
 {
   "$schema": "./schema/preset.schema.json",
   "name": "collaborator",
-  "description": "Collaborator Member Preset - standard member invited to workspace",
+  "description": "Collaborator Member Preset - standard member invited to tenant",
   "user": {
     "email": "collaborator@tuquet.dev",
     "password": "DevPass!12345",
@@ -14,7 +14,7 @@
   },
   "tenant": {
     "slug": "collaborator-sandbox",
-    "name": "Collaborator Sandbox Workspace",
+    "name": "Collaborator Sandbox Tenant",
     "avatar_url": "https://api.dicebear.com/7.x/identicon/svg?seed=collab-ws",
     "plan": "free",
     "metadata": {

@@ -196,6 +196,7 @@ CREATE INDEX IF NOT EXISTS idx_invitations_tenant_status ON public.tenant_invita
 CREATE INDEX IF NOT EXISTS idx_invitations_email ON public.tenant_invitations(email);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_tenant_time ON public.audit_logs(tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_actor ON public.audit_logs(tenant_id, actor_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_brin ON public.audit_logs USING brin(created_at);
 CREATE INDEX IF NOT EXISTS idx_system_plugins_status ON public.system_plugins(status);
 CREATE INDEX IF NOT EXISTS idx_system_plugins_schema ON public.system_plugins(schema_name);
 CREATE INDEX IF NOT EXISTS idx_system_plugins_is_system ON public.system_plugins(is_system);
@@ -231,18 +232,41 @@ $$;
 
 CREATE OR REPLACE FUNCTION public.is_tenant_member(_tenant_id UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-    SELECT EXISTS (
+DECLARE
+    v_jwt_tenant TEXT;
+    v_tenants JSONB;
+BEGIN
+    -- O(1) Fast-Path: Check active primary tenant in JWT
+    v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
+    IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
+        RETURN true;
+    END IF;
+
+    -- Fast-Path: Check user's tenant list in JWT
+    v_tenants := auth.jwt() -> 'app_metadata' -> 'tenants';
+    IF v_tenants IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM jsonb_array_elements(v_tenants) elem
+            WHERE elem->>'tenant_id' = _tenant_id::text
+        ) THEN
+            RETURN true;
+        END IF;
+    END IF;
+
+    -- Reliable Fallback to database
+    RETURN EXISTS (
         SELECT 1
         FROM public.tenant_members tm
         WHERE tm.tenant_id = _tenant_id
           AND tm.user_id = (SELECT auth.uid())
           AND tm.status = 'active'
     );
+END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.has_tenant_permission(
@@ -255,7 +279,20 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+    v_jwt_tenant TEXT;
+    v_jwt_perms JSONB;
 BEGIN
+    -- O(1) Fast-Path: Check active JWT claims if present
+    v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
+    IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
+        v_jwt_perms := auth.jwt() -> 'app_metadata' -> 'permissions';
+        IF v_jwt_perms IS NOT NULL THEN
+            RETURN v_jwt_perms ? _permission_id;
+        END IF;
+    END IF;
+
+    -- Reliable Fallback for service keys or non-active tenant lookups
     RETURN EXISTS (
         SELECT 1
         FROM public.tenant_members tm
@@ -269,7 +306,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.is_tenant_admin(_tenant_id UUID)
+CREATE OR REPLACE FUNCTION public.has_permission(requested_permission TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 STABLE
@@ -277,6 +314,31 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
+    RETURN COALESCE((auth.jwt() -> 'app_metadata' -> 'permissions') ? requested_permission, false);
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_tenant_admin(_tenant_id UUID)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_jwt_tenant TEXT;
+    v_jwt_roles JSONB;
+BEGIN
+    -- O(1) Fast-Path: Check active JWT roles
+    v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
+    IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
+        v_jwt_roles := auth.jwt() -> 'app_metadata' -> 'roles';
+        IF v_jwt_roles IS NOT NULL THEN
+            RETURN (v_jwt_roles ? 'owner') OR (v_jwt_roles ? 'admin');
+        END IF;
+    END IF;
+
+    -- Fallback to database
     RETURN EXISTS (
         SELECT 1
         FROM public.tenant_members tm
@@ -290,7 +352,7 @@ BEGIN
 END;
 $$;
 
--- 4.5. Custom Access Token Hook với giới hạn an toàn 25 Tenants (<8KB Header)
+-- 4.5. Custom Access Token Hook với bảo vệ kích thước Header (<8KB)
 CREATE OR REPLACE FUNCTION public.custom_access_token_hook(event JSONB)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -301,12 +363,54 @@ AS $$
 DECLARE
     claims JSONB;
     user_tenants JSONB;
+    primary_tenant_id UUID;
+    user_permissions JSONB;
+    user_roles JSONB;
 BEGIN
     -- Null safety: If not an authenticated user event, return untouched
     IF event->>'user_id' IS NULL OR event->'claims' IS NULL THEN
         RETURN event;
     END IF;
 
+    -- Resolve primary active tenant (first joined active tenant)
+    SELECT tm.tenant_id INTO primary_tenant_id
+    FROM public.tenant_members tm
+    WHERE tm.user_id = (event->>'user_id')::uuid
+      AND tm.status = 'active'
+    ORDER BY tm.joined_at ASC
+    LIMIT 1;
+
+    -- Synthesize distinct permissions for primary tenant (capped at 25)
+    SELECT COALESCE(
+        jsonb_agg(DISTINCT rp.permission_id),
+        '[]'::jsonb
+    )
+    INTO user_permissions
+    FROM (
+        SELECT rp.permission_id
+        FROM public.tenant_members tm
+        JOIN public.member_roles mr ON mr.member_id = tm.id
+        JOIN public.role_permissions rp ON rp.role_id = mr.role_id
+        WHERE tm.user_id = (event->>'user_id')::uuid
+          AND tm.tenant_id = primary_tenant_id
+          AND tm.status = 'active'
+        LIMIT 25
+    ) rp;
+
+    -- Synthesize distinct roles for primary tenant
+    SELECT COALESCE(
+        jsonb_agg(DISTINCT r.name),
+        '[]'::jsonb
+    )
+    INTO user_roles
+    FROM public.tenant_members tm
+    JOIN public.member_roles mr ON mr.member_id = tm.id
+    JOIN public.roles r ON r.id = mr.role_id
+    WHERE tm.user_id = (event->>'user_id')::uuid
+      AND tm.tenant_id = primary_tenant_id
+      AND tm.status = 'active';
+
+    -- Build aggregated tenants list
     SELECT COALESCE(
         jsonb_agg(
             jsonb_build_object(
@@ -328,10 +432,15 @@ BEGIN
         WHERE tm.user_id = (event->>'user_id')::uuid
           AND tm.status = 'active'
         ORDER BY tm.joined_at ASC
-        LIMIT 25 -- Bảo vệ kích thước JWT header < 8KB khi user tham gia nhiều tenant
+        LIMIT 25
     ) tm;
 
     claims := event->'claims';
+    IF primary_tenant_id IS NOT NULL THEN
+        claims := jsonb_set(claims, '{app_metadata,tenant_id}', to_jsonb(primary_tenant_id));
+        claims := jsonb_set(claims, '{app_metadata,roles}', user_roles);
+        claims := jsonb_set(claims, '{app_metadata,permissions}', user_permissions);
+    END IF;
     claims := jsonb_set(claims, '{app_metadata,tenants}', user_tenants);
     event := jsonb_set(event, '{claims}', claims);
     RETURN event;
@@ -449,6 +558,61 @@ BEGIN
     ORDER BY sp.is_system DESC, sp.installed_at ASC;
 END;
 $$;
+
+-- 5.4. Dependency Resolution Engine (Topological Sort / DAG for Migration Wizard)
+CREATE OR REPLACE FUNCTION public.resolve_plugin_dependencies(p_target_plugins TEXT[])
+RETURNS TABLE (
+    install_order INT,
+    plugin_id TEXT,
+    plugin_name TEXT,
+    schema_name TEXT,
+    is_installed BOOLEAN
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+    RETURN QUERY
+    WITH RECURSIVE dependency_tree AS (
+        -- Base: Các plugin được chỉ định
+        SELECT 
+            sp.id,
+            sp.name,
+            sp.schema_name,
+            (sp.status = 'installed') AS is_installed,
+            unnest(COALESCE(sp.dependencies, '{}'::text[])) AS dep_id,
+            1 AS depth
+        FROM public.system_plugins sp
+        WHERE sp.id = ANY(p_target_plugins)
+
+        UNION ALL
+
+        -- Recursive: Tìm các dependency cấp sâu hơn
+        SELECT 
+            parent.id,
+            parent.name,
+            parent.schema_name,
+            (parent.status = 'installed') AS is_installed,
+            unnest(COALESCE(parent.dependencies, '{}'::text[])) AS dep_id,
+            dt.depth + 1
+        FROM public.system_plugins parent
+        JOIN dependency_tree dt ON dt.dep_id = parent.id
+    )
+    SELECT 
+        (ROW_NUMBER() OVER (ORDER BY MAX(dt.depth) DESC, dt.id ASC))::INT AS install_order,
+        dt.id::TEXT AS plugin_id,
+        dt.name::TEXT AS plugin_name,
+        dt.schema_name::TEXT AS schema_name,
+        BOOL_AND(dt.is_installed) AS is_installed
+    FROM dependency_tree dt
+    GROUP BY dt.id, dt.name, dt.schema_name
+    ORDER BY install_order ASC;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.resolve_plugin_dependencies(TEXT[]) TO authenticated, service_role;
 
 -- ============================================================================
 -- 6. DATABASE TRIGGERS TỰ ĐỘNG HÓA

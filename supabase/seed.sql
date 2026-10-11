@@ -3,11 +3,15 @@
 -- Description: Realistic initial data for testing Core IAM & RBAC
 -- ============================================================================
 
+SET search_path = public, extensions, auth;
+
 -- 1. Create Auth Users (Supabase Auth Mock / Local Test)
 DO $$
 DECLARE
     v_admin_id UUID := 'a0000000-0000-0000-0000-000000000001';
     v_member_id UUID := 'a0000000-0000-0000-0000-000000000002';
+    v_test_id UUID := 'a0000000-0000-0000-0000-000000000003';
+    v_specter_id UUID := 'a0000000-0000-0000-0000-000000000004';
 BEGIN
     -- Check if auth.users exists
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'auth' AND table_name = 'users') THEN
@@ -23,7 +27,7 @@ BEGIN
                 'authenticated',
                 'authenticated',
                 'admin@tuquet.dev',
-                crypt('tuquet123!', gen_salt('bf', 10)),
+                extensions.crypt('tuquet123!', extensions.gen_salt('bf', 10)),
                 now(),
                 '{"provider":"email","providers":["email"]}'::jsonb,
                 '{"full_name":"Nguyen Dang Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
@@ -40,10 +44,44 @@ BEGIN
                 'authenticated',
                 'authenticated',
                 'member@tuquet.dev',
-                crypt('tuquet123!', gen_salt('bf', 10)),
+                extensions.crypt('tuquet123!', extensions.gen_salt('bf', 10)),
                 now(),
                 '{"provider":"email","providers":["email"]}'::jsonb,
                 '{"full_name":"Collaborator Dev","avatar_url":""}'::jsonb,
+                now(),
+                now(),
+                '',
+                '',
+                '',
+                ''
+            ),
+            (
+                v_test_id,
+                '00000000-0000-0000-0000-000000000000',
+                'authenticated',
+                'authenticated',
+                'test@tuquet.com',
+                extensions.crypt('tuquet123!', extensions.gen_salt('bf', 10)),
+                now(),
+                '{"provider":"email","providers":["email"]}'::jsonb,
+                '{"full_name":"Specter QA Tester","avatar_url":""}'::jsonb,
+                now(),
+                now(),
+                '',
+                '',
+                '',
+                ''
+            ),
+            (
+                v_specter_id,
+                '00000000-0000-0000-0000-000000000000',
+                'authenticated',
+                'authenticated',
+                'test@specter.tuquet.com',
+                extensions.crypt('tuquet123!', extensions.gen_salt('bf', 10)),
+                now(),
+                '{"provider":"email","providers":["email"]}'::jsonb,
+                '{"full_name":"Specter Test Runner","avatar_url":""}'::jsonb,
                 now(),
                 now(),
                 '',
@@ -84,6 +122,26 @@ BEGIN
                     now(),
                     now(),
                     now()
+                ),
+                (
+                    gen_random_uuid(),
+                    v_test_id::text,
+                    v_test_id,
+                    jsonb_build_object('sub', v_test_id::text, 'email', 'test@tuquet.com'),
+                    'email',
+                    now(),
+                    now(),
+                    now()
+                ),
+                (
+                    gen_random_uuid(),
+                    v_specter_id::text,
+                    v_specter_id,
+                    jsonb_build_object('sub', v_specter_id::text, 'email', 'test@specter.tuquet.com'),
+                    'email',
+                    now(),
+                    now(),
+                    now()
                 )
             ON CONFLICT (provider_id, provider) DO NOTHING;
         END IF;
@@ -93,7 +151,9 @@ BEGIN
     INSERT INTO public.profiles (id, email, full_name, avatar_url)
     VALUES 
         (v_admin_id, 'admin@tuquet.dev', 'Nguyen Dang Tu', 'https://avatars.githubusercontent.com/u/tuquet'),
-        (v_member_id, 'member@tuquet.dev', 'Collaborator Dev', '')
+        (v_member_id, 'member@tuquet.dev', 'Collaborator Dev', ''),
+        (v_test_id, 'test@tuquet.com', 'Specter QA Tester', ''),
+        (v_specter_id, 'test@specter.tuquet.com', 'Specter Test Runner', '')
     ON CONFLICT (id) DO UPDATE SET
         full_name = EXCLUDED.full_name,
         avatar_url = EXCLUDED.avatar_url;
@@ -156,6 +216,50 @@ FROM public.tenant_members tm
 WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000002' AND tm.user_id = 'a0000000-0000-0000-0000-000000000001'
 ON CONFLICT (member_id, role_id) DO NOTHING;
 
+-- Member 4: test@tuquet.com in acme-corp (admin)
+INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
+VALUES ('e0000000-0000-0000-0000-000000000004', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000003', 'active')
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
+
+INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+SELECT tm.id, '00000000-0000-0000-0000-000000000002', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000001' AND tm.user_id = 'a0000000-0000-0000-0000-000000000003'
+ON CONFLICT (member_id, role_id) DO NOTHING;
+
+-- Member 5: test@tuquet.com in personal-dev (owner)
+INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
+VALUES ('e0000000-0000-0000-0000-000000000005', 'b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000003', 'active')
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
+
+INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+SELECT tm.id, '00000000-0000-0000-0000-000000000001', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000002' AND tm.user_id = 'a0000000-0000-0000-0000-000000000003'
+ON CONFLICT (member_id, role_id) DO NOTHING;
+
+-- Member 6: test@specter.tuquet.com in acme-corp (admin)
+INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
+VALUES ('e0000000-0000-0000-0000-000000000006', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000004', 'active')
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
+
+INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+SELECT tm.id, '00000000-0000-0000-0000-000000000002', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000001' AND tm.user_id = 'a0000000-0000-0000-0000-000000000004'
+ON CONFLICT (member_id, role_id) DO NOTHING;
+
+-- Member 7: test@specter.tuquet.com in personal-dev (owner)
+INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
+VALUES ('e0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000002', 'a0000000-0000-0000-0000-000000000004', 'active')
+ON CONFLICT (tenant_id, user_id) DO UPDATE SET status = EXCLUDED.status;
+
+INSERT INTO public.member_roles (member_id, role_id, tenant_id)
+SELECT tm.id, '00000000-0000-0000-0000-000000000001', tm.tenant_id
+FROM public.tenant_members tm
+WHERE tm.tenant_id = 'b0000000-0000-0000-0000-000000000002' AND tm.user_id = 'a0000000-0000-0000-0000-000000000004'
+ON CONFLICT (member_id, role_id) DO NOTHING;
+
 -- 4. Subscription Tier Seed (Optional - Only runs when subscriptions plugin is installed)
 DO $$
 BEGIN
@@ -187,7 +291,7 @@ BEGIN
             8,
             16384,
             '["browser:chromium", "mv3_extension_worker", "headless", "automation:workflow_graph"]'::jsonb,
-            encode(digest('tqr_demo_token_12345', 'sha256'), 'hex')
+            encode(extensions.digest('tqr_demo_token_12345', 'sha256'), 'hex')
         )
         ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
@@ -197,15 +301,15 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'proxies') THEN
         INSERT INTO runners.proxies (
-            id, tenant_id, name, protocol, host, port, status
+            id, tenant_id, protocol, host, port, status, tags
         ) VALUES (
             'fa000000-0000-0000-0000-000000000001',
             'b0000000-0000-0000-0000-000000000001',
-            'Local Bridge SOCKS5',
             'socks5',
             '127.0.0.1',
             1080,
-            'active'
+            'active',
+            ARRAY['Local Bridge SOCKS5']
         )
         ON CONFLICT (id) DO NOTHING;
     END IF;
@@ -270,14 +374,14 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'automa' AND table_name = 'workflows') THEN
         INSERT INTO automa.workflows (
-            id, tenant_id, local_id, name, description, version, data, is_active
+            id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
         ) VALUES (
             'fb000000-0000-0000-0000-000000000001',
             'b0000000-0000-0000-0000-000000000001',
-            'wf-e2e-smoke-01',
             'E2E Smoke: Check Example Domain',
             'Opens example.com in Chromium headless, delays 2 seconds, and verifies browser state',
             '1.0.0',
+            'published',
             jsonb_build_object(
                 'nodes', jsonb_build_array(
                     jsonb_build_object('id', 'node-trigger', 'label', 'trigger', 'data', jsonb_build_object('type', 'manual')),
@@ -289,11 +393,13 @@ BEGIN
                     jsonb_build_object('id', 'edge-2', 'source', 'node-new-tab', 'target', 'node-delay')
                 )
             ),
-            true
+            '{}'::jsonb,
+            '{}'::jsonb,
+            'a0000000-0000-0000-0000-000000000001'
         )
-        ON CONFLICT (tenant_id, local_id) DO UPDATE SET
+        ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name,
-            data = EXCLUDED.data,
+            graph_data = EXCLUDED.graph_data,
             updated_at = timezone('utc'::text, now());
     END IF;
 END $$;

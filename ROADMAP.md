@@ -56,23 +56,26 @@ flowchart TD
 
 > **Objective**: Establish an unshakeable, production-ready PostgreSQL foundation with zero RLS recursion, hardened security, and a drop-in modular plugin architecture.
 
-- [x] **Base Platform Core Migration (`20260920000001_base_platform_core.sql`):**
+- [x] **Base Platform Core Migration (`20261011000001_core_iam.sql`):**
   - [x] 10 core tables in `public` schema (`profiles`, `tenants`, `roles`, `permissions`, `role_permissions`, `tenant_members`, `member_roles`, `tenant_invitations`, `audit_logs`, `system_plugins`).
+  - [x] High-performance BRIN index on `public.audit_logs (created_at)` for minimal RAM overhead.
   - [x] System Roles (`is_system = true`, `tenant_id IS NULL`) vs Custom Tenant Roles (`tenant_id = UUID`).
   - [x] Composite indexes starting with `tenant_id` for multi-tenant query optimization.
 - [x] **$O(1)$ JWT Access Token Hook & Zero-Recursion RLS:**
   - [x] `public.custom_access_token_hook` bakes active `tenant_id`, `roles`, and atomic `permissions` (`LIMIT 25`) into JWT `app_metadata`.
-  - [x] Authorization helpers (`has_permission`, `is_tenant_member`, `is_tenant_admin`) marked `SECURITY DEFINER` and `STABLE`.
+  - [x] Authorization helpers (`has_permission`, `has_tenant_permission`, `is_tenant_member`, `is_tenant_admin`) provide $O(1)$ in-memory JSON fast-path checks with DB fallback.
 - [x] **Hardened Security Definers (Privilege Escalation Protection):**
   - [x] 100% of functions, procedures, and triggers enforce `SET search_path = ''` with fully-qualified schema names.
-- [x] **Master Plugin Registry & Lifecycle Pipeline:**
+- [x] **Master Plugin Registry & Migration Wizard DAG Engine:**
   - [x] `public.system_plugins` tracks active plugins with `is_system` protection.
-  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `automa`).
-- [x] **4 First-Party Enterprise Plugins:**
+  - [x] `public.resolve_plugin_dependencies` runs in-database Recursive CTE Topological Sort (DAG) for automated Migration Wizard tailoring.
+  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `runners` $\rightarrow$ `automa`).
+- [x] **5 First-Party Enterprise Plugins:**
   - [x] `storage` (Schema: `media`): Metadata catalog & dual-layer Supabase Storage RLS.
   - [x] `subscriptions` (Schema: `billing`): SaaS plans, subscriptions, and usage meters.
-  - [x] `webhooks` (Schema: `events`): Transactional Outbox pattern & delivery audit logs.
-  - [x] `automa` (Schema: `automa`): Workflows, runner fleet, campaign runs, and telemetry logs.
+  - [x] `webhooks` (Schema: `events`): Transactional Outbox pattern with `FOR UPDATE SKIP LOCKED` batching & zero-latency `pg_notify`.
+  - [x] `runners` (Schema: `runners`): Workstations, proxy pool, cloud browsers, storage sync, and automated dead lease reaper.
+  - [x] `automa` (Schema: `automa`): Workflows, campaign runs, and telemetry streams with BRIN indexing.
 - [x] **Documentation & Anti-Hallucination Standards:**
   - [x] Canonical Terminology Dictionary (`docs/terminology_dictionary.md`).
   - [x] Technical Architecture & Extension Contract (`docs/architecture.md`).

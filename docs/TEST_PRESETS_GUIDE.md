@@ -15,7 +15,7 @@ tests/presets/
 ├── sql/
 │   └── 00_provision_helper.sql # [SRP] Atomic, Idempotent DB Provisioner Procedure
 ├── tunyk.json                  # [OCP] Production-ready Owner Identity Preset
-└── collaborator.json           # [OCP] Standard Member Workspace Preset
+└── collaborator.json           # [OCP] Standard Member Tenant Preset
 
 scripts/testing/
 ├── tuquet-test-cli.ps1         # Native PowerShell CLI (Windows / Local Dev)
@@ -42,13 +42,13 @@ scripts/testing/
 
 ## 2. Default Test Presets
 
-### `tunyk.json` (Owner Workspace Preset)
+### `tunyk.json` (Owner Tenant Preset)
 - **User Email**: `tunyk.93@gmail.com`
 - **Password**: `Admin!12345`
 - **Full Name**: `Nguyen Dang Tu`
 - **State**: `ACTIVE 100%` (email confirmed, bcrypt hashed, GoTrue tokens initialized)
-- **Tenant Slug**: `tunyk-workspace`
-- **Tenant Name**: `Tunyk Enterprise Workspace`
+- **Tenant Slug**: `tunyk-tenant`
+- **Tenant Name**: `Tunyk Enterprise Tenant`
 - **Role**: `owner`
 - **Plan**: `pro`
 
@@ -82,7 +82,7 @@ node scripts/testing/tuquet-test-cli.mjs list
 PRESET          EMAIL                          TENANT SLUG               ROLE     PLAN    
 ------------------------------------------------------------------------------------------
 collaborator    collaborator@tuquet.dev        collaborator-sandbox      member   free    
-tunyk           tunyk.93@gmail.com             tunyk-workspace           owner    pro     
+tunyk           tunyk.93@gmail.com             tunyk-tenant              owner    pro     
 ```
 
 ---

@@ -51,7 +51,7 @@ Tracks batch execution sessions dispatching workflows across distributed runner 
 ### 4. `automa.execution_logs`
 High-throughput telemetry and block-level execution logs for real-time debugging and auditing.
 * **Key Columns:** `id` (`BIGINT GENERATED ALWAYS AS IDENTITY`), `tenant_id`, `campaign_run_id`, `workflow_id`, `node_id`, `log_level` (`trace`, `debug`, `info`, `warn`, `error`, `fatal`), `message`, `context` (JSONB), `created_at`.
-* **Index:** `idx_automa_logs_campaign (campaign_run_id, created_at DESC)`.
+* **Indexes:** Composite B-Tree `idx_automa_logs_campaign (tenant_id, campaign_run_id, logged_at DESC)` and high-throughput BRIN index `idx_automa_logs_logged_at_brin (logged_at)`.
 * **RLS Policies:** `automa:logs:read` to stream and inspect execution logs.
 
 ### 5. `automa.schedules`
