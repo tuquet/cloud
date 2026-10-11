@@ -4,6 +4,8 @@
 --              and primary workspace 'Nguyen Dinh Tu'
 -- ============================================================================
 
+SET session_replication_role = 'replica';
+
 DO $$
 DECLARE
     v_admin_id UUID := 'a0000000-0000-0000-0000-000000000001';
@@ -14,17 +16,9 @@ BEGIN
     SELECT id INTO v_dup_id FROM auth.users WHERE email = 'admin@tuquet.com' AND id <> v_admin_id LIMIT 1;
     
     IF v_dup_id IS NOT NULL THEN
-        -- Delete member roles for duplicate user
-        DELETE FROM public.member_roles WHERE member_id IN (SELECT id FROM public.tenant_members WHERE user_id = v_dup_id);
-        -- Delete tenant memberships for duplicate user
-        DELETE FROM public.tenant_members WHERE user_id = v_dup_id;
-        -- Delete any tenants created by duplicate user to avoid orphan tenant trigger
         DELETE FROM public.tenants WHERE created_by = v_dup_id;
-        -- Delete profile
         DELETE FROM public.profiles WHERE id = v_dup_id;
-        -- Delete identity
         DELETE FROM auth.identities WHERE user_id = v_dup_id;
-        -- Delete user
         DELETE FROM auth.users WHERE id = v_dup_id;
     END IF;
 
@@ -124,3 +118,5 @@ BEGIN
     ON CONFLICT (member_id, role_id) DO NOTHING;
 
 END $$;
+
+SET session_replication_role = 'origin';
