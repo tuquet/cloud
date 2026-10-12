@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   automa: {
     Tables: {
@@ -1482,7 +1482,6 @@ export type Database = {
           p_name: string
           p_os_info?: string
           p_ram_mb?: number
-          p_tenant_id?: string
         }
         Returns: Json
       }
