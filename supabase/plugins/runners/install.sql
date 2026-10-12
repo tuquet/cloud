@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS runners.devices (
     last_heartbeat_at TIMESTAMPTZ,
     registered_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    telemetry JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
     CONSTRAINT uq_runners_devices_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint),
     CONSTRAINT uq_runners_devices_tenant_id UNIQUE (tenant_id, id)
@@ -330,6 +331,7 @@ BEGIN
         active_jobs = p_active_jobs,
         status = CASE WHEN p_active_jobs > 0 THEN 'busy'::runners.device_status ELSE 'idle'::runners.device_status END,
         last_heartbeat_at = timezone('utc'::text, now()),
+        telemetry = p_telemetry,
         metadata = runners.devices.metadata || jsonb_build_object('telemetry', p_telemetry)
     WHERE id = v_device.id;
 
