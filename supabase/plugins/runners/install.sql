@@ -233,7 +233,8 @@ CREATE OR REPLACE FUNCTION runners.enroll_device(
     p_ram_mb INT DEFAULT 1024,
     p_capabilities JSONB DEFAULT '[]'::jsonb,
     p_metadata JSONB DEFAULT '{}'::jsonb,
-    p_enrollment_token TEXT DEFAULT NULL
+    p_enrollment_token TEXT DEFAULT NULL,
+    p_tenant_id UUID DEFAULT NULL
 )
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -248,7 +249,12 @@ DECLARE
     v_config JSONB;
 BEGIN
     -- Resolve Target Tenant
-    SELECT id INTO v_tenant_id FROM public.tenants WHERE status = 'active' ORDER BY created_at ASC LIMIT 1;
+    IF p_tenant_id IS NOT NULL THEN
+        v_tenant_id := p_tenant_id;
+    ELSE
+        SELECT id INTO v_tenant_id FROM public.tenants WHERE status = 'active' ORDER BY created_at ASC LIMIT 1;
+    END IF;
+
     IF v_tenant_id IS NULL THEN
         RAISE EXCEPTION 'No active tenant available in Tuquet Cloud to enroll device';
     END IF;

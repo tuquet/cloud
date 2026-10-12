@@ -1482,6 +1482,7 @@ export type Database = {
           p_name: string
           p_os_info?: string
           p_ram_mb?: number
+          p_tenant_id?: string
         }
         Returns: Json
       }
