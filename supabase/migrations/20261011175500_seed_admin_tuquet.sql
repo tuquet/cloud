@@ -36,7 +36,7 @@ BEGIN
         'admin@tuquet.com',
         extensions.crypt('Tuquet1102@', extensions.gen_salt('bf', 10)),
         now(),
-        '{"provider":"email","providers":["email"]}'::jsonb,
+        '{"provider":"email","providers":["email"],"platform_role":"superadmin"}'::jsonb,
         '{"full_name":"Nguyen Dinh Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
         now(),
         now(),
@@ -46,6 +46,7 @@ BEGIN
         email = 'admin@tuquet.com',
         encrypted_password = extensions.crypt('Tuquet1102@', extensions.gen_salt('bf', 10)),
         email_confirmed_at = now(),
+        raw_app_meta_data = '{"provider":"email","providers":["email"],"platform_role":"superadmin"}'::jsonb,
         raw_user_meta_data = '{"full_name":"Nguyen Dinh Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
         updated_at = now();
 

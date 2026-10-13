@@ -29,7 +29,7 @@ BEGIN
                 'admin@tuquet.com',
                 extensions.crypt('Tuquet1102@', extensions.gen_salt('bf', 10)),
                 now(),
-                '{"provider":"email","providers":["email"]}'::jsonb,
+                '{"provider":"email","providers":["email"],"platform_role":"superadmin"}'::jsonb,
                 '{"full_name":"Nguyen Dinh Tu","avatar_url":"https://avatars.githubusercontent.com/u/tuquet"}'::jsonb,
                 now(),
                 now(),

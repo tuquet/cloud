@@ -53,5 +53,8 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'is_tenant_admin') THEN
         RAISE EXCEPTION 'FAILED: public.is_tenant_admin not found!';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON p.pronamespace = n.oid WHERE n.nspname = 'public' AND p.proname = 'is_platform_admin') THEN
+        RAISE EXCEPTION 'FAILED: public.is_platform_admin not found!';
+    END IF;
     RAISE NOTICE ' [PASS] Security Definer authorization functions are verified.';
 END $$;

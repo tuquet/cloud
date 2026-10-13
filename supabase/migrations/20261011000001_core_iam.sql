@@ -217,6 +217,21 @@ EXCEPTION
 END;
 $$;
 
+-- 4.0.1. Platform Superadmin Check (O(1) JWT claim)
+-- Identity source: auth.users.raw_app_meta_data.platform_role = 'superadmin'.
+-- app_metadata is writable only by service_role, so users cannot self-elevate.
+-- Every tenant-scoped helper below short-circuits to TRUE for superadmins, so all
+-- existing RLS policies (core + plugins) grant full read/write without per-table policies.
+CREATE OR REPLACE FUNCTION public.is_platform_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT COALESCE(auth.jwt() -> 'app_metadata' ->> 'platform_role', '') = 'superadmin';
+$$;
+
 CREATE OR REPLACE FUNCTION public.get_user_tenant_ids()
 RETURNS SETOF UUID
 LANGUAGE sql
@@ -224,6 +239,10 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+    SELECT t.id
+    FROM public.tenants t
+    WHERE public.is_platform_admin()
+    UNION
     SELECT tm.tenant_id
     FROM public.tenant_members tm
     WHERE tm.user_id = (SELECT auth.uid())
@@ -241,6 +260,10 @@ DECLARE
     v_jwt_tenant TEXT;
     v_tenants JSONB;
 BEGIN
+    IF public.is_platform_admin() THEN
+        RETURN true;
+    END IF;
+
     -- O(1) Fast-Path: Check active primary tenant in JWT
     v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
     IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
@@ -283,6 +306,10 @@ DECLARE
     v_jwt_tenant TEXT;
     v_jwt_perms JSONB;
 BEGIN
+    IF public.is_platform_admin() THEN
+        RETURN true;
+    END IF;
+
     -- O(1) Fast-Path: Check active JWT claims if present
     v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
     IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
@@ -314,6 +341,9 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
+    IF public.is_platform_admin() THEN
+        RETURN true;
+    END IF;
     RETURN COALESCE((auth.jwt() -> 'app_metadata' -> 'permissions') ? requested_permission, false);
 END;
 $$;
@@ -329,6 +359,10 @@ DECLARE
     v_jwt_tenant TEXT;
     v_jwt_roles JSONB;
 BEGIN
+    IF public.is_platform_admin() THEN
+        RETURN true;
+    END IF;
+
     -- O(1) Fast-Path: Check active JWT roles
     v_jwt_tenant := auth.jwt() -> 'app_metadata' ->> 'tenant_id';
     IF v_jwt_tenant IS NOT NULL AND v_jwt_tenant = _tenant_id::text THEN
@@ -830,6 +864,7 @@ BEGIN
     v_caller_is_owner := (
         (COALESCE(auth.jwt() ->> 'role', '') = 'service_role')
         OR (auth.uid() IS NULL)
+        OR public.is_platform_admin()
         OR v_is_invitation_acceptance
         OR v_is_initial_tenant_owner
         OR EXISTS (
@@ -984,6 +1019,7 @@ BEGIN
         v_caller_is_owner := (
             COALESCE(auth.jwt() ->> 'role', '') = 'service_role'
             OR auth.uid() IS NULL
+            OR public.is_platform_admin()
             OR EXISTS (
                 SELECT 1 FROM public.member_roles mr
                 JOIN public.tenant_members tm ON tm.id = mr.member_id
@@ -1055,7 +1091,8 @@ CREATE POLICY "Profiles are readable by authenticated users"
 
 CREATE POLICY "Users can update their own profile"
     ON public.profiles FOR UPDATE TO authenticated
-    USING ((SELECT auth.uid()) = id) WITH CHECK ((SELECT auth.uid()) = id);
+    USING ((SELECT auth.uid()) = id OR public.is_platform_admin())
+    WITH CHECK ((SELECT auth.uid()) = id OR public.is_platform_admin());
 
 CREATE POLICY "Users can view tenants they belong to"
     ON public.tenants FOR SELECT TO authenticated
@@ -1158,7 +1195,8 @@ CREATE POLICY "system_plugins_select_all" ON public.system_plugins
 
 CREATE POLICY "system_plugins_manage_admin" ON public.system_plugins
     FOR ALL TO authenticated
-    USING (COALESCE(auth.jwt() ->> 'role', '') = 'service_role');
+    USING (COALESCE(auth.jwt() ->> 'role', '') = 'service_role' OR public.is_platform_admin())
+    WITH CHECK (COALESCE(auth.jwt() ->> 'role', '') = 'service_role' OR public.is_platform_admin());
 
 -- ============================================================================
 -- 8. SEED DATA MẪU (PERMISSIONS & DEFAULT SYSTEM ROLES & CORE REGISTRATION)

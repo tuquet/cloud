@@ -177,6 +177,12 @@ CREATE POLICY "subscriptions_manage" ON billing.subscriptions
     WITH CHECK (public.has_tenant_permission(tenant_id, 'subscriptions:manage') OR public.is_tenant_admin(tenant_id));
 CREATE POLICY "meters_select" ON billing.usage_meters FOR SELECT TO authenticated USING (public.is_tenant_member(tenant_id));
 
+-- Platform superadmin: full control over the plan catalog (incl. inactive plans) and tenant subscriptions
+CREATE POLICY "plans_platform_admin" ON billing.plans FOR ALL TO authenticated
+    USING (public.is_platform_admin()) WITH CHECK (public.is_platform_admin());
+CREATE POLICY "subscriptions_platform_admin" ON billing.subscriptions FOR ALL TO authenticated
+    USING (public.is_platform_admin()) WITH CHECK (public.is_platform_admin());
+
 -- 6. Permissions
 INSERT INTO public.permissions (id, module, description)
 VALUES 
