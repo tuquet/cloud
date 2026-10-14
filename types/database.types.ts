@@ -1028,7 +1028,210 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      inbox_domains: {
+        Row: {
+          catch_all_enabled: boolean | null
+          cloudflare_zone_id: string | null
+          created_at: string | null
+          domain_name: string | null
+          id: string | null
+          metadata: Json | null
+          status: "active" | "pending_verification" | "disabled" | null
+          tenant_id: string | null
+          total_emails_received: number | null
+          updated_at: string | null
+          webhook_secret: string | null
+        }
+        Insert: {
+          catch_all_enabled?: boolean | null
+          cloudflare_zone_id?: string | null
+          created_at?: string | null
+          domain_name?: string | null
+          id?: string | null
+          metadata?: Json | null
+          status?: "active" | "pending_verification" | "disabled" | null
+          tenant_id?: string | null
+          total_emails_received?: number | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Update: {
+          catch_all_enabled?: boolean | null
+          cloudflare_zone_id?: string | null
+          created_at?: string | null
+          domain_name?: string | null
+          id?: string | null
+          metadata?: Json | null
+          status?: "active" | "pending_verification" | "disabled" | null
+          tenant_id?: string | null
+          total_emails_received?: number | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+        }
+        Relationships: []
+      }
+      inbox_emails: {
+        Row: {
+          assigned_browser_id: string | null
+          body_html: string | null
+          body_text: string | null
+          created_at: string | null
+          domain: string | null
+          domain_id: string | null
+          has_otp: boolean | null
+          id: string | null
+          message_id: string | null
+          metadata: Json | null
+          raw_headers: Json | null
+          received_at: string | null
+          recipient: string | null
+          sender: string | null
+          subject: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          assigned_browser_id?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string | null
+          domain?: never
+          domain_id?: string | null
+          has_otp?: boolean | null
+          id?: string | null
+          message_id?: never
+          metadata?: Json | null
+          raw_headers?: never
+          received_at?: string | null
+          recipient?: string | null
+          sender?: string | null
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          assigned_browser_id?: string | null
+          body_html?: string | null
+          body_text?: string | null
+          created_at?: string | null
+          domain?: never
+          domain_id?: string | null
+          has_otp?: boolean | null
+          id?: string | null
+          message_id?: never
+          metadata?: Json | null
+          raw_headers?: never
+          received_at?: string | null
+          recipient?: string | null
+          sender?: string | null
+          subject?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
+      inbox_links: {
+        Row: {
+          created_at: string | null
+          email_id: string | null
+          id: string | null
+          is_consumed: boolean | null
+          link_type:
+            | "activation"
+            | "password_reset"
+            | "magic_login"
+            | "other"
+            | null
+          metadata: Json | null
+          recipient: string | null
+          tenant_id: string | null
+          url: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email_id?: string | null
+          id?: string | null
+          is_consumed?: boolean | null
+          link_type?:
+            | "activation"
+            | "password_reset"
+            | "magic_login"
+            | "other"
+            | null
+          metadata?: Json | null
+          recipient?: string | null
+          tenant_id?: string | null
+          url?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email_id?: string | null
+          id?: string | null
+          is_consumed?: boolean | null
+          link_type?:
+            | "activation"
+            | "password_reset"
+            | "magic_login"
+            | "other"
+            | null
+          metadata?: Json | null
+          recipient?: string | null
+          tenant_id?: string | null
+          url?: string | null
+        }
+        Relationships: []
+      }
+      inbox_otps: {
+        Row: {
+          code: string | null
+          consumed_at: string | null
+          consumed_by: string | null
+          consumed_by_device_id: string | null
+          created_at: string | null
+          email_id: string | null
+          expires_at: string | null
+          id: string | null
+          is_consumed: boolean | null
+          metadata: Json | null
+          otp_code: string | null
+          recipient: string | null
+          sender_service: string | null
+          service_name: string | null
+          tenant_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          consumed_at?: string | null
+          consumed_by?: never
+          consumed_by_device_id?: string | null
+          created_at?: string | null
+          email_id?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_consumed?: boolean | null
+          metadata?: Json | null
+          otp_code?: string | null
+          recipient?: string | null
+          sender_service?: string | null
+          service_name?: string | null
+          tenant_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          consumed_at?: string | null
+          consumed_by?: never
+          consumed_by_device_id?: string | null
+          created_at?: string | null
+          email_id?: string | null
+          expires_at?: string | null
+          id?: string | null
+          is_consumed?: boolean | null
+          metadata?: Json | null
+          otp_code?: string | null
+          recipient?: string | null
+          sender_service?: string | null
+          service_name?: string | null
+          tenant_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: Json }
@@ -1037,6 +1240,15 @@ export type Database = {
           p_browser_id: string
           p_device_id: string
           p_device_token: string
+        }
+        Returns: Json
+      }
+      consume_otp: {
+        Args: {
+          p_device_id?: string
+          p_otp_id?: string
+          p_recipient?: string
+          p_tenant_id?: string
         }
         Returns: Json
       }
@@ -1087,6 +1299,22 @@ export type Database = {
           p_device_id: string
           p_device_token: string
           p_telemetry?: Json
+        }
+        Returns: Json
+      }
+      ingest_email: {
+        Args: {
+          p_assigned_browser_id?: string
+          p_body_html?: string
+          p_body_text: string
+          p_link_type?: string
+          p_link_url?: string
+          p_otp_code?: string
+          p_recipient: string
+          p_sender: string
+          p_sender_service?: string
+          p_subject: string
+          p_tenant_id: string
         }
         Returns: Json
       }
