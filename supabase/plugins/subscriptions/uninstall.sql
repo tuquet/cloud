@@ -1,5 +1,5 @@
 -- ============================================================================
--- TUQUET-CLOUD PLUGIN: SUBSCRIPTIONS & QUOTA METERING (UNINSTALLATION SCRIPT)
+-- TUQUET-CLOUD PLUGIN: SUBSCRIPTIONS, QUOTA & PAYMENT GATEWAY (UNINSTALLATION)
 -- Plugin ID: subscriptions
 -- Architecture: Atomic Zero-Orphan Cleanup via DROP SCHEMA CASCADE
 -- ============================================================================
@@ -11,5 +11,9 @@ DROP SCHEMA IF EXISTS billing CASCADE;
 SELECT public.unregister_plugin('subscriptions');
 
 -- 3. Cleanup Permissions from Base Core
-DELETE FROM public.role_permissions WHERE permission_id LIKE 'subscriptions:%' OR permission_id LIKE 'quota:%';
+DELETE FROM public.role_permissions
+WHERE permission_id LIKE 'subscriptions:%'
+   OR permission_id LIKE 'quota:%'
+   OR permission_id LIKE 'wallets:%'
+   OR permission_id LIKE 'payments:%';
 DELETE FROM public.permissions WHERE module = 'billing';

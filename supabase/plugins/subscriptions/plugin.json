@@ -1,18 +1,27 @@
 {
   "id": "subscriptions",
-  "name": "Subscriptions & Quota Metering",
-  "version": "1.0.0",
+  "name": "Subscriptions, Quota & Payment Gateway",
+  "version": "1.2.0",
   "schema": "billing",
-  "description": "SaaS Subscription Tiers, Tenant Subscription state, Usage Metering, and Quota Triggers",
+  "description": "SaaS Subscription Tiers, Usage Metering, Tenant Xu Wallet Ledger, and Multi-Platform Payment Gateway",
   "dependencies": [],
   "tables": [
     "billing.plans",
     "billing.subscriptions",
-    "billing.usage_meters"
+    "billing.usage_meters",
+    "billing.wallets",
+    "billing.wallet_transactions",
+    "billing.payment_gateways",
+    "billing.payment_gateway_secrets",
+    "billing.payment_intents"
   ],
   "permissions": [
     "subscriptions:read",
     "subscriptions:manage",
-    "quota:read"
+    "quota:read",
+    "wallets:read",
+    "wallets:manage",
+    "payments:read",
+    "payments:manage"
   ]
 }

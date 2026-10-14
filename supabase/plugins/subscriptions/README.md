@@ -1,7 +1,7 @@
-# 💎 Enterprise Plugin: Subscriptions & Quota Metering (`subscriptions`)
+# 💎 Enterprise Plugin: Subscriptions, Quota & Multi-Platform Payment Gateway (`subscriptions`)
 
-> **Multi-Tenant SaaS Billing Engine & Dynamic Resource Metering**  
-> Provides tiered SaaS subscription plans (`billing.plans`), organization-level subscription state tracking (`billing.subscriptions`), dynamic resource meters (`billing.usage_meters`), and atomic RPC functions for quota verification and usage recording.  
+> **Multi-Tenant SaaS Billing, Prepaid `Xu` Wallet & Pluggable Payment Gateway Engine**  
+> Provides tiered SaaS subscription plans (`billing.plans`), tenant subscription tracking (`billing.subscriptions`), resource metering (`billing.usage_meters`), integer **`Xu` (`credits` — `BIGINT`)** prepaid wallets (`billing.wallets`, `billing.wallet_transactions`), and an extensible multi-channel payment gateway (`billing.payment_gateways`, `billing.payment_intents`).  
 > 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md) for strict naming invariants.
 
 ---
@@ -13,72 +13,59 @@
 | **Plugin ID** | `subscriptions` |
 | **Classification** | **On-Demand Business Plugin** |
 | **PostgreSQL Schema** | `billing` (Fully isolated from `public`) |
-| **Version** | `1.0.0` |
+| **Version** | `1.2.0` |
 | **Dependencies** | `core-iam` |
 | **Installation Script** | [`install.sql`](install.sql) |
 | **Uninstallation Script** | [`uninstall.sql`](uninstall.sql) |
 
 ---
 
-## 2. Table Directory: Schema `billing`
+## 2. Table Directory: Schema `billing` (8 Tables)
 
 ```mermaid
 erDiagram
     tenants ||--o{ subscriptions : "subscribes"
     plans ||--o{ subscriptions : "defines limits"
     tenants ||--o{ usage_meters : "tracks usage"
+    tenants ||--o| wallets : "owns Xu balance"
+    wallets ||--o{ wallet_transactions : "appends ledger"
+    payment_gateways ||--o| payment_gateway_secrets : "isolates secrets"
+    payment_gateways ||--o{ payment_intents : "processes"
+    tenants ||--o{ payment_intents : "initiates (nullable for guest)"
 ```
 
-### 1. `billing.plans`
-Defines service tiers and maximum resource quotas:
-* `id` (`TEXT PRIMARY KEY`): Plan tier identifier (`free`, `pro`, `enterprise`).
-* `name`, `description`: Display name and marketing description.
-* `max_members` (`INT`): Maximum allowed team members per tenant.
-* `max_storage_mb` (`BIGINT`): Storage quota limit in Megabytes.
-* `max_monthly_runs` (`INT`): Monthly automation run limit.
-* `price_monthly_usd` (`NUMERIC(10, 2)`): Monthly subscription cost in USD.
-* `is_active` (`BOOLEAN`): Availability status.
+### 1. `billing.plans` & `billing.subscriptions` & `billing.usage_meters`
+Defines SaaS service tiers (`free`, `pro`, `enterprise`), active tenant subscription states, and real-time quota meters (`storage_mb`, `monthly_runs`).
 
-#### Default Seeded Plans:
-| Plan Tier | Team Members (`max_members`) | Storage Quota (`max_storage_mb`) | Monthly Runs (`max_monthly_runs`) | Price / Month |
-|---|:---:|:---:|:---:|:---:|
-| **Free Starter** (`free`) | 2 | 500 MB | 1,000 | $0.00 |
-| **Team Pro** (`pro`) | 10 | 10,240 MB (10GB) | 50,000 | $29.00 |
-| **Enterprise Fleet** (`enterprise`) | 100 | 102,400 MB (100GB) | 1,000,000 | $199.00 |
+### 2. `billing.wallets` & `billing.wallet_transactions` (Prepaid `Xu` Ledger)
+* `balance_credits` (`BIGINT NOT NULL DEFAULT 0 CHECK (balance_credits >= 0)`): Canonical virtual currency balance in integer **Xu**.
+* `wallet_transactions`: Immutable append-only audit trail (`tx_type`: `topup`, `purchase`, `refund`, `admin_adjustment`, `bonus`) with BRIN indexing on `created_at`.
 
-### 2. `billing.subscriptions`
-Active subscription state per Tenant:
-* `tenant_id` (`UUID UNIQUE REFERENCES public.tenants`): Each tenant holds exactly one active subscription record.
-* `plan_id` (`TEXT REFERENCES billing.plans`): Active plan tier.
-* `status`: Enum (`free_tier`, `trialing`, `active`, `past_due`, `canceled`, `unpaid`).
-* `stripe_customer_id`, `stripe_subscription_id`: External payment processor identifiers.
-* `current_period_start`, `current_period_end`: Active billing cycle boundaries.
+### 3. `billing.payment_gateways` & `billing.payment_gateway_secrets`
+* Supports 5 extensible payment channels (`billing.payment_channel`):
+  1. `internal_wallet`: Instant 1-click `Xu` deduction (`rate_per_credit = 1`).
+  2. `bank_transfer`: Domestic 24/7 Bank Transfer (manual copy + dynamic VietQR/Napas247 image) reconciled via SePay / PayOS / Casso / Web2M webhooks.
+  3. `e_wallet`: Domestic e-wallets (**MoMo**, **ZaloPay**) via personal transfer memo or Merchant IPN.
+  4. `card_intl`: International Visa/Mastercard/Apple Pay via **Stripe** Checkout.
+  5. `crypto`: **USDT** (TRC20/BEP20) and **Binance Pay**.
+* Secrets (`webhook_secret`, API keys) are physically isolated in `billing.payment_gateway_secrets` (accessible strictly to `service_role` and `public.is_platform_admin()`).
 
-### 3. `billing.usage_meters`
-Real-time resource consumption counters:
-* Composite unique key: `(tenant_id, metric_name)` (e.g., `storage_mb`, `monthly_runs`, `api_calls`).
-* `current_value` (`BIGINT`): Accumulated consumption in the active billing period.
-* `reset_at` (`TIMESTAMPTZ`): Periodic reset timestamp (start of the next billing cycle).
+### 4. `billing.payment_intents`
+* Tracks payment lifecycle across `pending`, `processing`, `manual_review`, `succeeded`, `failed`, `expired`, and `refunded`.
+* Generates a unique 8-character memo code (`TQxxxxxx`) for deterministic bank/MoMo reconciliation.
+* Automatically holds expired (`> 30 minutes`) or underpaid transfers in `status = 'manual_review'` for Platform Admin approval (`_force_approve = TRUE`).
 
 ---
 
-## 3. Core Billing RPC Functions
+## 3. Core Billing, Wallet & Payment RPC Functions
 
-### `billing.check_tenant_quota(_tenant_id, _metric_name, _increment)`
-Evaluates whether a tenant possesses sufficient quota before initiating an action:
-```sql
--- Check if Tenant can execute 10 automation tasks
-SELECT billing.check_tenant_quota('b000...-0001'::uuid, 'monthly_runs', 10);
--- Returns: TRUE (Quota available) or FALSE (Limit reached)
-```
-
-### `billing.record_usage(_tenant_id, _metric_name, _increment)`
-Atomically upserts and increments a tenant's usage counter:
-```sql
--- Record 5 completed tasks
-SELECT billing.record_usage('b000...-0001'::uuid, 'monthly_runs', 5);
--- Returns: Updated usage value
-```
+* `billing.check_tenant_quota(_tenant_id, _metric_name, _increment)`
+* `billing.record_usage(_tenant_id, _metric_name, _increment)`
+* `billing.credit_tenant_wallet(_tenant_id, _amount_credits, _tx_type, _reference_type, _reference_id, _description)`
+* `billing.debit_tenant_wallet(_tenant_id, _amount_credits, _tx_type, _reference_type, _reference_id, _description)`
+* `billing.get_active_gateways()`
+* `billing.create_payment_intent(_gateway_id, _target_type, _target_id, _amount_credits, _tenant_id, _buyer_email)`
+* `billing.settle_payment_intent(_intent_id, _transfer_code, _provider_tx_id, _actual_pay_amount, _raw_metadata, _force_approve)`
 
 ---
 
@@ -89,45 +76,7 @@ SELECT billing.record_usage('b000...-0001'::uuid, 'monthly_runs', 5);
 | `subscriptions:read` | `billing` | View active plan, limits, and billing history | ✅ | ✅ | ✅ |
 | `subscriptions:manage` | `billing` | Upgrade, downgrade, or cancel subscriptions | ✅ | ✅ | ❌ |
 | `quota:read` | `billing` | Inspect real-time consumption meters | ✅ | ✅ | ✅ |
-
----
-
-## 5. Client Consumption Example (Supabase JS SDK)
-
-```typescript
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient('https://<project-ref>.supabase.co', '<anon-key>');
-
-// 1. Fetch Tenant's active subscription and plan limits
-const { data: sub } = await supabase
-  .schema('billing')
-  .from('subscriptions')
-  .select(`
-    status,
-    current_period_end,
-    plans:plan_id (name, max_members, max_storage_mb, max_monthly_runs)
-  `)
-  .single();
-
-// 2. Fetch usage meters
-const { data: meters } = await supabase
-  .schema('billing')
-  .from('usage_meters')
-  .select('metric_name, current_value, reset_at');
-```
-
----
-
-## 6. Lifecycle Management
-
-### Installation
-```powershell
-supabase db query --local -f supabase/plugins/subscriptions/install.sql
-```
-
-### Uninstallation
-```powershell
-supabase db query --local -f supabase/plugins/subscriptions/uninstall.sql
-```
-Executes `DROP SCHEMA IF EXISTS billing CASCADE;`, cleaning up subscription tables, meters, RPC functions, and unregistering from `system_plugins`.
+| `wallets:read` | `billing` | View tenant `Xu` wallet balance and transaction ledger | ✅ | ✅ | ✅ |
+| `wallets:manage` | `billing` | Top up or spend from tenant `Xu` wallet | ✅ | ✅ | ❌ |
+| `payments:read` | `billing` | View payment gateways and payment intents | ✅ | ✅ | ✅ |
+| `payments:manage` | `billing` | Configure gateways and approve `manual_review` intents | ✅ | ✅ | ❌ |
