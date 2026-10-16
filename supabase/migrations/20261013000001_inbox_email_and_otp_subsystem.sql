@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS inbox.domains (
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     domain_name VARCHAR(255) NOT NULL,
     status inbox.domain_status NOT NULL DEFAULT 'active',
-    webhook_secret VARCHAR(64) NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'),
+    webhook_secret VARCHAR(64) NOT NULL DEFAULT encode(extensions.gen_random_bytes(24), 'hex'),
     cloudflare_zone_id VARCHAR(64),
     catch_all_enabled BOOLEAN NOT NULL DEFAULT true,
     total_emails_received BIGINT NOT NULL DEFAULT 0,
@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS inbox.emails (
     body_text TEXT,
     body_html TEXT,
     has_otp BOOLEAN NOT NULL DEFAULT false,
-    assigned_browser_id UUID REFERENCES runners.browsers(id) ON DELETE SET NULL,
+    assigned_browser_id UUID,
     received_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS inbox.otps (
     code VARCHAR(32) NOT NULL,
     sender_service VARCHAR(64),
     is_consumed BOOLEAN NOT NULL DEFAULT false,
-    consumed_by_device_id UUID REFERENCES runners.devices(id) ON DELETE SET NULL,
+    consumed_by_device_id UUID,
     consumed_at TIMESTAMPTZ,
     expires_at TIMESTAMPTZ NOT NULL DEFAULT (timezone('utc'::text, now()) + INTERVAL '15 minutes'),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -104,6 +104,22 @@ CREATE TABLE IF NOT EXISTS inbox.links (
 COMMENT ON TABLE inbox.links IS 'Extracted verification, activation, and magic login URLs';
 
 CREATE INDEX IF NOT EXISTS idx_inbox_links_lookup ON inbox.links (tenant_id, recipient, is_consumed, created_at DESC);
+
+-- Attach foreign keys to runners plugin tables if runners plugin is already installed
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'browsers') THEN
+        ALTER TABLE inbox.emails
+            DROP CONSTRAINT IF EXISTS fk_inbox_emails_assigned_browser,
+            ADD CONSTRAINT fk_inbox_emails_assigned_browser
+            FOREIGN KEY (assigned_browser_id) REFERENCES runners.browsers(id) ON DELETE SET NULL;
+    END IF;
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'devices') THEN
+        ALTER TABLE inbox.otps
+            DROP CONSTRAINT IF EXISTS fk_inbox_otps_consumed_by_device,
+            ADD CONSTRAINT fk_inbox_otps_consumed_by_device
+            FOREIGN KEY (consumed_by_device_id) REFERENCES runners.devices(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 7. Row Level Security Policies
 ALTER TABLE inbox.domains ENABLE ROW LEVEL SECURITY;
@@ -256,11 +272,14 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-    v_otp RECORD;
+    v_found_id UUID;
+    v_code VARCHAR(32);
+    v_sender_service VARCHAR(64);
+    v_created_at TIMESTAMPTZ;
 BEGIN
     IF p_otp_id IS NOT NULL THEN
-        SELECT id, code, sender_service, created_at, expires_at
-        INTO v_otp
+        SELECT id, code, sender_service, created_at
+        INTO v_found_id, v_code, v_sender_service, v_created_at
         FROM inbox.otps
         WHERE id = p_otp_id
           AND (p_tenant_id IS NULL OR tenant_id = p_tenant_id)
@@ -268,8 +287,8 @@ BEGIN
           AND expires_at > timezone('utc'::text, now())
         FOR UPDATE SKIP LOCKED;
     ELSE
-        SELECT id, code, sender_service, created_at, expires_at
-        INTO v_otp
+        SELECT id, code, sender_service, created_at
+        INTO v_found_id, v_code, v_sender_service, v_created_at
         FROM inbox.otps
         WHERE (p_tenant_id IS NULL OR tenant_id = p_tenant_id)
           AND lower(recipient) = lower(p_recipient)
@@ -280,7 +299,7 @@ BEGIN
         FOR UPDATE SKIP LOCKED;
     END IF;
 
-    IF v_otp.id IS NULL THEN
+    IF v_found_id IS NULL THEN
         RETURN jsonb_build_object(
             'found', false,
             'code', NULL
@@ -292,14 +311,14 @@ BEGIN
     SET is_consumed = true,
         consumed_by_device_id = p_device_id,
         consumed_at = timezone('utc'::text, now())
-    WHERE id = v_otp.id;
+    WHERE id = v_found_id;
 
     RETURN jsonb_build_object(
         'found', true,
-        'otp_id', v_otp.id,
-        'code', v_otp.code,
-        'sender_service', v_otp.sender_service,
-        'created_at', v_otp.created_at
+        'otp_id', v_found_id,
+        'code', v_code,
+        'sender_service', v_sender_service,
+        'created_at', v_created_at
     );
 END;
 $$;
