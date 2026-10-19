@@ -20,6 +20,12 @@ param (
 
 $ErrorActionPreference = 'Stop'
 
+# Configure Specter Bridge HTTP Forwarder proxy for remote targets if not already set
+if ($Target -ne 'local' -and (-not $env:HTTP_PROXY)) {
+    $env:HTTP_PROXY = "http://127.0.0.1:8118"
+    $env:HTTPS_PROXY = "http://127.0.0.1:8118"
+}
+
 # Define canonical installation order (Infrastructure -> Billing -> Events -> Compute Grid -> Business Domain)
 $CanonicalOrder = @(
     @{ Id = 'storage';       Install = 'supabase/plugins/storage/install.sql';       Uninstall = 'supabase/plugins/storage/uninstall.sql';       Desc = 'Media Storage Assets (schema: media)' },

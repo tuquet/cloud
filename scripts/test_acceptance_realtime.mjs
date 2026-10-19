@@ -21,7 +21,8 @@ async function main() {
     console.log("================================================================================");
 
     // 1. Verify Device Identity
-    const configPath = join(homedir(), ".specter", "system", ".identity.json");
+    const tuquetHome = process.env.TUQUET_HOME || process.env.SPECTER_HOME || (existsSync(join(homedir(), ".tuquet")) ? join(homedir(), ".tuquet") : join(homedir(), ".specter"));
+    const configPath = join(tuquetHome, "system", ".identity.json");
     if (!existsSync(configPath)) {
         throw new Error(`Device identity not found at ${configPath}. Run 'specter runner enroll' first.`);
     }

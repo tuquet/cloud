@@ -11,6 +11,12 @@ param (
 
 $ErrorActionPreference = 'Stop'
 
+# Configure Specter Bridge HTTP Forwarder proxy for remote targets if not already set
+if ($Target -ne 'local' -and (-not $env:HTTP_PROXY)) {
+    $env:HTTP_PROXY = "http://127.0.0.1:8118"
+    $env:HTTPS_PROXY = "http://127.0.0.1:8118"
+}
+
 Write-Host "====================================================================" -ForegroundColor Cyan
 Write-Host " [TUQUET-CLOUD] Database Test Suite Runner (Target: $Target)" -ForegroundColor Cyan
 Write-Host "====================================================================" -ForegroundColor Cyan

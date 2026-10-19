@@ -1,42 +1,23 @@
 -- ============================================================================
 -- TUQUET-CLOUD PLUGIN: RUNNERS (SEED DATA)
--- Description: Realistic initial data for testing runner devices
+-- Description: Foundation proxies and cloud browser profiles
+-- NOTE: runners.devices is NOT seeded here.
+--       Physical devices/workstations are dynamically enrolled via Tauri Desk
+--       or 'specter runner start' using the RPC function runners.enroll_device().
 -- ============================================================================
 
-INSERT INTO runners.devices (
-    id, tenant_id, name, machine_fingerprint, status, version, os_info,
-    cpu_cores, ram_mb, capabilities, last_heartbeat_at
-)
-VALUES
-    (
-        'd0000000-0000-0000-0000-000000000001',
-        'b0000000-0000-0000-0000-000000000001',
-        'Workstation-Dev-Node-01',
-        'HWID-WIN-8942-X86',
-        'idle',
-        '0.1.0',
-        'Windows 11 Pro 64-bit',
-        8,
-        16384,
-        '["agent:claude-agy", "shell:pwsh", "browser:automa"]'::jsonb,
-        now()
-    ),
-    (
-        'd0000000-0000-0000-0000-000000000002',
-        'b0000000-0000-0000-0000-000000000001',
-        'Cloud-VPS-Worker-SG',
-        'HWID-LNX-2201-SG',
-        'busy',
-        '0.1.0',
-        'Ubuntu 22.04 LTS x86_64',
-        16,
-        32768,
-        '["agent:claude-agy", "shell:bash", "http"]'::jsonb,
-        now()
-    )
-ON CONFLICT (id) DO UPDATE SET
-    tenant_id = EXCLUDED.tenant_id,
-    name = EXCLUDED.name,
-    machine_fingerprint = EXCLUDED.machine_fingerprint,
-    status = EXCLUDED.status,
-    last_heartbeat_at = EXCLUDED.last_heartbeat_at;
+-- Ensure a default local bridge proxy is available for testing
+INSERT INTO runners.proxies (
+    id, tenant_id, host, port, protocol, country_code, city, status, latency_ms, tags
+) VALUES (
+    'fa000000-0000-0000-0000-000000000001',
+    'b0000000-0000-0000-0000-000000000001',
+    '127.0.0.1',
+    1080,
+    'socks5',
+    'VN',
+    'Local Bridge',
+    'active',
+    5,
+    ARRAY['Local Bridge SOCKS5', 'Specter-Bridge']
+) ON CONFLICT (tenant_id, host, port, protocol, username) DO NOTHING;

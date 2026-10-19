@@ -25,7 +25,8 @@ if (!SERVICE_KEY) {
 async function runAcceptance() {
     // 1. Identify Local Workstation Identity (SSOT)
     let deviceId = null;
-    const identityPath = join(homedir(), ".specter", "system", ".identity.json");
+    const tuquetHome = process.env.TUQUET_HOME || process.env.SPECTER_HOME || (existsSync(join(homedir(), ".tuquet")) ? join(homedir(), ".tuquet") : join(homedir(), ".specter"));
+    const identityPath = join(tuquetHome, "system", ".identity.json");
     if (existsSync(identityPath)) {
         try {
             const identity = JSON.parse(readFileSync(identityPath, "utf-8"));

@@ -46,7 +46,7 @@ CREATE POLICY "bank_accounts_admin_full_policy" ON billing.bank_receiving_accoun
 CREATE OR REPLACE FUNCTION billing.get_next_receiving_account(
     _amount_vnd NUMERIC DEFAULT 0
 )
-RETURNS billing.bank_receiving_accounts%ROWTYPE
+RETURNS billing.bank_receiving_accounts
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
@@ -84,7 +84,17 @@ BEGIN
 END;
 $$;
 
--- 5. Upgrade billing.create_payment_intent to use Dynamic Account Pool for bank_transfer
+-- 5. Upgrade billing.create_payment_intent to use Dynamic Account Pool for bank_transfer (if subscriptions plugin installed)
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_type t 
+        JOIN pg_namespace n ON n.oid = t.typnamespace 
+        WHERE n.nspname = 'billing' AND t.typname = 'payment_target_type'
+    ) AND EXISTS (
+        SELECT 1 FROM information_schema.tables 
+        WHERE table_schema = 'billing' AND table_name = 'payment_gateways'
+    ) THEN
+        EXECUTE $fn$
 CREATE OR REPLACE FUNCTION billing.create_payment_intent(
     _gateway_id TEXT,
     _target_type billing.payment_target_type,
@@ -97,7 +107,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $$
+AS $body$
 DECLARE
     v_gateway billing.payment_gateways%ROWTYPE;
     v_bank_acc billing.bank_receiving_accounts%ROWTYPE;
@@ -255,7 +265,10 @@ BEGIN
 
     RETURN to_jsonb(v_intent);
 END;
-$$;
+$body$;
+        $fn$;
+    END IF;
+END $$;
 
 -- 6. Seed initial pool accounts
 INSERT INTO billing.bank_receiving_accounts (id, bank_bin, bank_name, account_no, account_name, qr_template, daily_limit_vnd, priority, is_active, status)

@@ -51,10 +51,10 @@ switch ($Env) {
         Write-Host "API Endpoint: https://$devRef.supabase.co" -ForegroundColor Gray
     }
     'local' {
-        Write-Host "Targeting Local Docker Supabase (127.0.0.1:54321)..." -ForegroundColor Yellow
+        Write-Host "Targeting Local Docker Supabase (127.0.0.1:55321)..." -ForegroundColor Yellow
         Write-Host "[SUCCESS] Active target is now Local Docker Supabase." -ForegroundColor Green
-        Write-Host "API Endpoint: http://127.0.0.1:54321" -ForegroundColor Gray
-        Write-Host "Studio:       http://localhost:54323" -ForegroundColor Gray
+        Write-Host "API Endpoint: http://127.0.0.1:55321" -ForegroundColor Gray
+        Write-Host "Studio:       http://localhost:55323" -ForegroundColor Gray
     }
 }
 Write-Host "====================================================================" -ForegroundColor Cyan
