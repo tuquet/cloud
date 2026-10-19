@@ -66,6 +66,16 @@ jobs:
           set -e
           ACTION="${{ inputs.action || 'push_migrations' }}"
           echo "Executing deployment action: $ACTION"
+
+          echo "==> Ensuring remote migration history is synchronized..."
+          if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+            supabase migration repair --linked --status reverted 20261009000001 --password "$SUPABASE_DB_PASSWORD" || true
+            supabase migration repair --linked --status applied 20261013000001 --password "$SUPABASE_DB_PASSWORD" || true
+          else
+            supabase migration repair --linked --status reverted 20261009000001 || true
+            supabase migration repair --linked --status applied 20261013000001 || true
+          fi
+
           case "$ACTION" in
             "push_migrations")
               echo "==> Pushing migrations to linked project..."
