@@ -36,6 +36,17 @@ CREATE POLICY "bank_accounts_select_policy" ON billing.bank_receiving_accounts
     FOR SELECT TO authenticated, anon
     USING (is_active = TRUE AND status = 'active');
 
+-- Ensure public.is_platform_admin() exists (idempotent helper for environments where core_iam pre-dates this function)
+CREATE OR REPLACE FUNCTION public.is_platform_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+    SELECT COALESCE(auth.jwt() -> 'app_metadata' ->> 'platform_role', '') = 'superadmin';
+$$;
+
 DROP POLICY IF EXISTS "bank_accounts_admin_full_policy" ON billing.bank_receiving_accounts;
 CREATE POLICY "bank_accounts_admin_full_policy" ON billing.bank_receiving_accounts
     FOR ALL TO authenticated
