@@ -252,6 +252,60 @@ export type Database = {
   }
   billing: {
     Tables: {
+      bank_receiving_accounts: {
+        Row: {
+          account_name: string
+          account_no: string
+          bank_bin: string
+          bank_name: string
+          created_at: string
+          current_daily_total: number
+          daily_limit_vnd: number
+          daily_reset_at: string
+          id: string
+          is_active: boolean
+          metadata: Json
+          priority: number
+          qr_template: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_no: string
+          bank_bin: string
+          bank_name: string
+          created_at?: string
+          current_daily_total?: number
+          daily_limit_vnd?: number
+          daily_reset_at?: string
+          id: string
+          is_active?: boolean
+          metadata?: Json
+          priority?: number
+          qr_template?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_no?: string
+          bank_bin?: string
+          bank_name?: string
+          created_at?: string
+          current_daily_total?: number
+          daily_limit_vnd?: number
+          daily_reset_at?: string
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          priority?: number
+          qr_template?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plans: {
         Row: {
           created_at: string
@@ -376,6 +430,32 @@ export type Database = {
       check_tenant_quota: {
         Args: { _increment?: number; _metric_name: string; _tenant_id: string }
         Returns: boolean
+      }
+      get_next_receiving_account: {
+        Args: { _amount_vnd?: number }
+        Returns: {
+          account_name: string
+          account_no: string
+          bank_bin: string
+          bank_name: string
+          created_at: string
+          current_daily_total: number
+          daily_limit_vnd: number
+          daily_reset_at: string
+          id: string
+          is_active: boolean
+          metadata: Json
+          priority: number
+          qr_template: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bank_receiving_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       record_usage: {
         Args: { _increment?: number; _metric_name: string; _tenant_id: string }
@@ -1318,6 +1398,7 @@ export type Database = {
         }
         Returns: Json
       }
+      is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: { _tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
       list_browsers: {
