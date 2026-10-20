@@ -121,7 +121,7 @@ async function runTests() {
     orderId: 'ORD-001',
     requestId: 'REQ-001',
     amount: 250000,
-    orderInfo: 'Nap Xu Tuquet tq77a8b9',
+    orderInfo: 'Nap Xu tq77a8b9',
     transId: 4091827364,
     resultCode: 0,
     message: 'Successful.',

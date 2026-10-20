@@ -35,7 +35,7 @@ if [ "$TARGET" != "local" ]; then
         export HTTP_PROXY="http://127.0.0.1:8118"
         export HTTPS_PROXY="http://127.0.0.1:8118"
     fi
-    echo "Routing traffic via Tuquet Bridge HTTP Forwarder ($HTTP_PROXY)..."
+    echo "Routing traffic via Bridge HTTP Forwarder ($HTTP_PROXY)..."
 fi
 
 echo -e "\n--> Step 1/4: Resetting database schema and migrations..."
@@ -55,7 +55,7 @@ fi
 if [ "$WITH_SEED" = "true" ]; then
     echo -e "\n--> Step 3/4: Seeding Model 1 test data..."
     if [ "$TARGET" = "local" ]; then
-        docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres < supabase/seed.sql
+        docker exec -i supabase_db_cloud psql -U postgres -d postgres < supabase/seed.sql
     else
         supabase db query --linked -f supabase/seed.sql
     fi

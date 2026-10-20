@@ -1,4 +1,4 @@
-# ⚡ Tuquet Cloud Plugin: Runners, Cloud Browsers & Compute Fleet
+# ⚡ Cloud Plugin: Runners, Cloud Browsers & Compute Fleet
 
 **Plugin ID:** `runners`  
 **Schema:** `runners`  
@@ -8,7 +8,7 @@
 ---
 
 ## 📖 Overview
-The `runners` plugin acts as the universal compute infrastructure foundation and virtual browser profile manager for Tuquet Cloud. It manages physical workstations, edge nodes, cloud runner daemons running `runner` (Runner in Rust), proxy pools, deterministic C++ hardware fingerprints, and distributed session storage synchronization.
+The `runners` plugin acts as the universal compute infrastructure foundation and virtual browser profile manager for Cloud. It manages physical workstations, edge nodes, cloud runner daemons running `runner` (Runner in Rust), proxy pools, deterministic C++ hardware fingerprints, and distributed session storage synchronization.
 
 ---
 

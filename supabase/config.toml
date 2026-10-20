@@ -1,7 +1,7 @@
 # For detailed configuration reference documentation, visit:
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
-project_id = "tuquet-cloud"
+project_id = "cloud"
 
 [api]
 enabled = true

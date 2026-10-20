@@ -257,7 +257,7 @@ BEGIN
     END IF;
 
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'No active tenant available in Tuquet Cloud to enroll device';
+        RAISE EXCEPTION 'No active tenant available in Cloud to enroll device';
     END IF;
 
     -- Generate Device Secret Token (Raw token returned to client, SHA-256 hash stored)
@@ -915,5 +915,5 @@ SELECT public.register_plugin(
     ARRAY[]::TEXT[],
     'Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, and live telemetry',
     FALSE,
-    '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
+    '{"author": "Team", "license": "MIT"}'::jsonb
 );

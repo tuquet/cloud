@@ -209,5 +209,5 @@ SELECT public.register_plugin(
     ARRAY['runners']::TEXT[],
     'Distributed browser automation coordinator, batch campaign runs, and telemetry',
     FALSE,
-    '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
+    '{"author": "Team", "license": "MIT"}'::jsonb
 );

@@ -5,7 +5,7 @@ Apply **KISS** (Keep It Simple, Stupid) and **YAGNI** (You Aren't Gonna Need It)
 
 ### Context & Decisions
 1. **Premature Inbox / OTP Subsystem (YAGNI):** The inbox and OTP interception feature (`inbox.domains`, `inbox.emails`, `inbox.otps`, `inbox.links`, etc.) has not been developed on the client/runner side yet. Including it now is premature. Both `20261013000001_inbox_email_and_otp_subsystem.sql` and the anti-pattern `rollback_inbox_subsystem.sql` (along with tests `07_verify_inbox_subsystem.sql` and `test_acceptance_inbox.mjs`) will be completely removed.
-2. **Duplicate Admin Seed Migration (KISS):** `20261011175500_seed_admin_tuquet.sql` is a duplicate seed script disguised as a DDL migration. `supabase/seed.sql` already provisions `admin@tuquet.com`, `Tuquet Enterprise Corp` tenant, profiles, and identities. This migration will be removed.
+2. **Duplicate Admin Seed Migration (KISS):** `20261011175500_seed_admin_tuquet.sql` is a duplicate seed script disguised as a DDL migration. `supabase/seed.sql` already provisions `admin@tuquet.com`, `Enterprise Corp` tenant, profiles, and identities. This migration will be removed.
 3. **Canonical Relocation of Dynamic Bank Pool (SRP & Plugin Architecture):** Table `billing.bank_receiving_accounts` belongs to schema `billing` owned by the `subscriptions` plugin. It will be integrated into `supabase/plugins/subscriptions/install.sql` (and `uninstall.sql`), and `20261017000001_billing_dynamic_bank_pool.sql` will be deleted.
 4. **Baseline Migration State:** `cloud/supabase/migrations/` will contain exactly **one** clean baseline migration: `20261011000001_core_iam.sql`.
 
@@ -14,7 +14,7 @@ Apply **KISS** (Keep It Simple, Stupid) and **YAGNI** (You Aren't Gonna Need It)
 ## Tech Stack
 - **Database:** PostgreSQL 15+ (Supabase)
 - **Tooling:** Supabase CLI, psql, Docker
-- **Target Repository:** `cloud/` (`tuquet-cloud`)
+- **Target Repository:** `cloud/` (`cloud`)
 
 ---
 

@@ -6,4 +6,4 @@
 # ============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-node "${SCRIPT_DIR}/tuquet-test-cli.mjs" "$@"
+node "${SCRIPT_DIR}/test-cli.mjs" "$@"

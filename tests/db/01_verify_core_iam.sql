@@ -1,6 +1,6 @@
 -- ============================================================================
 -- TEST SUITE: 01_VERIFY_CORE_IAM.SQL
--- Description: Smoke and integrity verification for Tuquet Cloud Core Kernel
+-- Description: Smoke and integrity verification for Cloud Core Kernel
 -- ============================================================================
 
 DO $$

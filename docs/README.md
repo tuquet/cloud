@@ -1,6 +1,6 @@
-# Tuquet Cloud Internal Specifications
+# Cloud Internal Specifications
 
-> ⚠️ **Developer Reference Only**: The markdown files in this directory (`architecture.md`, `terminology_dictionary.md`, `TEST_PRESETS_GUIDE.md`) serve as internal low-level implementation notes and test fixtures for `tuquet-cloud`.
+> ⚠️ **Developer Reference Only**: The markdown files in this directory (`architecture.md`, `terminology_dictionary.md`, `TEST_PRESETS_GUIDE.md`) serve as internal low-level implementation notes and test fixtures for `cloud`.
 
 For official user-facing, operator, and deployment documentation, see the **Central Documentation Hub**:
 

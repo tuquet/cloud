@@ -42,7 +42,7 @@ function executeSql(sql, target = 'local') {
   if (target === 'local') {
     try {
       const output = execSync(
-        'docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres',
+        'docker exec -i supabase_db_cloud psql -U postgres -d postgres',
         {
           input: sql,
           encoding: 'utf-8',

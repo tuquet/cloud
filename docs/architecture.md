@@ -1,13 +1,13 @@
-# Tuquet Cloud Architecture & Technical Specification
+# Cloud Architecture & Technical Specification
 
-> **KISS & YAGNI Compliant**: Authoritative technical specification for `tuquet-cloud`. Details the Micro-Kernel architecture, Base Core IAM data model, dynamic PostgreSQL Schema Plugin extension contract, zero-recursion $O(1)$ Row-Level Security (RLS), and dynamic PostgREST API introspection.  
+> **KISS & YAGNI Compliant**: Authoritative technical specification for `cloud`. Details the Micro-Kernel architecture, Base Core IAM data model, dynamic PostgreSQL Schema Plugin extension contract, zero-recursion $O(1)$ Row-Level Security (RLS), and dynamic PostgREST API introspection.  
 > 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](./terminology_dictionary.md) for strict naming invariants and forbidden terms.
 
 ---
 
 ## 1. High-Level Architecture: Micro-Kernel & Schema Plugins
 
-Tuquet Cloud implements a **Row-Level Tenancy (Shared Database, Shared Schema)** pattern for the core identity layer combined with a **Pluggable Schema Isolation** architecture for business domains on **Supabase / PostgreSQL 15+**.
+Cloud implements a **Row-Level Tenancy (Shared Database, Shared Schema)** pattern for the core identity layer combined with a **Pluggable Schema Isolation** architecture for business domains on **Supabase / PostgreSQL 15+**.
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -47,7 +47,7 @@ Tuquet Cloud implements a **Row-Level Tenancy (Shared Database, Shared Schema)**
 
 ## 2. Base Platform Kernel (Schema: `public`)
 
-The Base Platform Kernel is the **immutable core** of Tuquet Cloud. It manages identity extension, multi-tenancy boundary isolation, NIST RBAC role hierarchies, access token claim synthesis, and plugin registration.
+The Base Platform Kernel is the **immutable core** of Cloud. It manages identity extension, multi-tenancy boundary isolation, NIST RBAC role hierarchies, access token claim synthesis, and plugin registration.
 
 ### 2.1. Kernel Entity-Relationship Diagram (Kernel ERD)
 
@@ -183,7 +183,7 @@ erDiagram
 
 ## 3. Plugin Extension Architecture (The Universal Contract)
 
-In Tuquet Cloud, **the Core never couples to plugins**. Plugins are dynamic, modular packages living in their own isolated PostgreSQL schemas (`media`, `billing`, `events`, `automa`, or custom 3rd-party domains).
+In Cloud, **the Core never couples to plugins**. Plugins are dynamic, modular packages living in their own isolated PostgreSQL schemas (`media`, `billing`, `events`, `automa`, or custom 3rd-party domains).
 
 Every dynamic plugin connects to the platform via **4 Universal Extension Points**:
 
@@ -248,7 +248,7 @@ flowchart TD
 ### 4.1. Custom Access Token Hook ($O(1)$ RLS Lookups)
 In naive multi-tenant Supabase implementations, RLS policies execute circular subqueries on `tenant_members` and `role_permissions` for every single queried row. This causes **RLS Infinite Recursion** and pegging CPU to 100%.
 
-Tuquet Cloud solves this at the protocol level:
+Cloud solves this at the protocol level:
 1. `public.custom_access_token_hook` runs when Supabase Auth issues a JWT.
 2. It fetches the user's active `tenant_id`, aggregated role names (`roles`), and atomic capabilities (`permissions`, capped at **25 items** to prevent JWT header bloat).
 3. These claims are baked directly into `auth.jwt() -> 'app_metadata'`.
@@ -298,7 +298,7 @@ The Compute Grid engine exposes `runners.reap_stale_browser_locks()` (and `publi
 
 ## 5. Plugin Authoring Specification (How to Create a New Plugin)
 
-To develop a new dynamic plugin for Tuquet Cloud, create a directory under `supabase/plugins/<plugin_id>/` containing exactly 4 standard files:
+To develop a new dynamic plugin for Cloud, create a directory under `supabase/plugins/<plugin_id>/` containing exactly 4 standard files:
 
 ```
 supabase/plugins/<plugin_id>/
@@ -361,11 +361,11 @@ ON CONFLICT (id) DO UPDATE SET
 
 ## 6. Dynamic PostgREST OpenAPI Introspection & SDK Generation
 
-Under the **KISS & YAGNI** principles, Tuquet Cloud **does not store static, dead OpenAPI JSON snapshots in version control**. Supabase PostgREST dynamically inspects the database catalog and exposes real-time OpenAPI v3 specifications.
+Under the **KISS & YAGNI** principles, Cloud **does not store static, dead OpenAPI JSON snapshots in version control**. Supabase PostgREST dynamically inspects the database catalog and exposes real-time OpenAPI v3 specifications.
 
 ### 6.1. Fetch Live OpenAPI Specification On-Demand
 ```bash
-# Production Supabase Cloud instance (tuquet-cloud)
+# Production Supabase Cloud instance (cloud)
 curl.exe -s -H "apikey: <anon-key>" -H "Accept: application/openapi+json" https://dswhacsoaxgpfnkaxnhz.supabase.co/rest/v1/ -o openapi.json
 
 # Local Supabase instance (Port 54321 - if running)

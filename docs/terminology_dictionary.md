@@ -1,6 +1,6 @@
 # Terminology Dictionary & Anti-Hallucination Lexicon
 
-> **Supreme Purpose**: This document serves as the **Single Source of Truth (SSOT)** for all technical terminology, domain entities, database naming conventions, and architectural contracts within `tuquet-cloud` and across the broader Tuquet ecosystem (`cli`, `runner`, `automa`, `lib`, `cloud`, `scoop-bucket`, `skills`, `claude-agy`).  
+> **Supreme Purpose**: This document serves as the **Single Source of Truth (SSOT)** for all technical terminology, domain entities, database naming conventions, and architectural contracts within `cloud` and across the broader ecosystem (`cli`, `runner`, `automa`, `lib`, `cloud`, `scoop-bucket`, `skills`, `claude-agy`).  
 > All technical documentation, SQL routines, migrations, API DTOs, client SDK code, and AI Agents **MUST adhere 100%** to this lexicon to completely eradicate **Terminology Hallucination** and ambiguous concept mixing.
 
 ---
@@ -34,7 +34,7 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 | **`Plugin`** | `public.system_plugins` | ❌ *Module*, *Extension*, *Addon*, *Package* | Autonomous database module with a dedicated folder `supabase/plugins/<id>/` and PostgreSQL schema. |
 | **`Storage`** | `media.assets` & `tenant-assets` | ❌ *Vault*, *Media Bucket*, *File Drive* | Cloud media asset storage service. The term "Vault" is **FORBIDDEN** in cloud services. |
 | **`Browser`** | `runners.browsers` / `runners.node_browsers` | ❌ *Profile*, *Browser Profile*, *Anti-detect Profile* | Isolated anti-detect virtual browser container on local workstation disk or central cloud fleet. Calling a browser instance a "Profile" is **FORBIDDEN** to prevent confusion with `public.profiles`. |
-| **`Device / Runner`** | `runners.devices` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Physical workstation, laptop, or edge node running Tuquet CLI master (`tuquet`) or Runner (`runner`) reporting heartbeats and telemetry to Tuquet Cloud. |
+| **`Device / Runner`** | `runners.devices` | ❌ *Worker*, *Agent Node*, *Bot*, *Client Daemon* | Physical workstation, laptop, or edge node running CLI master (`tuquet`) or Runner (`runner`) reporting heartbeats and telemetry to Cloud. |
 | **`Workflow`** | `automa.workflows` | ❌ *Script*, *Flowchart*, *Automation Pipeline* | Visual node graph AST automation workflow compatible with VueFlow graph JSON. |
 | **`Campaign Run`** | `automa.campaign_runs` | ❌ *Batch Job*, *Execution*, *Run Task* | Execution session of an automation campaign dispatched across distributed runners. |
 | **`Execution Log`** | `automa.execution_logs` | ❌ *Audit Log*, *System Log*, *Trace File* | Telemetry stream recording block-level execution events during an automation run. |
@@ -125,7 +125,7 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 
 1. **`Storage` (Never Use "Vault")**:
    - Cloud media asset storage service backed by the Supabase Storage Engine.
-   - The term "Vault" is strictly **FORBIDDEN** for cloud storage. "Vault" only exists in `tuquet-automa` referring to the offline local scenario directory (`apps/vault`).
+   - The term "Vault" is strictly **FORBIDDEN** for cloud storage. "Vault" only exists in `automa` referring to the offline local scenario directory (`apps/vault`).
 2. **`Media Asset` (`media.assets`)**:
    - File metadata catalog: `file_path`, `mime_type`, `file_size_bytes`, `metadata JSONB`.
    - Schema: Resides in schema `media` (preventing collision with Supabase's internal `storage` schema).
@@ -166,7 +166,7 @@ Use this quick-reference matrix for anti-hallucination audits during documentati
 ### 3.6. Distributed Fleet & Automa Cloud Bridge Domain
 
 1. **`Device / Runner` (`runners.devices`)**:
-   - Execution machine node (Desktop Workstation, Laptop, or Cloud VPS running the Tuquet master CLI `tuquet` or standalone `runner` engine).
+   - Execution machine node (Desktop Workstation, Laptop, or Cloud VPS running the master CLI `tuquet` or standalone `runner` engine).
    - Calling runners "Workers", "Bots", or "Agent Nodes" is strictly **FORBIDDEN**.
 2. **`Node Browser` (`runners.node_browsers`)**:
    - Node-local isolated browser container (`*.browser.json`) with distinct fingerprint, proxy, cookie jar, and local storage.

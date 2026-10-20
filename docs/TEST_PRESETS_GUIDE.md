@@ -1,6 +1,6 @@
-# Tuquet Cloud Test Presets & CLI Architecture Guide
+# Cloud Test Presets & CLI Architecture Guide
 
-This guide details the declarative Test Presets System and the `tuquet-test-cli` utility built for automated, reproducible end-to-end testing across **Tuquet Cloud**.
+This guide details the declarative Test Presets System and the `test-cli` utility built for automated, reproducible end-to-end testing across **Cloud**.
 
 ---
 
@@ -18,9 +18,9 @@ tests/presets/
 └── collaborator.json           # [OCP] Standard Member Tenant Preset
 
 scripts/testing/
-├── tuquet-test-cli.ps1         # Native PowerShell CLI (Windows / Local Dev)
-├── tuquet-test-cli.mjs         # Native Node.js CLI (Cross-platform / CI/CD)
-└── tuquet-test-cli.sh          # POSIX Bash Wrapper
+├── test-cli.ps1         # Native PowerShell CLI (Windows / Local Dev)
+├── test-cli.mjs         # Native Node.js CLI (Cross-platform / CI/CD)
+└── test-cli.sh          # POSIX Bash Wrapper
 ```
 
 ### Principles in Action:
@@ -68,10 +68,10 @@ Displays all discovered presets in `tests/presets/`:
 
 ```powershell
 # PowerShell
-.\scripts\testing\tuquet-test-cli.ps1 list
+.\scripts\testing\test-cli.ps1 list
 
 # Node.js
-node scripts/testing/tuquet-test-cli.mjs list
+node scripts/testing/test-cli.mjs list
 ```
 
 **Output:**
@@ -92,10 +92,10 @@ Idempotently provisions the identity, creates the tenant, assigns membership/rol
 
 ```powershell
 # PowerShell
-.\scripts\testing\tuquet-test-cli.ps1 apply -Preset tunyk -Verify
+.\scripts\testing\test-cli.ps1 apply -Preset tunyk -Verify
 
 # Node.js
-node scripts/testing/tuquet-test-cli.mjs apply --preset tunyk --verify
+node scripts/testing/test-cli.mjs apply --preset tunyk --verify
 ```
 
 **Output:**
@@ -134,7 +134,7 @@ node scripts/testing/tuquet-test-cli.mjs apply --preset tunyk --verify
 Validate credentials against GoTrue (`/auth/v1/token?grant_type=password`) and PostgREST RLS:
 
 ```powershell
-.\scripts\testing\tuquet-test-cli.ps1 verify -Preset tunyk
+.\scripts\testing\test-cli.ps1 verify -Preset tunyk
 ```
 
 ---
@@ -143,7 +143,7 @@ Validate credentials against GoTrue (`/auth/v1/token?grant_type=password`) and P
 Quickly spin up a custom tenant for any identity:
 
 ```powershell
-.\scripts\testing\tuquet-test-cli.ps1 provision-tenant `
+.\scripts\testing\test-cli.ps1 provision-tenant `
     -Email tunyk.93@gmail.com `
     -Password 'Admin!12345' `
     -TenantSlug 'fleet-ops' `
@@ -159,7 +159,7 @@ Quickly spin up a custom tenant for any identity:
 Removes the test user and their test tenant:
 
 ```powershell
-.\scripts\testing\tuquet-test-cli.ps1 cleanup -Preset collaborator
+.\scripts\testing\test-cli.ps1 cleanup -Preset collaborator
 ```
 
 ---
@@ -186,5 +186,5 @@ Removes the test user and their test tenant:
   "role": "owner"
 }
 ```
-2. Run `.\scripts\testing\tuquet-test-cli.ps1 apply -Preset qa-tester -Verify`.
+2. Run `.\scripts\testing\test-cli.ps1 apply -Preset qa-tester -Verify`.
 3. The preset is instantly usable across tests and manual development.

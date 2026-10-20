@@ -1,7 +1,7 @@
 # 🤖 Enterprise Plugin: Automa Cloud Bridge (`automa`)
 
 > **Distributed Automation Fleet Orchestration & Workflow Infrastructure**  
-> Provides enterprise-grade infrastructure for storing visual workflow ASTs, registering and monitoring distributed worker runners (Desktop Workers / Cloud VPS), dispatching and tracking batch execution campaigns, streaming granular telemetry logs, and managing automated cron schedules for the `tuquet-automa` automation ecosystem.  
+> Provides enterprise-grade infrastructure for storing visual workflow ASTs, registering and monitoring distributed worker runners (Desktop Workers / Cloud VPS), dispatching and tracking batch execution campaigns, streaming granular telemetry logs, and managing automated cron schedules for the `automa` automation ecosystem.  
 > 📖 **Terminology Standard**: Review the [**Terminology Dictionary & Anti-Hallucination Lexicon (docs/terminology_dictionary.md)**](../../../docs/terminology_dictionary.md) for strict domain invariants (e.g., virtual browser entities must NEVER be called "Profiles"; use "Browser" or "Anti-Detect Browser").
 
 ---

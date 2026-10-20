@@ -1,6 +1,6 @@
-# 🗺️ Tuquet Cloud Roadmap
+# 🗺️ Cloud Roadmap
 
-> **Product**: Tuquet Cloud — Enterprise Multi-Tenant SaaS Engine & Modular Schema Plugin Framework for Supabase (PostgreSQL 15+)  
+> **Product**: Cloud — Enterprise Multi-Tenant SaaS Engine & Modular Schema Plugin Framework for Supabase (PostgreSQL 15+)  
 > **Mission**: Build the world's most robust, developer-friendly, production-ready multi-tenant backend architecture for Supabase, featuring $O(1)$ JWT authorization, modular schema isolation, and automated database plugin lifecycle.
 
 ---
@@ -107,7 +107,7 @@ flowchart TD
 
 ## 🔮 5. Phase 3: Enterprise Scale, Partitioning & High Availability
 
-> **Objective**: Scale Tuquet Cloud to hundreds of millions of records, automate continuous database deployment, and ensure high availability.
+> **Objective**: Scale Cloud to hundreds of millions of records, automate continuous database deployment, and ensure high availability.
 
 1. **Declarative Table Partitioning by `tenant_id`:**
    - Implement PostgreSQL Declarative Table Partitioning (HASH or LIST) for high-growth append-only tables:

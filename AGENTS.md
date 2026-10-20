@@ -1,4 +1,4 @@
-# Project Agent Behavioral Rules: tuquet-cloud
+# Project Agent Behavioral Rules: cloud
 
 ## 1. Domain Terminology & Anti-Hallucination Standards
 All AI agents operating in this repository MUST strictly adhere to [**`docs/terminology_dictionary.md`**](docs/terminology_dictionary.md):

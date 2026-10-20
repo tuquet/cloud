@@ -114,8 +114,8 @@ INSERT INTO public.tenants (id, slug, name, avatar_url, status, metadata, create
 VALUES
     (
         'b0000000-0000-0000-0000-000000000001',
-        'tuquet-corp',
-        'Tuquet Enterprise Corp',
+        'corp',
+        'Enterprise Corp',
         'https://api.dicebear.com/7.x/identicon/svg?seed=tuquetcorp',
         'active',
         '{"plan": "enterprise", "region": "ap-southeast-1"}'::jsonb,
@@ -136,7 +136,7 @@ ON CONFLICT (id) DO UPDATE SET
     metadata = EXCLUDED.metadata;
 
 -- 3. Tenant Memberships & Role Assignments
--- 3.1. Tuquet Enterprise Corp (b0...01):
+-- 3.1. Enterprise Corp (b0...01):
 -- Admin (Owner role)
 INSERT INTO public.tenant_members (id, tenant_id, user_id, status)
 VALUES ('e0000000-0000-0000-0000-000000000001', 'b0000000-0000-0000-0000-000000000001', 'a0000000-0000-0000-0000-000000000001', 'active')
@@ -383,7 +383,7 @@ BEGIN
         INSERT INTO commerce.categories (id, slug, name, description, icon, sort_order)
         VALUES 
             (v_cat_proxy, 'proxies', 'Hạ Tầng Proxy', 'Bể proxy dân cư và datacenter tốc độ cao', 'globe', 1),
-            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Tuquet Runner & Bot', 'cpu', 2),
+            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Runner & Bot', 'cpu', 2),
             (v_cat_xu, 'xu-packages', 'Gói Nạp Xu', 'Gói tín dụng Xu nạp tiền vào ví tổ chức', 'wallet', 3)
         ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;
     END IF;
@@ -395,11 +395,11 @@ BEGIN
                 v_prod_proxy, v_cat_proxy, 'dedicated-proxy-vn-30d',
                 'Gói Dedicated Proxy IPv4 VN (30 Ngày)',
                 'Proxy dân cư Việt Nam tốc độ cao, băng thông không giới hạn',
-                'tuquet_resource', 'public'
+                'resource', 'public'
             ),
             (
-                v_prod_soft, v_cat_soft, 'tuquet-runner-pro-1y',
-                'Bản Quyền Tuquet Runner Pro (1 Năm)',
+                v_prod_soft, v_cat_soft, 'runner-pro-1y',
+                'Bản Quyền Runner Pro (1 Năm)',
                 'Mã bản quyền kích hoạt không giới hạn worker nodes trên 1 máy trạm',
                 'digital_file', 'public'
             )

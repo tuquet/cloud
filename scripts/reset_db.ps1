@@ -41,12 +41,12 @@ if ($Target -ne 'local') {
         }
     }
 
-    # Ensure Tuquet Bridge HTTP Forwarder proxy is active
+    # Ensure Bridge HTTP Forwarder proxy is active
     if (-not $env:HTTP_PROXY) {
         $env:HTTP_PROXY = "http://127.0.0.1:8118"
         $env:HTTPS_PROXY = "http://127.0.0.1:8118"
     }
-    Write-Host "Routing traffic via Tuquet Bridge HTTP Forwarder ($env:HTTP_PROXY)..." -ForegroundColor Gray
+    Write-Host "Routing traffic via Bridge HTTP Forwarder ($env:HTTP_PROXY)..." -ForegroundColor Gray
 }
 
 # 2. Step 1: Execute Database Reset
@@ -98,7 +98,7 @@ if ($WithSeed) {
         $ErrorActionPreference = 'SilentlyContinue'
 
         if ($Target -eq 'local') {
-            Get-Content $seedFile -Raw | docker exec -i supabase_db_tuquet-cloud psql -U postgres -d postgres 2>&1 | Out-Host
+            Get-Content $seedFile -Raw | docker exec -i supabase_db_cloud psql -U postgres -d postgres 2>&1 | Out-Host
             $exitCode = $LASTEXITCODE
         } else {
             $targetFlag = if ($Target -eq 'dev') { 'linked' } else { $Target }
