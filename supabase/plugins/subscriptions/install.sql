@@ -176,6 +176,29 @@ CREATE INDEX IF NOT EXISTS idx_billing_payment_intents_transfer_code
 CREATE INDEX IF NOT EXISTS idx_billing_payment_intents_created_brin
     ON billing.payment_intents USING brin (created_at);
 
+-- 2.4. Bank Receiving Accounts Pool Table
+CREATE TABLE IF NOT EXISTS billing.bank_receiving_accounts (
+    id TEXT PRIMARY KEY,
+    bank_bin VARCHAR(16) NOT NULL,
+    bank_name VARCHAR(64) NOT NULL,
+    account_no VARCHAR(64) NOT NULL,
+    account_name VARCHAR(128) NOT NULL,
+    qr_template VARCHAR(32) NOT NULL DEFAULT 'compact2',
+    daily_limit_vnd NUMERIC(18, 2) NOT NULL DEFAULT 300000000.00,
+    current_daily_total NUMERIC(18, 2) NOT NULL DEFAULT 0.00,
+    daily_reset_at TIMESTAMPTZ NOT NULL DEFAULT (date_trunc('day', timezone('utc'::text, now())) + INTERVAL '1 day'),
+    priority INT NOT NULL DEFAULT 10,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    status VARCHAR(32) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'cooling', 'suspended', 'maintenance')),
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+COMMENT ON TABLE billing.bank_receiving_accounts IS '[Plugin: subscriptions] Dynamic receiving account pool supporting MMO multi-bank rotation and daily limit guards';
+
+CREATE INDEX IF NOT EXISTS idx_billing_bank_accounts_active ON billing.bank_receiving_accounts (is_active, status, priority ASC);
+
 -- 3. Seed Default Plans & Pluggable Payment Gateways
 INSERT INTO billing.plans (id, name, description, max_members, max_storage_mb, max_monthly_runs, price_monthly_usd)
 VALUES 
@@ -261,6 +284,17 @@ VALUES
     ('stripe_card', '{"webhook_secret": "whsec_test_stripe_placeholder"}'::jsonb),
     ('crypto_usdt', '{"webhook_secret": "test-crypto-hmac-secret-placeholder"}'::jsonb)
 ON CONFLICT (gateway_id) DO NOTHING;
+
+INSERT INTO billing.bank_receiving_accounts (id, bank_bin, bank_name, account_no, account_name, qr_template, daily_limit_vnd, priority, is_active, status)
+VALUES
+    ('mbbank_primary', '970422', 'MBBank', '0000123456789', 'TUQUET PLATFORM', 'compact2', 300000000.00, 1, TRUE, 'active'),
+    ('vpbank_secondary', '970432', 'VPBank', '9888777666', 'TUQUET MEDIA CORP', 'compact2', 500000000.00, 2, TRUE, 'active'),
+    ('techcombank_backup', '970407', 'Techcombank', '19033445566778', 'NGUYEN DINH TU', 'compact2', 150000000.00, 3, TRUE, 'active')
+ON CONFLICT (id) DO UPDATE SET
+    bank_name = EXCLUDED.bank_name,
+    account_no = EXCLUDED.account_no,
+    account_name = EXCLUDED.account_name,
+    daily_limit_vnd = EXCLUDED.daily_limit_vnd;
 
 -- 4. Generic Quota Checking & Usage Recording Functions
 CREATE OR REPLACE FUNCTION billing.check_tenant_quota(

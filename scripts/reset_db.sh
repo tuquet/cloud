@@ -35,7 +35,7 @@ if [ "$TARGET" != "local" ]; then
         export HTTP_PROXY="http://127.0.0.1:8118"
         export HTTPS_PROXY="http://127.0.0.1:8118"
     fi
-    echo "Routing traffic via Specter Bridge HTTP Forwarder ($HTTP_PROXY)..."
+    echo "Routing traffic via Tuquet Bridge HTTP Forwarder ($HTTP_PROXY)..."
 fi
 
 echo -e "\n--> Step 1/4: Resetting database schema and migrations..."

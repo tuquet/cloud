@@ -3,7 +3,7 @@
 -- Description: Foundation proxies and cloud browser profiles
 -- NOTE: runners.devices is NOT seeded here.
 --       Physical devices/workstations are dynamically enrolled via Tauri Desk
---       or 'specter runner start' using the RPC function runners.enroll_device().
+--       or 'tuquet runner start' using the RPC function runners.enroll_device().
 -- ============================================================================
 
 -- Ensure a default local bridge proxy is available for testing
@@ -19,5 +19,5 @@ INSERT INTO runners.proxies (
     'Local Bridge',
     'active',
     5,
-    ARRAY['Local Bridge SOCKS5', 'Specter-Bridge']
+    ARRAY['Local Bridge SOCKS5', 'Tuquet-Bridge']
 ) ON CONFLICT (tenant_id, host, port, protocol, username) DO NOTHING;

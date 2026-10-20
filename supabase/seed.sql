@@ -383,7 +383,7 @@ BEGIN
         INSERT INTO commerce.categories (id, slug, name, description, icon, sort_order)
         VALUES 
             (v_cat_proxy, 'proxies', 'Hạ Tầng Proxy', 'Bể proxy dân cư và datacenter tốc độ cao', 'globe', 1),
-            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Specter Runner & Bot', 'cpu', 2),
+            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Tuquet Runner & Bot', 'cpu', 2),
             (v_cat_xu, 'xu-packages', 'Gói Nạp Xu', 'Gói tín dụng Xu nạp tiền vào ví tổ chức', 'wallet', 3)
         ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;
     END IF;
@@ -395,11 +395,11 @@ BEGIN
                 v_prod_proxy, v_cat_proxy, 'dedicated-proxy-vn-30d',
                 'Gói Dedicated Proxy IPv4 VN (30 Ngày)',
                 'Proxy dân cư Việt Nam tốc độ cao, băng thông không giới hạn',
-                'specter_resource', 'public'
+                'tuquet_resource', 'public'
             ),
             (
-                v_prod_soft, v_cat_soft, 'specter-runner-pro-1y',
-                'Bản Quyền Specter Runner Pro (1 Năm)',
+                v_prod_soft, v_cat_soft, 'tuquet-runner-pro-1y',
+                'Bản Quyền Tuquet Runner Pro (1 Năm)',
                 'Mã bản quyền kích hoạt không giới hạn worker nodes trên 1 máy trạm',
                 'digital_file', 'public'
             )

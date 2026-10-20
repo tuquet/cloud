@@ -17,7 +17,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA commerce GRANT ALL ON SEQUENCES TO authentica
 DO $$ BEGIN
     CREATE TYPE commerce.product_type AS ENUM (
         'serial_stock',
-        'specter_resource',
+        'tuquet_resource',
         'digital_file',
         'wallet_credit'
     );
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS commerce.products (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-COMMENT ON TABLE commerce.products IS '[Plugin: commerce] Multi-type digital products catalog (serial_stock, specter_resource, digital_file, wallet_credit)';
+COMMENT ON TABLE commerce.products IS '[Plugin: commerce] Multi-type digital products catalog (serial_stock, tuquet_resource, digital_file, wallet_credit)';
 
 CREATE INDEX IF NOT EXISTS idx_commerce_products_category_active
     ON commerce.products (category_id, is_active, sort_order);
@@ -221,7 +221,7 @@ CREATE INDEX IF NOT EXISTS idx_commerce_deliveries_tenant
 INSERT INTO commerce.categories (slug, name, description, icon, sort_order, is_active)
 VALUES
     ('accounts-keys', 'Tai khoan & License Key', 'Tai khoan so, phoi MMO (uid|pass|2fa) va ma kich hoat phan mem giao tuc thi', 'lucide:key-round', 1, TRUE),
-    ('specter-resources', 'Tai nguyen Specter', 'Proxy dan cu/datacenter, kich ban Automa mau va goi nang cap he sinh thai', 'lucide:cpu', 2, TRUE),
+    ('tuquet-resources', 'Tai nguyen Tuquet', 'Proxy dan cu/datacenter, kich ban Automa mau va goi nang cap he sinh thai', 'lucide:cpu', 2, TRUE),
     ('digital-files', 'Tep so & Cong cu', 'Bo cai dat, tai lieu ky thuat va du lieu tai xuong', 'lucide:file-down', 3, TRUE),
     ('wallet-topup', 'Nap Xu Tra Truoc', 'Goi nap Xu tich luy vao vi Tenant kem uu dai tang them Xu', 'lucide:coins', 4, TRUE)
 ON CONFLICT (slug) DO UPDATE SET
@@ -243,7 +243,7 @@ DECLARE
     v_prod_topup UUID;
 BEGIN
     SELECT id INTO v_cat_accounts FROM commerce.categories WHERE slug = 'accounts-keys';
-    SELECT id INTO v_cat_specter FROM commerce.categories WHERE slug = 'specter-resources';
+    SELECT id INTO v_cat_specter FROM commerce.categories WHERE slug = 'tuquet-resources';
     SELECT id INTO v_cat_files FROM commerce.categories WHERE slug = 'digital-files';
     SELECT id INTO v_cat_topup FROM commerce.categories WHERE slug = 'wallet-topup';
 
@@ -268,17 +268,17 @@ BEGIN
     VALUES (v_prod_serial, 'VIA-2FA-STD', 'Goi Tieu Chuan (1 Tai khoan)', 50, 65, 'serialized', 1, 50, 1)
     ON CONFLICT (sku) DO UPDATE SET price_credits = EXCLUDED.price_credits;
 
-    -- 2. Specter Ecosystem Resource Product
+    -- 2. Tuquet Ecosystem Resource Product
     INSERT INTO commerce.products (category_id, slug, name, short_description, product_type, visibility, is_active, tags, fulfillment_config, sort_order)
     VALUES (
         v_cat_specter,
-        'specter-residential-proxy-pack',
+        'tuquet-residential-proxy-pack',
         'Proxy Dan Cu Tinh (Cap Thang Vao Workspace)',
         'Tu dong khoi tao va gan Proxy truc tiep vao bang runners.proxies cua Tenant',
-        'specter_resource',
+        'tuquet_resource',
         'tenant_only',
         TRUE,
-        ARRAY['proxy', 'specter', 'runners'],
+        ARRAY['proxy', 'tuquet', 'runners'],
         '{"resource_subtype": "proxy_pool"}'::jsonb,
         2
     )
@@ -304,7 +304,7 @@ BEGIN
     INSERT INTO commerce.products (category_id, slug, name, short_description, product_type, visibility, is_active, tags, fulfillment_config, sort_order)
     VALUES (
         v_cat_files,
-        'specter-stealth-fingerprints-pack',
+        'tuquet-stealth-fingerprints-pack',
         'Bo Du Lieu Canvas & WebGL Fingerprint Cao Cap',
         'Tap tin ZIP chua 500 mau thong so phan cung thuc te cho trinh duyet antidetect',
         'digital_file',
@@ -327,7 +327,7 @@ BEGIN
         'unlimited',
         1,
         1,
-        '{"bucket_name": "tenant-assets", "file_path": "store/specter-fingerprints-500.zip", "max_downloads": 5, "expire_hours": 168}'::jsonb,
+        '{"bucket_name": "tenant-assets", "file_path": "store/tuquet-fingerprints-500.zip", "max_downloads": 5, "expire_hours": 168}'::jsonb,
         1
     )
     ON CONFLICT (sku) DO UPDATE SET price_credits = EXCLUDED.price_credits;
@@ -499,7 +499,7 @@ BEGIN
 END;
 $$;
 
--- 4.3. Atomic Auto-Fulfillment Dispatcher (serial_stock, specter_resource, digital_file, wallet_credit)
+-- 4.3. Atomic Auto-Fulfillment Dispatcher (serial_stock, tuquet_resource, digital_file, wallet_credit)
 CREATE OR REPLACE FUNCTION commerce.fulfill_order(
     _order_id UUID
 )
@@ -632,10 +632,10 @@ BEGIN
                     USING ERRCODE = 'P0001';
             END IF;
 
-        -- CASE 2: Specter Ecosystem Resource (Proxy Pool, Automa Workflow, Plan Upgrade)
-        ELSIF v_item.product_type = 'specter_resource' THEN
+        -- CASE 2: Tuquet Ecosystem Resource (Proxy Pool, Automa Workflow, Plan Upgrade)
+        ELSIF v_item.product_type = 'tuquet_resource' THEN
             IF v_order.buyer_tenant_id IS NULL THEN
-                RAISE EXCEPTION 'Specter ecosystem resource requires buyer_tenant_id'
+                RAISE EXCEPTION 'Tuquet ecosystem resource requires buyer_tenant_id'
                     USING ERRCODE = '22023';
             END IF;
 
@@ -707,7 +707,7 @@ BEGIN
                         v_order.id,
                         v_item.id,
                         v_order.buyer_tenant_id,
-                        'specter_resource',
+                        'tuquet_resource',
                         v_stock.id,
                         jsonb_build_object(
                             'resource_subtype', 'proxy_pool',
@@ -762,7 +762,7 @@ BEGIN
                         v_order.id,
                         v_item.id,
                         v_order.buyer_tenant_id,
-                        'specter_resource',
+                        'tuquet_resource',
                         jsonb_build_object(
                             'resource_subtype', 'automa_workflow',
                             'workflow_id', v_workflow_id,
@@ -812,7 +812,7 @@ BEGIN
                     v_order.id,
                     v_item.id,
                     v_order.buyer_tenant_id,
-                    'specter_resource',
+                    'tuquet_resource',
                     jsonb_build_object(
                         'resource_subtype', 'plan_upgrade',
                         'plan_id', v_plan_id,

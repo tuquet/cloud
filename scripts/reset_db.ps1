@@ -41,12 +41,12 @@ if ($Target -ne 'local') {
         }
     }
 
-    # Ensure Specter Bridge HTTP Forwarder proxy is active
+    # Ensure Tuquet Bridge HTTP Forwarder proxy is active
     if (-not $env:HTTP_PROXY) {
         $env:HTTP_PROXY = "http://127.0.0.1:8118"
         $env:HTTPS_PROXY = "http://127.0.0.1:8118"
     }
-    Write-Host "Routing traffic via Specter Bridge HTTP Forwarder ($env:HTTP_PROXY)..." -ForegroundColor Gray
+    Write-Host "Routing traffic via Tuquet Bridge HTTP Forwarder ($env:HTTP_PROXY)..." -ForegroundColor Gray
 }
 
 # 2. Step 1: Execute Database Reset

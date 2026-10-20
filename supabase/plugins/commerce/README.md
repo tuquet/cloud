@@ -7,12 +7,12 @@
 
 ## 1. Overview
 
-Provides the Central Platform Digital Store and Automated Fulfillment engine for the Tuquet/Specter ecosystem. Supports both **Authenticated Tenant Checkout** (instant `Xu` wallet deduction or external payment gateways) and **Public Storefront Guest Checkout** (verified via cryptographic `claim_token`).
+Provides the Central Platform Digital Store and Automated Fulfillment engine for the Tuquet ecosystem. Supports both **Authenticated Tenant Checkout** (instant `Xu` wallet deduction or external payment gateways) and **Public Storefront Guest Checkout** (verified via cryptographic `claim_token`).
 
 ## 2. Supported Digital Product Categories (`commerce.product_type`)
 
 1. **`serial_stock`**: Text/serial inventory (`uid|pass|2fa`, license keys, vouchers) with row-level `FOR UPDATE SKIP LOCKED` reservation and zero double-selling guarantees.
-2. **`specter_resource`**: Automated provisioning of Specter ecosystem assets directly into the buyer's workspace (`buyer_tenant_id`):
+2. **`tuquet_resource`**: Automated provisioning of Tuquet ecosystem assets directly into the buyer's workspace (`buyer_tenant_id`):
    - `proxy_pool`: Claims proxy lines from `commerce.stock_items` and inserts into `runners.proxies`.
    - `automa_workflow`: Clones template workflows into `automa.workflows`.
    - `plan_upgrade`: Activates or extends SaaS plans in `billing.subscriptions`.

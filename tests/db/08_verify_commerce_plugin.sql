@@ -128,7 +128,7 @@ BEGIN
     END IF;
     RAISE NOTICE ' [PASS] Instant Xu wallet checkout deducted 50 Xu and delivered serial_stock atomically.';
 
-    RAISE NOTICE '>>> [TEST 6] Verifying Specter Ecosystem Resource Provisioning (runners.proxies)...';
+    RAISE NOTICE '>>> [TEST 6] Verifying Tuquet Ecosystem Resource Provisioning (runners.proxies)...';
     PERFORM commerce.import_stock_batch(
         v_proxy_variant_id,
         ARRAY['198.51.100.25:10800:pxuser1:pxpass1'],
@@ -150,7 +150,7 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'FAILED: Proxy resource was not provisioned into runners.proxies!';
     END IF;
-    RAISE NOTICE ' [PASS] Specter proxy_pool resource automatically provisioned into runners.proxies.';
+    RAISE NOTICE ' [PASS] Tuquet proxy_pool resource automatically provisioned into runners.proxies.';
 
     RAISE NOTICE '>>> [TEST 7] Verifying Guest Checkout, Webhook Settlement Trigger & Claim Token Lookup...';
     v_guest_order_res := commerce.create_checkout_order(

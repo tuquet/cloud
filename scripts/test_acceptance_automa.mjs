@@ -23,10 +23,10 @@ async function main() {
     console.log("================================================================================");
 
     // 1. Verify Device Identity
-    const tuquetHome = process.env.TUQUET_HOME || process.env.SPECTER_HOME || (existsSync(join(homedir(), ".tuquet")) ? join(homedir(), ".tuquet") : join(homedir(), ".specter"));
+    const tuquetHome = process.env.TUQUET_HOME || process.env.SPECTER_HOME || (existsSync(join(homedir(), ".tuquet")) ? join(homedir(), ".tuquet") : join(homedir(), ".tuquet"));
     const configPath = join(tuquetHome, "system", ".identity.json");
     if (!existsSync(configPath)) {
-        throw new Error(`Device identity not found at ${configPath}. Run 'specter runner enroll' first.`);
+        throw new Error(`Device identity not found at ${configPath}. Run 'tuquet runner enroll' first.`);
     }
 
     const identity = JSON.parse(readFileSync(configPath, "utf-8"));
@@ -73,7 +73,7 @@ async function main() {
     console.log(`      Status:         ${createdRun.status.toUpperCase()}`);
     console.log(`      Target Driver:  automa (Chromium CDP Sandbox)`);
 
-    // 3. Execute via specter runner run
+    // 3. Execute via tuquet runner run
     console.log(`\n[3/5] Executing job via runner run with real-time log ingestion to Supabase...`);
     const startTime = Date.now();
     let runnerStdout = "";
