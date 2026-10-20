@@ -917,20 +917,3 @@ SELECT public.register_plugin(
     FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
 );
-
--- 10. Link inbox subsystem foreign keys if inbox schema is present
-DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'inbox' AND table_name = 'emails') THEN
-        ALTER TABLE inbox.emails
-            DROP CONSTRAINT IF EXISTS fk_inbox_emails_assigned_browser,
-            ADD CONSTRAINT fk_inbox_emails_assigned_browser
-            FOREIGN KEY (assigned_browser_id) REFERENCES runners.browsers(id) ON DELETE SET NULL;
-    END IF;
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'inbox' AND table_name = 'otps') THEN
-        ALTER TABLE inbox.otps
-            DROP CONSTRAINT IF EXISTS fk_inbox_otps_consumed_by_device,
-            ADD CONSTRAINT fk_inbox_otps_consumed_by_device
-            FOREIGN KEY (consumed_by_device_id) REFERENCES runners.devices(id) ON DELETE SET NULL;
-    END IF;
-END $$;
-
