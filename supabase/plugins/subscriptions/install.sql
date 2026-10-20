@@ -565,6 +565,47 @@ AS $$
     ORDER BY pg.sort_order ASC, pg.id ASC;
 $$;
 
+CREATE OR REPLACE FUNCTION billing.get_next_receiving_account(
+    _amount_vnd NUMERIC DEFAULT 0
+)
+RETURNS billing.bank_receiving_accounts
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+    v_account billing.bank_receiving_accounts%ROWTYPE;
+    v_now TIMESTAMPTZ := timezone('utc'::text, now());
+BEGIN
+    -- 1. Reset daily limits if new UTC calendar day
+    UPDATE billing.bank_receiving_accounts
+    SET current_daily_total = 0.00,
+        daily_reset_at = date_trunc('day', v_now) + INTERVAL '1 day'
+    WHERE daily_reset_at <= v_now;
+
+    -- 2. Pick the active account with highest priority and remaining quota
+    SELECT * INTO v_account
+    FROM billing.bank_receiving_accounts bra
+    WHERE bra.is_active = TRUE
+      AND bra.status = 'active'
+      AND (bra.current_daily_total + COALESCE(_amount_vnd, 0) <= bra.daily_limit_vnd)
+    ORDER BY bra.priority ASC, (bra.current_daily_total / NULLIF(bra.daily_limit_vnd, 0)) ASC, bra.created_at ASC
+    LIMIT 1;
+
+    -- 3. Fallback: If all active accounts exceeded limit, pick the one with lowest load or highest priority
+    IF v_account.id IS NULL THEN
+        SELECT * INTO v_account
+        FROM billing.bank_receiving_accounts bra
+        WHERE bra.is_active = TRUE
+          AND bra.status IN ('active', 'cooling')
+        ORDER BY bra.priority ASC, bra.current_daily_total ASC
+        LIMIT 1;
+    END IF;
+
+    RETURN v_account;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION billing.create_payment_intent(
     _gateway_id TEXT,
     _target_type billing.payment_target_type,
@@ -580,6 +621,7 @@ SET search_path = ''
 AS $$
 DECLARE
     v_gateway billing.payment_gateways%ROWTYPE;
+    v_bank_acc billing.bank_receiving_accounts%ROWTYPE;
     v_pay_amount NUMERIC(18, 2);
     v_transfer_code TEXT;
     v_checkout_payload JSONB;
@@ -587,6 +629,10 @@ DECLARE
     v_paid_at TIMESTAMPTZ := NULL;
     v_intent billing.payment_intents%ROWTYPE;
     v_new_balance BIGINT;
+    v_bank_bin TEXT;
+    v_account_no TEXT;
+    v_account_name TEXT;
+    v_qr_template TEXT;
 BEGIN
     IF _amount_credits IS NULL OR _amount_credits <= 0 THEN
         RAISE EXCEPTION 'Payment amount_credits must be strictly positive (got %)', _amount_credits
@@ -615,29 +661,42 @@ BEGIN
         EXIT WHEN NOT EXISTS (SELECT 1 FROM billing.payment_intents WHERE transfer_code = v_transfer_code);
     END LOOP;
 
-    -- Build channel-specific checkout payload
+    -- Build channel-specific checkout payload with dynamic bank rotation
     IF v_gateway.channel = 'bank_transfer' THEN
+        -- Dynamic account selection from pool
+        v_bank_acc := billing.get_next_receiving_account(v_pay_amount);
+
+        IF v_bank_acc.id IS NOT NULL THEN
+            v_bank_bin := v_bank_acc.bank_bin;
+            v_account_no := v_bank_acc.account_no;
+            v_account_name := v_bank_acc.account_name;
+            v_qr_template := v_bank_acc.qr_template;
+        ELSE
+            -- Static fallback if bank pool table is unseeded
+            v_bank_bin := COALESCE(v_gateway.public_config->>'bank_bin', '970422');
+            v_account_no := COALESCE(v_gateway.public_config->>'account_no', '0000123456789');
+            v_account_name := COALESCE(v_gateway.public_config->>'account_name', 'TUQUET PLATFORM');
+            v_qr_template := COALESCE(v_gateway.public_config->>'qr_template', 'compact2');
+        END IF;
+
         v_checkout_payload := v_gateway.public_config || jsonb_build_object(
+            'bank_bin', v_bank_bin,
+            'account_no', v_account_no,
+            'account_name', v_account_name,
+            'receiving_account_id', v_bank_acc.id,
             'transfer_code', v_transfer_code,
             'pay_amount', v_pay_amount,
             'pay_currency', v_gateway.currency,
             'qr_image_url', format(
                 'https://img.vietqr.io/image/%s-%s-%s.png?amount=%s&addInfo=%s',
-                COALESCE(v_gateway.public_config->>'bank_bin', '970422'),
-                COALESCE(v_gateway.public_config->>'account_no', '0000123456789'),
-                COALESCE(v_gateway.public_config->>'qr_template', 'compact2'),
+                v_bank_bin,
+                v_account_no,
+                v_qr_template,
                 v_pay_amount::bigint,
                 v_transfer_code
             )
         );
     ELSIF v_gateway.channel = 'e_wallet' THEN
-        v_checkout_payload := v_gateway.public_config || jsonb_build_object(
-            'transfer_code', v_transfer_code,
-            'pay_amount', v_pay_amount,
-            'pay_currency', v_gateway.currency,
-            'deeplink_memo', v_transfer_code
-        );
-    ELSIF v_gateway.channel = 'crypto' THEN
         v_checkout_payload := v_gateway.public_config || jsonb_build_object(
             'transfer_code', v_transfer_code,
             'pay_amount', v_pay_amount,
@@ -647,36 +706,42 @@ BEGIN
         v_checkout_payload := v_gateway.public_config || jsonb_build_object(
             'transfer_code', v_transfer_code,
             'pay_amount', v_pay_amount,
-            'pay_currency', v_gateway.currency
+            'pay_currency', v_gateway.currency,
+            'client_secret', 'mock_stripe_sec_' || lower(v_transfer_code)
+        );
+    ELSIF v_gateway.channel = 'crypto' THEN
+        v_checkout_payload := v_gateway.public_config || jsonb_build_object(
+            'transfer_code', v_transfer_code,
+            'pay_amount', v_pay_amount,
+            'pay_currency', v_gateway.currency,
+            'deposit_memo', v_transfer_code
         );
     ELSIF v_gateway.channel = 'internal_wallet' THEN
         IF _tenant_id IS NULL THEN
-            RAISE EXCEPTION 'Internal Xu wallet payment requires an authenticated tenant_id'
-                USING ERRCODE = '22023';
-        END IF;
-        IF _target_type = 'wallet_topup' THEN
-            RAISE EXCEPTION 'Cannot top up Xu wallet using internal_wallet channel'
+            RAISE EXCEPTION 'Internal wallet payment requires an authenticated tenant_id'
                 USING ERRCODE = '22023';
         END IF;
 
-        -- Deduct Xu immediately in the same ACID transaction
+        -- Atomic immediate debit from Xu balance
         v_new_balance := billing.debit_tenant_wallet(
             _tenant_id,
             _amount_credits,
             'purchase',
             _target_type::text,
             _target_id,
-            'Thanh toan ' || _amount_credits || ' Xu cho ' || _target_type::text || ' (' || _target_id || ')'
+            'Thanh toan tuc thi qua Vi Xu Noi Bo (' || v_transfer_code || ')'
         );
+
         v_status := 'succeeded';
         v_paid_at := timezone('utc'::text, now());
         v_checkout_payload := jsonb_build_object(
-            'instant_wallet_debit', true,
+            'instant_paid', true,
             'balance_after_credits', v_new_balance,
             'transfer_code', v_transfer_code
         );
     END IF;
 
+    -- Record immutable payment intent
     INSERT INTO billing.payment_intents (
         tenant_id,
         gateway_id,
@@ -935,6 +1000,19 @@ CREATE POLICY "payment_gateway_secrets_platform_admin" ON billing.payment_gatewa
 DROP POLICY IF EXISTS "payment_intents_platform_admin" ON billing.payment_intents;
 CREATE POLICY "payment_intents_platform_admin" ON billing.payment_intents FOR ALL TO authenticated
     USING (public.is_platform_admin()) WITH CHECK (public.is_platform_admin());
+
+ALTER TABLE billing.bank_receiving_accounts ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "bank_accounts_select_policy" ON billing.bank_receiving_accounts;
+CREATE POLICY "bank_accounts_select_policy" ON billing.bank_receiving_accounts
+    FOR SELECT TO authenticated, anon
+    USING (is_active = TRUE AND status = 'active');
+
+DROP POLICY IF EXISTS "bank_accounts_admin_full_policy" ON billing.bank_receiving_accounts;
+CREATE POLICY "bank_accounts_admin_full_policy" ON billing.bank_receiving_accounts
+    FOR ALL TO authenticated
+    USING (public.is_platform_admin())
+    WITH CHECK (public.is_platform_admin());
 
 -- 6. Permissions
 INSERT INTO public.permissions (id, module, description)
