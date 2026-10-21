@@ -1,0 +1,27 @@
+{
+  "id": "automation",
+  "name": "Automation Cloud Bridge",
+  "version": "1.0.0",
+  "schema": "automation",
+  "description": "Distributed browser automation engine coordinator, composite package blocks, campaign executions, and telemetry logs",
+  "dependencies": [
+    "runners"
+  ],
+  "tables": [
+    "automation.workflows",
+    "automation.packages",
+    "automation.campaign_runs",
+    "automation.execution_logs",
+    "automation.schedules"
+  ],
+  "permissions": [
+    "automation:workflows:read",
+    "automation:workflows:manage",
+    "automation:packages:read",
+    "automation:packages:manage",
+    "automation:campaigns:read",
+    "automation:campaigns:run",
+    "automation:campaigns:manage",
+    "automation:logs:read"
+  ]
+}

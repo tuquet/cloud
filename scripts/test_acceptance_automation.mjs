@@ -35,8 +35,8 @@ async function main() {
     console.log(`      Device Name:  ${identity.name}`);
     console.log(`      Environment:  ${(identity.env || 'prod').toUpperCase()} (${identity.cloud_url})`);
 
-    // 2. Dispatch Job into Supabase workflows.campaign_runs
-    console.log(`\n[2/5] Dispatching browser workflow into Supabase (workflows.campaign_runs)...`);
+    // 2. Dispatch Job into Supabase automation.campaign_runs
+    console.log(`\n[2/5] Dispatching browser workflow into Supabase (automation.campaign_runs)...`);
     const runPayload = {
         tenant_id: TENANT_ID,
         runner_id: identity.device_id,
@@ -56,8 +56,8 @@ async function main() {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,
             "Content-Type": "application/json",
-            "Accept-Profile": "workflows",
-            "Content-Profile": "workflows",
+            "Accept-Profile": "automation",
+            "Content-Profile": "automation",
             "Prefer": "return=representation"
         },
         body: JSON.stringify(runPayload)
@@ -93,8 +93,8 @@ async function main() {
                     "apikey": SERVICE_KEY,
                     "Authorization": `Bearer ${SERVICE_KEY}`,
                     "Content-Type": "application/json",
-                    "Accept-Profile": "workflows",
-                    "Content-Profile": "workflows"
+                    "Accept-Profile": "automation",
+                    "Content-Profile": "automation"
                 },
                 body: JSON.stringify({
                     tenant_id: TENANT_ID,
@@ -138,16 +138,16 @@ async function main() {
         throw new Error(`runner execution failed with exit code ${exitCode}`);
     }
 
-    // 4. Update Supabase workflows.campaign_runs to completed
-    console.log(`\n[4/5] Updating Supabase (workflows.campaign_runs) with completed status and result summary...`);
+    // 4. Update Supabase automation.campaign_runs to completed
+    console.log(`\n[4/5] Updating Supabase (automation.campaign_runs) with completed status and result summary...`);
     const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/campaign_runs?id=eq.${createdRun.id}`, {
         method: "PATCH",
         headers: {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,
             "Content-Type": "application/json",
-            "Accept-Profile": "workflows",
-            "Content-Profile": "workflows"
+            "Accept-Profile": "automation",
+            "Content-Profile": "automation"
         },
         body: JSON.stringify({
             status: "completed",
@@ -172,7 +172,7 @@ async function main() {
         headers: {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,
-            "Accept-Profile": "workflows"
+            "Accept-Profile": "automation"
         }
     });
     const [finalRun] = await verifyRunRes.json();
@@ -181,7 +181,7 @@ async function main() {
         headers: {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,
-            "Accept-Profile": "workflows"
+            "Accept-Profile": "automation"
         }
     });
     const logs = await verifyLogsRes.json();

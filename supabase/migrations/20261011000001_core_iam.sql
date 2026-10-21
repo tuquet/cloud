@@ -13,14 +13,14 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Đảm bảo các schema ứng dụng cốt lõi tồn tại cho PostgREST và Plugin Engine
 CREATE SCHEMA IF NOT EXISTS runners;
-CREATE SCHEMA IF NOT EXISTS workflows;
+CREATE SCHEMA IF NOT EXISTS automation;
 CREATE SCHEMA IF NOT EXISTS media;
 CREATE SCHEMA IF NOT EXISTS billing;
 CREATE SCHEMA IF NOT EXISTS events;
 CREATE SCHEMA IF NOT EXISTS commerce;
 
 GRANT USAGE ON SCHEMA runners TO anon, authenticated, service_role;
-GRANT USAGE ON SCHEMA workflows TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA automation TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA media TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA billing TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA events TO anon, authenticated, service_role;
@@ -167,10 +167,10 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 
 -- 2.10. Bảng Đăng ký Plugin Hệ thống (Master System Plugin Registry)
 CREATE TABLE IF NOT EXISTS public.system_plugins (
-    id VARCHAR(64) PRIMARY KEY,                  -- vd: 'core-iam', 'workflows', 'storage', 'subscriptions', 'webhooks'
+    id VARCHAR(64) PRIMARY KEY,                  -- vd: 'core-iam', 'automation', 'storage', 'subscriptions', 'webhooks'
     name VARCHAR(128) NOT NULL,
     version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
-    schema_name VARCHAR(64) NOT NULL UNIQUE,     -- vd: 'public', 'workflows', 'media', 'billing', 'events'
+    schema_name VARCHAR(64) NOT NULL UNIQUE,     -- vd: 'public', 'automation', 'media', 'billing', 'events'
     status public.plugin_status NOT NULL DEFAULT 'installed',
     is_system BOOLEAN NOT NULL DEFAULT false,    -- TRUE = Bất biến (Core Kernel), FALSE = On-demand plugin
     dependencies TEXT[] NOT NULL DEFAULT '{}',   -- vd: ARRAY['storage']

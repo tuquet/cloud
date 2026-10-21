@@ -519,7 +519,7 @@ DECLARE
     v_parts TEXT[];
     v_proxy_id UUID;
     v_workflow_id UUID;
-    v_template_wf workflows.workflows%ROWTYPE;
+    v_template_wf automation.workflows%ROWTYPE;
     v_credit_amount BIGINT;
     v_bonus_credits BIGINT;
     v_total_credited BIGINT;
@@ -722,7 +722,7 @@ BEGIN
 
             ELSIF v_subtype = 'workflow_package' THEN
                 FOR i IN 1..v_needed LOOP
-                    INSERT INTO workflows.packages (
+                    INSERT INTO automation.packages (
                         tenant_id,
                         name,
                         description,
@@ -751,7 +751,7 @@ BEGIN
                         variables,
                         data,
                         v_order.buyer_user_id
-                    FROM workflows.packages
+                    FROM automation.packages
                     WHERE id = public.safe_cast_uuid(v_variant.fulfillment_payload->>'template_package_id')
                     RETURNING id INTO v_workflow_id;
 
@@ -782,10 +782,10 @@ BEGIN
             ELSIF v_subtype = 'workflow' THEN
                 FOR i IN 1..v_needed LOOP
                     SELECT * INTO v_template_wf
-                    FROM workflows.workflows
+                    FROM automation.workflows
                     WHERE id = public.safe_cast_uuid(v_variant.fulfillment_payload->>'template_workflow_id');
 
-                    INSERT INTO workflows.workflows (
+                    INSERT INTO automation.workflows (
                         tenant_id,
                         name,
                         description,
@@ -1519,7 +1519,7 @@ SELECT public.register_plugin(
     'Digital Products Store & Auto-Fulfillment',
     '1.0.0',
     'commerce',
-    ARRAY['subscriptions', 'runners', 'workflows', 'storage']::TEXT[],
+    ARRAY['subscriptions', 'runners', 'automation', 'storage']::TEXT[],
     'Multi-category digital products catalog, zero-double-selling serialized stock inventory, order state machine, and atomic auto-fulfillment',
     FALSE,
     '{"guest_checkout_enabled": true, "reservation_ttl_minutes": 15}'::jsonb

@@ -1,10 +1,10 @@
 -- ============================================================================
--- TUQUET-CLOUD PLUGIN: WORKFLOWS CLOUD BRIDGE (MOCK SEED DATA)
--- Schema: workflows
+-- TUQUET-CLOUD PLUGIN: AUTOMATION CLOUD BRIDGE (MOCK SEED DATA)
+-- Schema: automation
 -- ============================================================================
 
 -- 1. Sample Standalone Workflow
-INSERT INTO workflows.workflows (
+INSERT INTO automation.workflows (
     id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
 )
 VALUES
@@ -23,7 +23,7 @@ VALUES
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. Sample Official Automa Composite Block Package (Reusable Lego Block)
-INSERT INTO workflows.packages (
+INSERT INTO automation.packages (
     id, tenant_id, name, description, icon, version, is_external, status, settings, inputs, outputs, variables, data, created_by
 )
 VALUES
