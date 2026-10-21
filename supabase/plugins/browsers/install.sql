@@ -85,7 +85,7 @@ DO $$ BEGIN
                 )
             );
     END IF;
-END $;
+END $$;
 
 -- 2.1. Helper for validating tenant folder in browser-profiles storage bucket
 CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_id UUID)
@@ -93,12 +93,12 @@ RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public, extensions
-AS $
+AS $$
     SELECT (
         p_tenant_id IS NOT NULL
         AND EXISTS (SELECT 1 FROM public.tenants WHERE id = p_tenant_id AND status = 'active')
     );
-$;
+$$;
 GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(UUID) TO authenticated, anon, service_role;
 
 -- 3. Core Tables
