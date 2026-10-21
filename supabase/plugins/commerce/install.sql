@@ -720,7 +720,66 @@ BEGIN
                     v_item.fulfilled_quantity := v_item.fulfilled_quantity + 1;
                 END LOOP;
 
-            ELSIF v_subtype = 'workflow' OR v_subtype = 'automa_workflow' THEN
+            ELSIF v_subtype = 'workflow_package' THEN
+                FOR i IN 1..v_needed LOOP
+                    INSERT INTO workflows.packages (
+                        tenant_id,
+                        name,
+                        description,
+                        icon,
+                        version,
+                        is_external,
+                        status,
+                        settings,
+                        inputs,
+                        outputs,
+                        variables,
+                        data,
+                        created_by
+                    )
+                    SELECT 
+                        v_order.buyer_tenant_id,
+                        name,
+                        description,
+                        icon,
+                        version,
+                        TRUE,
+                        'published',
+                        settings,
+                        inputs,
+                        outputs,
+                        variables,
+                        data,
+                        v_order.buyer_user_id
+                    FROM workflows.packages
+                    WHERE id = public.safe_cast_uuid(v_variant.fulfillment_payload->>'template_package_id')
+                    RETURNING id INTO v_workflow_id;
+
+                    INSERT INTO commerce.order_deliveries (
+                        order_id,
+                        order_item_id,
+                        buyer_tenant_id,
+                        delivery_type,
+                        delivered_payload,
+                        created_at
+                    )
+                    VALUES (
+                        v_order.id,
+                        v_item.id,
+                        v_order.buyer_tenant_id,
+                        'resource',
+                        jsonb_build_object(
+                            'resource_subtype', 'workflow_package',
+                            'package_id', v_workflow_id,
+                            'package_name', v_item.product_name
+                        ),
+                        v_now
+                    );
+
+                    v_item.fulfilled_quantity := v_item.fulfilled_quantity + 1;
+                END LOOP;
+
+            ELSIF v_subtype = 'workflow' THEN
                 FOR i IN 1..v_needed LOOP
                     SELECT * INTO v_template_wf
                     FROM workflows.workflows

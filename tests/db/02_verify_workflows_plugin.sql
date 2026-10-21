@@ -1,6 +1,6 @@
 -- ============================================================================
 -- TEST SUITE: 02_VERIFY_WORKFLOWS_PLUGIN.SQL
--- Description: Verification for Workflows Cloud Bridge schema, tables, and RLS
+-- Description: Verification for Workflows Cloud Bridge schema, packages, tables, RLS, and functions
 -- ============================================================================
 
 DO $$
@@ -8,11 +8,11 @@ DECLARE
     v_missing_tables TEXT[] := ARRAY[]::TEXT[];
     v_tbl TEXT;
     v_expected_tables TEXT[] := ARRAY[
-        'workflows', 'campaign_runs', 'execution_logs', 'schedules'
+        'workflows', 'packages', 'campaign_runs', 'execution_logs', 'schedules'
     ];
     v_rls_disabled TEXT[] := ARRAY[]::TEXT[];
 BEGIN
-    RAISE NOTICE '>>> [TEST 1] Verifying schema workflows and tables...';
+    RAISE NOTICE '>>> [TEST 1] Verifying schema workflows and all 5 tables (including Official Automa packages)...';
     
     IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'workflows') THEN
         RAISE EXCEPTION 'FAILED: Schema workflows does not exist!';
@@ -30,10 +30,10 @@ BEGIN
     IF array_length(v_missing_tables, 1) > 0 THEN
         RAISE EXCEPTION 'FAILED: Missing tables in schema workflows: %', v_missing_tables;
     ELSE
-        RAISE NOTICE ' [PASS] All 4 Workflows Tables exist in schema workflows.';
+        RAISE NOTICE ' [PASS] All 5 Workflows & Packages tables exist in schema workflows.';
     END IF;
 
-    -- Verify RLS is enabled on all 4 tables
+    -- Verify RLS is enabled on all 5 tables
     RAISE NOTICE '>>> [TEST 2] Verifying Row Level Security (RLS) enforcement...';
     FOREACH v_tbl IN ARRAY v_expected_tables LOOP
         IF NOT EXISTS (
@@ -60,11 +60,31 @@ BEGIN
         RAISE NOTICE ' [PASS] Plugin workflows is active in public.system_plugins.';
     END IF;
 
-    -- Verify Atomic Permissions
-    RAISE NOTICE '>>> [TEST 4] Verifying Workflows Atomic Permissions...';
-    IF (SELECT count(*) FROM public.permissions WHERE module = 'workflows') < 6 THEN
-        RAISE EXCEPTION 'FAILED: Fewer than 6 workflows permissions registered in public.permissions!';
+    -- Verify Atomic Permissions (Including packages permissions)
+    RAISE NOTICE '>>> [TEST 4] Verifying Workflows & Packages Atomic Permissions...';
+    IF (SELECT count(*) FROM public.permissions WHERE module = 'workflows') < 8 THEN
+        RAISE EXCEPTION 'FAILED: Fewer than 8 workflows permissions registered in public.permissions!';
     ELSE
-        RAISE NOTICE ' [PASS] All 6 Workflows permissions registered successfully.';
+        RAISE NOTICE ' [PASS] All 8 Workflows permissions (including packages) registered successfully.';
     END IF;
+
+    -- Verify Queue Claiming and Dead-Run Reaper routines exist
+    RAISE NOTICE '>>> [TEST 5] Verifying Queue Claiming & Dead Lease Reaper Functions...';
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname = 'workflows' AND p.proname = 'claim_next_campaign_run'
+    ) THEN
+        RAISE EXCEPTION 'FAILED: workflows.claim_next_campaign_run function not found!';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_proc p
+        JOIN pg_namespace n ON p.pronamespace = n.oid
+        WHERE n.nspname = 'workflows' AND p.proname = 'reap_stale_campaign_runs'
+    ) THEN
+        RAISE EXCEPTION 'FAILED: workflows.reap_stale_campaign_runs function not found!';
+    END IF;
+
+    RAISE NOTICE ' [PASS] Both claim_next_campaign_run and reap_stale_campaign_runs exist.';
 END $$;

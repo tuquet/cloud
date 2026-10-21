@@ -3,12 +3,13 @@
   "name": "Workflows Cloud Bridge",
   "version": "1.0.0",
   "schema": "workflows",
-  "description": "Distributed browser automation workflow coordinator, campaign executions, and telemetry logs",
+  "description": "Distributed browser automation workflow coordinator, composite package blocks, campaign executions, and telemetry logs",
   "dependencies": [
     "runners"
   ],
   "tables": [
     "workflows.workflows",
+    "workflows.packages",
     "workflows.campaign_runs",
     "workflows.execution_logs",
     "workflows.schedules"
@@ -16,6 +17,8 @@
   "permissions": [
     "workflows:workflows:read",
     "workflows:workflows:manage",
+    "workflows:packages:read",
+    "workflows:packages:manage",
     "workflows:campaigns:read",
     "workflows:campaigns:run",
     "workflows:campaigns:manage",

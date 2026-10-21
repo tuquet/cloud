@@ -14,6 +14,81 @@ export type Database = {
   }
   workflows: {
     Tables: {
+      packages: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          deleted_at: string | null
+          description: string | null
+          icon: string
+          id: string
+          inputs: Json
+          is_external: boolean
+          name: string
+          outputs: Json
+          settings: Json
+          status: Database["workflows"]["Enums"]["workflow_status"]
+          tenant_id: string
+          updated_at: string
+          variables: Json
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          deleted_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          inputs?: Json
+          is_external?: boolean
+          name: string
+          outputs?: Json
+          settings?: Json
+          status?: Database["workflows"]["Enums"]["workflow_status"]
+          tenant_id: string
+          updated_at?: string
+          variables?: Json
+          version?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          deleted_at?: string | null
+          description?: string | null
+          icon?: string
+          id?: string
+          inputs?: Json
+          is_external?: boolean
+          name?: string
+          outputs?: Json
+          settings?: Json
+          status?: Database["workflows"]["Enums"]["workflow_status"]
+          tenant_id?: string
+          updated_at?: string
+          variables?: Json
+          version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_workflows_packages_created_by"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_workflows_packages_tenant"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      },
       campaign_runs: {
         Row: {
           completed_tasks: number
