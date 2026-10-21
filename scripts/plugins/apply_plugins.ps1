@@ -9,7 +9,7 @@ param (
     [ValidateSet('local', 'dev', 'linked')]
     [string]$Target = 'local',
 
-    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'workers', 'browsers', 'workers', 'automationtion')]
+    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'workers', 'browsers', 'automation')]
     [string]$Plugin = 'all',
 
     [ValidateSet('install', 'uninstall')]
@@ -33,7 +33,7 @@ $CanonicalOrder = @(
     @{ Id = 'webhooks';      Install = 'supabase/plugins/webhooks/install.sql';      Uninstall = 'supabase/plugins/webhooks/uninstall.sql';      Desc = 'Asynchronous Outbox & Webhooks (schema: events)' },
     @{ Id = 'workers';       Install = 'supabase/plugins/workers/install.sql';       Uninstall = 'supabase/plugins/workers/uninstall.sql';       Desc = 'Workers & Compute Fleet (schema: workers)' },
     @{ Id = 'browsers';      Install = 'supabase/plugins/browsers/install.sql';      Uninstall = 'supabase/plugins/browsers/uninstall.sql';      Desc = 'Cloud Browser Profiles & Engine Catalog (schema: browsers)' },
-    @{ Id = 'automationtion';     Install = 'supabase/plugins/automationtion/install.sql';     Uninstall = 'supabase/plugins/automationtion/uninstall.sql';     Desc = 'automationtion Cloud Bridge (schema: automationtion)' }
+    @{ Id = 'automation';    Install = 'supabase/plugins/automation/install.sql';    Uninstall = 'supabase/plugins/automation/uninstall.sql';    Desc = 'Automation Engine & Workflows (schema: automation)' }
 )
 
 Write-Host "====================================================================" -ForegroundColor Cyan

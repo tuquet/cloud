@@ -176,6 +176,6 @@ BEGIN
 
     RAISE NOTICE ' [PASS] All business logic functions and compatibility views verified.';
     RAISE NOTICE '=============================================================';
-    RAISE NOTICE ' [SUCCESS] ALL 7 TESTS FOR BROWSERS PLUGIN PASSED (100%)';
+    RAISE NOTICE ' [SUCCESS] ALL 7 TESTS FOR BROWSERS PLUGIN PASSED (100%%)';
     RAISE NOTICE '=============================================================';
 END $$;
