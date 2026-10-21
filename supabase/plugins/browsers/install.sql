@@ -1,10 +1,11 @@
 -- ============================================================================
 -- TUQUET-CLOUD PLUGIN: CLOUD BROWSER PROFILES & ANTIDETECT ENGINE CATALOG
 -- Plugin ID: browsers
--- Version: 1.0.0
+-- Version: 1.1.0
 -- Architecture: PostgreSQL Dedicated Schema Isolation (schema: browsers)
 -- Dependencies: ["core-iam"]
--- Specification: Complete Anti-detect Dimensions, Remote Engine Registry,
+-- Specification: Ungoogled Chromium / adryfish/fingerprint-chromium 1:1 Alignment
+--                Deterministic C++ PRNG (--fingerprint=<seed>), Official Releases,
 --                Distributed Profile Leasing & Session Snapshot Sync
 -- ============================================================================
 
@@ -35,32 +36,34 @@ END $$;
 
 -- 3. Core Tables
 
--- 3.1. Central Chromium & Patched Engine Release Catalog
+-- 3.1. Central Engine Release Catalog (adryfish/fingerprint-chromium Distribution)
 CREATE TABLE IF NOT EXISTS browsers.releases (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
-    version VARCHAR(32) NOT NULL,                  -- e.g. '148.0.7778.215'
-    major_version INT NOT NULL,                     -- e.g. 148
-    channel VARCHAR(32) NOT NULL DEFAULT 'stable',    -- 'stable', 'beta', 'dev', 'stealth-patch'
-    os_platform VARCHAR(32) NOT NULL,               -- 'windows', 'macos', 'linux'
-    arch VARCHAR(32) NOT NULL,                      -- 'x86_64', 'aarch64'
-    download_url TEXT NOT NULL,
-    sha256_checksum VARCHAR(64) NOT NULL,
+    version VARCHAR(32) NOT NULL,                       -- e.g. '148.0.7778.215'
+    tag VARCHAR(32) NOT NULL,                           -- e.g. '148.0.7778.215'
+    channel VARCHAR(32) NOT NULL DEFAULT 'lts',         -- 'lts', 'latest', 'archive'
+    status VARCHAR(32) NOT NULL DEFAULT 'recommended',    -- 'recommended', 'buggy', 'deprecated', 'unverified'
+    os_platform VARCHAR(32) NOT NULL,                    -- 'windows', 'linux', 'macos'
+    arch VARCHAR(32) NOT NULL,                         -- 'x86_64', 'aarch64'
+    asset_name TEXT NOT NULL,                            -- 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip'
+    download_url TEXT NOT NULL,                          -- Official GitHub Release URL
     file_size_bytes BIGINT NOT NULL DEFAULT 0,
+    sha256_checksum VARCHAR(64),
     is_recommended BOOLEAN NOT NULL DEFAULT false,
-    is_deprecated BOOLEAN NOT NULL DEFAULT false,
-    release_notes TEXT,
+    notes TEXT,                                          -- Upstream notes & known issues
+    published_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
 
     CONSTRAINT uq_browsers_releases_unique UNIQUE (version, channel, os_platform, arch)
 );
 
-COMMENT ON TABLE browsers.releases IS '[Plugin: browsers] Remote catalog of downloadable browser engines and patched stealth binaries for CLI discovery';
+COMMENT ON TABLE browsers.releases IS '[Plugin: browsers] Remote catalog of downloadable adryfish/fingerprint-chromium releases for CLI discovery and auto-installation';
 
 CREATE INDEX IF NOT EXISTS idx_browsers_releases_lookup ON browsers.releases (os_platform, arch, channel);
 CREATE INDEX IF NOT EXISTS idx_browsers_releases_version ON browsers.releases (version);
 
--- 3.2. Central Cloud Browser Profiles (Antidetect Identities)
+-- 3.2. Central Cloud Browser Profiles (Antidetect Identities - Streamlined for C++ Core)
 CREATE TABLE IF NOT EXISTS browsers.profiles (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -68,33 +71,28 @@ CREATE TABLE IF NOT EXISTS browsers.profiles (
     group_name VARCHAR(64) NOT NULL DEFAULT 'default',
     tags TEXT[] DEFAULT '{}'::text[],
 
-    -- Engine & Platform Specification
-    browser_type VARCHAR(64) NOT NULL DEFAULT 'chromium',
+    -- C++ Engine & Version Target
+    browser_type VARCHAR(64) NOT NULL DEFAULT 'ungoogled-chromium',
     engine_version VARCHAR(32) NOT NULL DEFAULT '148.0.7778.215',
+
+    -- Core Deterministic C++ Fingerprint (--fingerprint=<seed>)
+    -- In adryfish/fingerprint-chromium, this single seed deterministically drives:
+    -- Canvas 2D noise, WebGL parameters, AudioContext, Font metrics, and Math.random PRNG
+    fingerprint_seed BIGINT NOT NULL DEFAULT floor(random() * 2147483647)::bigint,
+
+    -- Platform & Hardware Spoofing (--fingerprint-platform, --fingerprint-brand, etc.)
     os_platform VARCHAR(32) NOT NULL DEFAULT 'windows',
     os_version VARCHAR(64) NOT NULL DEFAULT '10.0.0',
     browser_brand VARCHAR(64) NOT NULL DEFAULT 'Chrome',
-
-    -- Hardware & Performance Emulation
     cpu_cores INT NOT NULL DEFAULT 8 CHECK (cpu_cores >= 1),
     ram_gb INT NOT NULL DEFAULT 16 CHECK (ram_gb >= 1),
-    max_touch_points INT NOT NULL DEFAULT 0,
 
-    -- Display & Screen Geometry
+    -- Display Geometry & HiDPI Scaling (--window-size=W,H, --force-device-scale-factor)
     screen_width INT NOT NULL DEFAULT 1920,
     screen_height INT NOT NULL DEFAULT 1080,
-    screen_color_depth INT NOT NULL DEFAULT 24,
     device_pixel_ratio NUMERIC(3, 2) NOT NULL DEFAULT 1.0,
 
-    -- Deterministic Hardware Fingerprint Seeds & Anti-Detect Noise
-    fingerprint_seed BIGINT NOT NULL DEFAULT floor(random() * 2147483647)::bigint,
-    canvas_mode VARCHAR(32) NOT NULL DEFAULT 'noise' CHECK (canvas_mode IN ('real', 'noise', 'off', 'block')),
-    audio_mode VARCHAR(32) NOT NULL DEFAULT 'noise' CHECK (audio_mode IN ('real', 'noise', 'off')),
-    webgl_mode VARCHAR(32) NOT NULL DEFAULT 'noise' CHECK (webgl_mode IN ('real', 'noise', 'off')),
-    webgl_vendor TEXT DEFAULT 'Google Inc. (NVIDIA)',
-    webgl_renderer TEXT DEFAULT 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
-
-    -- Locale, Timezone & Client Hints (Sec-CH-UA)
+    -- Localization, Headers & Client Hints
     timezone TEXT NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
     locale TEXT NOT NULL DEFAULT 'vi-VN',
     accept_languages TEXT NOT NULL DEFAULT 'vi-VN,vi,en-US,en',
@@ -103,13 +101,7 @@ CREATE TABLE IF NOT EXISTS browsers.profiles (
     sec_ch_ua_platform VARCHAR(32) DEFAULT '"Windows"',
     sec_ch_ua_mobile BOOLEAN DEFAULT false,
 
-    -- Geolocation Mocking
-    geolocation_mode VARCHAR(32) NOT NULL DEFAULT 'prompt' CHECK (geolocation_mode IN ('prompt', 'allow', 'block', 'custom')),
-    latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION,
-    accuracy_meters INT DEFAULT 100,
-
-    -- Network, Proxy & WebRTC STUN Shielding
+    -- Network, Proxy & WebRTC STUN Shielding (--proxy-server, --disable-non-proxied-udp)
     proxy_id UUID,
     custom_proxy TEXT,
     webrtc_mode VARCHAR(32) NOT NULL DEFAULT 'proxy_shielded',
@@ -136,7 +128,7 @@ CREATE TABLE IF NOT EXISTS browsers.profiles (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
 );
 
-COMMENT ON TABLE browsers.profiles IS '[Plugin: browsers] Multi-tenant inventory of antidetect browser profiles, deterministic hardware fingerprints, and cloud session snapshots';
+COMMENT ON TABLE browsers.profiles IS '[Plugin: browsers] Multi-tenant inventory of virtual antidetect browser profiles aligned with adryfish/fingerprint-chromium';
 
 CREATE INDEX IF NOT EXISTS idx_browsers_profiles_tenant_status ON browsers.profiles (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_browsers_profiles_tenant_group ON browsers.profiles (tenant_id, group_name);
@@ -159,8 +151,6 @@ CREATE TABLE IF NOT EXISTS browsers.fingerprint_templates (
     device_pixel_ratio NUMERIC(3, 2) NOT NULL DEFAULT 1.0,
     cpu_cores INT NOT NULL DEFAULT 8,
     ram_gb INT NOT NULL DEFAULT 16,
-    webgl_vendor TEXT NOT NULL,
-    webgl_renderer TEXT NOT NULL,
     user_agent TEXT NOT NULL,
     sec_ch_ua TEXT NOT NULL,
     sec_ch_ua_platform VARCHAR(32) NOT NULL,
@@ -433,55 +423,100 @@ CROSS JOIN (
 WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
--- 8. Seed Initial Data
+-- 8. Seed Official adryfish/fingerprint-chromium Releases (1:1 with browser/manifest.json)
 
--- 8.1. Chromium 148 Releases Catalog
-INSERT INTO browsers.releases (version, major_version, channel, os_platform, arch, download_url, sha256_checksum, file_size_bytes, is_recommended, release_notes)
+-- 8.1. Releases Catalog
+INSERT INTO browsers.releases (
+    version, tag, channel, status, os_platform, arch,
+    asset_name, download_url, file_size_bytes, is_recommended, notes, published_at
+)
 VALUES 
+    -- 148.0.7778.215 (Golden LTS)
     (
-        '148.0.7778.215', 148, 'stable', 'windows', 'x86_64',
-        'https://storage.tuquet.com/engines/chromium-148.0.7778.215-win64.zip',
-        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        185400000, true, 'Official Chromium 148 stable build for Windows 64-bit'
+        '148.0.7778.215', '148.0.7778.215', 'lts', 'recommended', 'windows', 'x86_64',
+        'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/148.0.7778.215/ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip',
+        189767686, true,
+        'Golden LTS Release: Zero canvas readback crashes, realistic WebGL GPU parameter simulation, randomized 8/16/32 GB device memory.',
+        '2026-06-21T04:34:00Z'
     ),
     (
-        '148.0.7778.215', 148, 'stable', 'macos', 'aarch64',
-        'https://storage.tuquet.com/engines/chromium-148.0.7778.215-mac-arm64.zip',
-        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        172000000, true, 'Official Chromium 148 stable build for macOS Apple Silicon'
+        '148.0.7778.215', '148.0.7778.215', 'lts', 'recommended', 'linux', 'x86_64',
+        'ungoogled-chromium-148.0.7778.215-1-x86_64_linux.tar.xz',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/148.0.7778.215/ungoogled-chromium-148.0.7778.215-1-x86_64_linux.tar.xz',
+        141269020, true,
+        'Golden LTS Release: Zero canvas readback crashes, realistic WebGL GPU parameter simulation, randomized 8/16/32 GB device memory.',
+        '2026-06-21T04:34:00Z'
     ),
     (
-        '148.0.7778.215', 148, 'stable', 'linux', 'x86_64',
-        'https://storage.tuquet.com/engines/chromium-148.0.7778.215-linux64.tar.gz',
-        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        198000000, true, 'Official Chromium 148 stable build for Linux x86_64'
+        '148.0.7778.215', '148.0.7778.215', 'lts', 'recommended', 'macos', 'x86_64',
+        'ungoogled-chromium_148.0.7778.215-1.1_macos.dmg',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/148.0.7778.215/ungoogled-chromium_148.0.7778.215-1.1_macos.dmg',
+        140187500, true,
+        'Golden LTS Release: Zero canvas readback crashes, realistic WebGL GPU parameter simulation, randomized 8/16/32 GB device memory.',
+        '2026-06-21T04:34:00Z'
+    ),
+    -- 150.0.7871.186 (Latest - Buggy)
+    (
+        '150.0.7871.186', '150.0.7871.186', 'latest', 'buggy', 'windows', 'x86_64',
+        'ungoogled-chromium_150.0.7871.186-1.1_windows_x64.zip',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/150.0.7871.186/ungoogled-chromium_150.0.7871.186-1.1_windows_x64.zip',
+        193743241, false,
+        'Upstream regression: SIGSEGV / Crashpad_NotConnectedToHandler in getImageData() / readPixels() (Issues #94 & #95). Not recommended for production.',
+        '2026-10-02T14:02:29Z'
+    ),
+    (
+        '150.0.7871.186', '150.0.7871.186', 'latest', 'buggy', 'linux', 'x86_64',
+        'ungoogled-chromium-150.0.7871.186-1-x86_64_linux.tar.xz',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/150.0.7871.186/ungoogled-chromium-150.0.7871.186-1-x86_64_linux.tar.xz',
+        145806232, false,
+        'Upstream regression: SIGSEGV in getImageData() / readPixels(). Not recommended for production.',
+        '2026-10-02T14:02:29Z'
+    ),
+    -- 144.0.7559.132 (Archive - Deprecated)
+    (
+        '144.0.7559.132', '144.0.7559.132', 'archive', 'deprecated', 'windows', 'x86_64',
+        'ungoogled-chromium_144.0.7559.132-1.1_windows_x64.zip',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/144.0.7559.132/ungoogled-chromium_144.0.7559.132-1.1_windows_x64.zip',
+        176796270, false,
+        'Introduced realistic WebGL parameter simulation. Deprecated manual --fingerprint-gpu-vendor.',
+        '2026-02-27T09:02:24Z'
+    ),
+    (
+        '144.0.7559.132', '144.0.7559.132', 'archive', 'deprecated', 'linux', 'x86_64',
+        'ungoogled-chromium-144.0.7559.132-1-x86_64_linux.tar.xz',
+        'https://github.com/adryfish/fingerprint-chromium/releases/download/144.0.7559.132/ungoogled-chromium-144.0.7559.132-1-x86_64_linux.tar.xz',
+        133493680, false,
+        'Introduced realistic WebGL parameter simulation. Deprecated manual --fingerprint-gpu-vendor.',
+        '2026-02-27T09:02:24Z'
     )
 ON CONFLICT (version, channel, os_platform, arch) DO UPDATE SET
     download_url = EXCLUDED.download_url,
-    is_recommended = EXCLUDED.is_recommended;
+    asset_name = EXCLUDED.asset_name,
+    file_size_bytes = EXCLUDED.file_size_bytes,
+    is_recommended = EXCLUDED.is_recommended,
+    status = EXCLUDED.status,
+    notes = EXCLUDED.notes;
 
 -- 8.2. Baseline Fingerprint Templates
 INSERT INTO browsers.fingerprint_templates (
     name, is_system, os_platform, os_version, browser_brand, engine_version,
     screen_width, screen_height, device_pixel_ratio, cpu_cores, ram_gb,
-    webgl_vendor, webgl_renderer,
     user_agent, sec_ch_ua, sec_ch_ua_platform
 )
 VALUES 
     (
-        'Windows 11 Desktop (NVIDIA GeForce RTX 3070)', true,
+        'Standard Windows 11 Desktop (1080p, 8-Core, 16GB)', true,
         'windows', '10.0.0', 'Chrome', '148.0.7778.215',
         1920, 1080, 1.0, 8, 16,
-        'Google Inc. (NVIDIA)', 'ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 Direct3D11 vs_5_0 ps_5_0, D3D11)',
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.215 Safari/537.36',
         '"Chromium";v="148", "Not A(Brand";v="24", "Google Chrome";v="148"',
         '"Windows"'
     ),
     (
-        'macOS Sonoma (Apple M2 Pro)', true,
+        'Retina macOS Sonoma Desktop (1440p, 10-Core, 16GB)', true,
         'macos', '14.5.0', 'Chrome', '148.0.7778.215',
         2560, 1440, 2.0, 10, 16,
-        'Apple Inc.', 'Apple M2 Pro',
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.215 Safari/537.36',
         '"Chromium";v="148", "Not A(Brand";v="24", "Google Chrome";v="148"',
         '"macOS"'
@@ -492,10 +527,10 @@ ON CONFLICT DO NOTHING;
 SELECT public.register_plugin(
     'browsers',
     'Cloud Browser Profiles & Antidetect Engine Catalog',
-    '1.0.0',
+    '1.1.0',
     'browsers',
     ARRAY['core-iam']::TEXT[],
-    'Virtual antidetect browser profiles, deterministic hardware fingerprints, remote Chromium engine release catalog, and session storage sync',
+    'Virtual antidetect browser profiles (Ungoogled/adryfish), deterministic C++ PRNG fingerprints, remote engine releases catalog, and session storage sync',
     FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
 );

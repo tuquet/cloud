@@ -1,6 +1,6 @@
 # ============================================================================
 # TUQUET-CLOUD PLUGIN RUNNER UTILITY
-# Description: Automates the atomic installation and uninstallation of plugins
+# Description: automationtes the atomic installation and uninstallation of plugins
 #              in canonical architectural order against local or linked Supabase.
 # ============================================================================
 
@@ -9,7 +9,7 @@ param (
     [ValidateSet('local', 'dev', 'linked')]
     [string]$Target = 'local',
 
-    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'workers', 'browsers', 'runners', 'automation')]
+    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'workers', 'browsers', 'workers', 'automationtion')]
     [string]$Plugin = 'all',
 
     [ValidateSet('install', 'uninstall')]
@@ -33,7 +33,7 @@ $CanonicalOrder = @(
     @{ Id = 'webhooks';      Install = 'supabase/plugins/webhooks/install.sql';      Uninstall = 'supabase/plugins/webhooks/uninstall.sql';      Desc = 'Asynchronous Outbox & Webhooks (schema: events)' },
     @{ Id = 'workers';       Install = 'supabase/plugins/workers/install.sql';       Uninstall = 'supabase/plugins/workers/uninstall.sql';       Desc = 'Workers & Compute Fleet (schema: workers)' },
     @{ Id = 'browsers';      Install = 'supabase/plugins/browsers/install.sql';      Uninstall = 'supabase/plugins/browsers/uninstall.sql';      Desc = 'Cloud Browser Profiles & Engine Catalog (schema: browsers)' },
-    @{ Id = 'automation';     Install = 'supabase/plugins/automation/install.sql';     Uninstall = 'supabase/plugins/automation/uninstall.sql';     Desc = 'Automation Cloud Bridge (schema: automation)' }
+    @{ Id = 'automationtion';     Install = 'supabase/plugins/automationtion/install.sql';     Uninstall = 'supabase/plugins/automationtion/uninstall.sql';     Desc = 'automationtion Cloud Bridge (schema: automationtion)' }
 )
 
 Write-Host "====================================================================" -ForegroundColor Cyan
@@ -87,7 +87,7 @@ foreach ($item in $TargetPlugins) {
     Write-Host "    [OK] Successfully applied $sqlFile" -ForegroundColor Green
 
     # Apply seed data if available and requested during install
-    if ($Action -eq 'install' -and ($pluginId -eq 'automa' -or $pluginId -eq 'runners') -and $WithSeed) {
+    if ($Action -eq 'install' -and ($pluginId -eq 'automation' -or $pluginId -eq 'workers') -and $WithSeed) {
         $seedFile = "supabase/plugins/$pluginId/seed.sql"
         if (Test-Path $seedFile) {
             Write-Host "    --> Applying sample data: $seedFile" -ForegroundColor DarkYellow

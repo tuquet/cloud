@@ -62,7 +62,7 @@ for item in "${CANONICAL_PLUGINS[@]}"; do
     fi
     echo "    [OK] Successfully applied $sql_file"
 
-    if [[ "$ACTION" == "install" && ("$plugin_id" == "automation" || "$plugin_id" == "runners") && "$WITH_SEED" == "true" ]]; then
+    if [[ "$ACTION" == "install" && ("$plugin_id" == "automation" || "$plugin_id" == "workers") && "$WITH_SEED" == "true" ]]; then
         seed_file="supabase/plugins/$plugin_id/seed.sql"
         if [[ -f "$seed_file" ]]; then
             echo "    --> Applying sample data: $seed_file"

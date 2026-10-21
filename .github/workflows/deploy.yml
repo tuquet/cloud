@@ -13,7 +13,7 @@ on:
       action:
         description: 'Deployment action to perform'
         required: true
-        default: 'push_migrations'
+        default: 'reset_and_deploy'
         type: choice
         options:
           - 'push_migrations'
@@ -77,6 +77,16 @@ jobs:
           fi
 
           case "$ACTION" in
+            "reset_and_deploy")
+              echo "==> Step 0: Resetting remote linked database to pristine state..."
+              if [ -n "$SUPABASE_DB_PASSWORD" ]; then
+                supabase db reset --linked --yes --password "$SUPABASE_DB_PASSWORD"
+              else
+                supabase db reset --linked --yes
+              fi
+              echo "==> Step 1: Applying business plugins & seed data..."
+              bash scripts/plugins/apply_plugins.sh linked all install true
+              ;;
             "push_migrations")
               echo "==> Pushing migrations to linked project..."
               if [ -n "$SUPABASE_DB_PASSWORD" ]; then
@@ -134,7 +144,7 @@ jobs:
         run: |
           mkdir -p types
           echo "==> Generating TypeScript definitions from Supabase Cloud..."
-          supabase gen types typescript --linked --schema public,runners,automation,billing,events,media > types/database.types.ts
+          supabase gen types typescript --linked --schema public,workers,browsers,automation,billing,events,media > types/database.types.ts
           echo "==> Generated $(wc -l < types/database.types.ts) lines of TypeScript definitions."
 
       - name: Upload TypeScript Types Artifact

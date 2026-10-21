@@ -1,7 +1,7 @@
 -- ============================================================================
 -- TEST SUITE: 03_VERIFY_BROWSERS_PLUGIN.SQL
--- Description: Verification for Dedicated browsers Schema, Releases Catalog,
---              Antidetect Profiles v2, and Fingerprint Templates
+-- Description: Verification for Dedicated browsers Schema aligned with
+--              adryfish/fingerprint-chromium (Ungoogled Chromium Core)
 -- ============================================================================
 
 DO $$
@@ -16,21 +16,33 @@ BEGIN
     END IF;
 
     -- ========================================================================
-    -- TEST 2: browsers.releases (Engine Catalog)
+    -- TEST 2: browsers.releases (adryfish/fingerprint-chromium Engine Catalog)
     -- ========================================================================
-    RAISE NOTICE '>>> [TEST 2] Verifying browsers.releases table and public catalog...';
+    RAISE NOTICE '>>> [TEST 2] Verifying browsers.releases table and authentic GitHub releases...';
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.tables WHERE table_schema = 'browsers' AND table_name = 'releases'
     ) THEN
         RAISE EXCEPTION 'FAILED: Table browsers.releases does not exist!';
     END IF;
 
+    -- Check required catalog columns
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'releases' AND column_name = 'asset_name';
+    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: asset_name missing from browsers.releases'; END IF;
+
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'releases' AND column_name = 'tag';
+    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: tag missing from browsers.releases'; END IF;
+
+    -- Check authentic adryfish GitHub download URL
     IF NOT EXISTS (
-        SELECT 1 FROM browsers.releases WHERE version = '148.0.7778.215' AND os_platform = 'windows'
+        SELECT 1 FROM browsers.releases 
+        WHERE version = '148.0.7778.215' 
+          AND os_platform = 'windows'
+          AND download_url LIKE '%adryfish/fingerprint-chromium%'
+          AND asset_name = 'ungoogled-chromium_148.0.7778.215-1.1_windows_x64.zip'
     ) THEN
-        RAISE EXCEPTION 'FAILED: Seed release for Windows Chromium 148 is missing!';
+        RAISE EXCEPTION 'FAILED: Authentic adryfish release for Windows Chromium 148 is missing or invalid!';
     ELSE
-        RAISE NOTICE ' [PASS] Seed release for Windows Chromium 148 verified.';
+        RAISE NOTICE ' [PASS] Authentic adryfish release for Windows Chromium 148 verified.';
     END IF;
 
     -- Verify RLS on releases
@@ -43,32 +55,39 @@ BEGIN
     END IF;
 
     -- ========================================================================
-    -- TEST 3: browsers.profiles (Antidetect Profiles v2)
+    -- TEST 3: browsers.profiles (Streamlined for C++ adryfish core)
     -- ========================================================================
-    RAISE NOTICE '>>> [TEST 3] Verifying browsers.profiles and anti-detect columns...';
+    RAISE NOTICE '>>> [TEST 3] Verifying browsers.profiles (streamlined, no redundant columns)...';
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.tables WHERE table_schema = 'browsers' AND table_name = 'profiles'
     ) THEN
         RAISE EXCEPTION 'FAILED: Table browsers.profiles does not exist!';
     END IF;
 
-    -- Check critical anti-detect columns
+    -- Check essential C++ anti-detect columns
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'fingerprint_seed';
+    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: fingerprint_seed missing from browsers.profiles'; END IF;
+
     PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'screen_width';
     IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: screen_width missing from browsers.profiles'; END IF;
 
-    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'canvas_mode';
-    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: canvas_mode missing from browsers.profiles'; END IF;
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'screen_height';
+    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: screen_height missing from browsers.profiles'; END IF;
+
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'device_pixel_ratio';
+    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: device_pixel_ratio missing from browsers.profiles'; END IF;
 
     PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'sec_ch_ua';
     IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: sec_ch_ua missing from browsers.profiles'; END IF;
 
-    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'max_touch_points';
-    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: max_touch_points missing from browsers.profiles'; END IF;
+    -- Guardrail: Ensure redundant columns are NOT present
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'canvas_mode';
+    IF FOUND THEN RAISE EXCEPTION 'FAILED: canvas_mode should NOT be in browsers.profiles (handled by C++ PRNG seed)'; END IF;
 
-    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'geolocation_mode';
-    IF NOT FOUND THEN RAISE EXCEPTION 'FAILED: geolocation_mode missing from browsers.profiles'; END IF;
+    PERFORM 1 FROM information_schema.columns WHERE table_schema = 'browsers' AND table_name = 'profiles' AND column_name = 'webgl_vendor';
+    IF FOUND THEN RAISE EXCEPTION 'FAILED: webgl_vendor should NOT be in browsers.profiles (handled by C++ PRNG seed)'; END IF;
 
-    RAISE NOTICE ' [PASS] All critical anti-detect columns verified on browsers.profiles.';
+    RAISE NOTICE ' [PASS] All streamlined C++ engine columns verified on browsers.profiles (zero redundancy).';
 
     -- Verify RLS on profiles
     IF NOT EXISTS (
@@ -120,9 +139,9 @@ BEGIN
     END IF;
 
     -- ========================================================================
-    -- TEST 7: Business Functions
+    -- TEST 7: Business Functions & Backward Compatibility Views
     -- ========================================================================
-    RAISE NOTICE '>>> [TEST 7] Verifying lease and lock functions...';
+    RAISE NOTICE '>>> [TEST 7] Verifying lease functions and compatibility views...';
     IF NOT EXISTS (
         SELECT 1 FROM pg_proc WHERE proname = 'acquire_profile' AND pronamespace = 'browsers'::regnamespace
     ) THEN
@@ -136,12 +155,14 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
-        SELECT 1 FROM pg_proc WHERE proname = 'reap_stale_profile_locks' AND pronamespace = 'browsers'::regnamespace
+        SELECT 1 FROM information_schema.views WHERE table_schema = 'workers' AND table_name = 'browsers'
     ) THEN
-        RAISE EXCEPTION 'FAILED: Function browsers.reap_stale_profile_locks does not exist!';
+        RAISE EXCEPTION 'FAILED: Backward compatibility view workers.browsers does not exist!';
+    ELSE
+        RAISE NOTICE ' [PASS] Backward compatibility view workers.browsers verified.';
     END IF;
 
-    RAISE NOTICE ' [PASS] All business logic functions verified.';
+    RAISE NOTICE ' [PASS] All business logic functions and compatibility views verified.';
     RAISE NOTICE '=============================================================';
     RAISE NOTICE ' [SUCCESS] ALL 7 TESTS FOR BROWSERS PLUGIN PASSED (100%)';
     RAISE NOTICE '=============================================================';
