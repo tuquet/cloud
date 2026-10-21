@@ -1424,7 +1424,7 @@ CREATE POLICY "orders_select_tenant" ON commerce.orders
     FOR SELECT TO authenticated
     USING (
         (buyer_tenant_id IS NOT NULL AND public.is_tenant_member(buyer_tenant_id))
-        OR buyer_user_id = auth.uid()
+        OR buyer_user_id = (SELECT auth.uid())
     );
 
 DROP POLICY IF EXISTS "order_items_select_tenant" ON commerce.order_items;
@@ -1436,7 +1436,7 @@ CREATE POLICY "order_items_select_tenant" ON commerce.order_items
             WHERE o.id = commerce.order_items.order_id
               AND (
                   (o.buyer_tenant_id IS NOT NULL AND public.is_tenant_member(o.buyer_tenant_id))
-                  OR o.buyer_user_id = auth.uid()
+                  OR o.buyer_user_id = (SELECT auth.uid())
               )
         )
     );
@@ -1449,7 +1449,7 @@ CREATE POLICY "order_deliveries_select_tenant" ON commerce.order_deliveries
         OR EXISTS (
             SELECT 1 FROM commerce.orders o
             WHERE o.id = commerce.order_deliveries.order_id
-              AND o.buyer_user_id = auth.uid()
+              AND o.buyer_user_id = (SELECT auth.uid())
         )
     );
 
