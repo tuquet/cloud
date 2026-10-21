@@ -458,7 +458,7 @@ BEGIN
         id, tenant_id, name, fingerprint_seed,
         screen_width, screen_height, device_pixel_ratio,
         os_platform, cpu_cores, ram_gb,
-        proxy, timezone, locale,
+        custom_proxy, timezone, locale,
         storage_path, storage_size_bytes, storage_hash,
         cookies_count, metadata,
         status, last_synced_at, updated_at
@@ -481,7 +481,7 @@ BEGIN
         os_platform = EXCLUDED.os_platform,
         cpu_cores = EXCLUDED.cpu_cores,
         ram_gb = EXCLUDED.ram_gb,
-        proxy = COALESCE(EXCLUDED.proxy, browsers.profiles.proxy),
+        custom_proxy = COALESCE(EXCLUDED.custom_proxy, browsers.profiles.custom_proxy),
         timezone = COALESCE(EXCLUDED.timezone, browsers.profiles.timezone),
         locale = COALESCE(EXCLUDED.locale, browsers.profiles.locale),
         storage_path = COALESCE(EXCLUDED.storage_path, browsers.profiles.storage_path),
