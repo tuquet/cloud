@@ -16,6 +16,20 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON TABLES TO authenticated
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON FUNCTIONS TO authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON SEQUENCES TO authenticated, service_role;
 
+-- 1.1. Storage Helper for Validating Tenant Folder in browser-profiles Bucket
+CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+    SELECT (
+        p_tenant_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM public.tenants WHERE id = p_tenant_id AND status = 'active')
+    );
+$$;
+GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(UUID) TO authenticated, anon, service_role;
+
 -- 2. Storage Bucket for Browser Profile Session Archives (.zip, .tar.zst)
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'buckets') THEN
@@ -86,20 +100,6 @@ DO $$ BEGIN
             );
     END IF;
 END $$;
-
--- 2.1. Helper for validating tenant folder in browser-profiles storage bucket
-CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_id UUID)
-RETURNS BOOLEAN
-LANGUAGE sql
-SECURITY DEFINER
-SET search_path = public, extensions
-AS $$
-    SELECT (
-        p_tenant_id IS NOT NULL
-        AND EXISTS (SELECT 1 FROM public.tenants WHERE id = p_tenant_id AND status = 'active')
-    );
-$$;
-GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(UUID) TO authenticated, anon, service_role;
 
 -- 3. Core Tables
 
