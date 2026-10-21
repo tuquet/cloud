@@ -15,6 +15,7 @@ echo "===================================================================="
 TEST_FILES=(
     "tests/db/01_verify_core_iam.sql"
     "tests/db/02_verify_automation_plugin.sql"
+    "tests/db/03_verify_browsers_plugin.sql"
     "tests/db/02b_verify_runners_plugin.sql"
     "tests/db/02c_verify_cloud_browsers.sql"
     "tests/db/02d_verify_overwrite_and_advisory_warning.sql"

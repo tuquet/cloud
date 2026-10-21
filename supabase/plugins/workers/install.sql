@@ -11,27 +11,27 @@
 
 -- 1. Create Dedicated Schema & Permissions
 CREATE SCHEMA IF NOT EXISTS runners;
-GRANT USAGE ON SCHEMA runners TO authenticated, service_role, anon;
-ALTER DEFAULT PRIVILEGES IN SCHEMA runners GRANT ALL ON TABLES TO authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA runners GRANT ALL ON FUNCTIONS TO authenticated, service_role;
-ALTER DEFAULT PRIVILEGES IN SCHEMA runners GRANT ALL ON SEQUENCES TO authenticated, service_role;
+GRANT USAGE ON SCHEMA workers TO authenticated, service_role, anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA workers GRANT ALL ON TABLES TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA workers GRANT ALL ON FUNCTIONS TO authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA workers GRANT ALL ON SEQUENCES TO authenticated, service_role;
 
--- 2. Enums in schema runners
+-- 2. Enums in SCHEMA workers
 DO $$ BEGIN
-    CREATE TYPE runners.device_status AS ENUM ('offline', 'idle', 'busy', 'maintenance', 'disabled');
+    CREATE TYPE workers.device_status AS ENUM ('offline', 'idle', 'busy', 'maintenance', 'disabled');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
 
--- 3. Tables in schema runners
+-- 3. Tables in SCHEMA workers
 
 -- 3.1. Physical Devices & Compute Workstations Registry
-CREATE TABLE IF NOT EXISTS runners.devices (
+CREATE TABLE IF NOT EXISTS workers.devices (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     name VARCHAR(128) NOT NULL,
     machine_fingerprint VARCHAR(128) NOT NULL,
-    status runners.device_status NOT NULL DEFAULT 'offline',
+    status workers.device_status NOT NULL DEFAULT 'offline',
     version VARCHAR(32) NOT NULL DEFAULT '0.1.0',
     os_info VARCHAR(128),
     cpu_cores INT NOT NULL DEFAULT 1 CHECK (cpu_cores >= 1),
@@ -45,17 +45,17 @@ CREATE TABLE IF NOT EXISTS runners.devices (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     telemetry JSONB NOT NULL DEFAULT '{}'::jsonb,
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT uq_runners_devices_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint),
-    CONSTRAINT uq_runners_devices_tenant_id UNIQUE (tenant_id, id)
+    CONSTRAINT uq_workers_devices_tenant_fingerprint UNIQUE (tenant_id, machine_fingerprint),
+    CONSTRAINT uq_workers_devices_tenant_id UNIQUE (tenant_id, id)
 );
 
-COMMENT ON TABLE runners.devices IS '[Plugin: runners] Registered physical workstations and edge worker nodes';
+COMMENT ON TABLE workers.devices IS '[Plugin: runners] Registered physical workstations and edge worker nodes';
 
-CREATE INDEX IF NOT EXISTS idx_runners_devices_tenant_status ON runners.devices (tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_runners_devices_heartbeat ON runners.devices (last_heartbeat_at);
+CREATE INDEX IF NOT EXISTS idx_workers_devices_tenant_status ON workers.devices (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_devices_heartbeat ON workers.devices (last_heartbeat_at);
 
 -- 3.2. Central Multi-Tenant Proxy Pool
-CREATE TABLE IF NOT EXISTS runners.proxies (
+CREATE TABLE IF NOT EXISTS workers.proxies (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     host VARCHAR(255) NOT NULL,
@@ -74,15 +74,15 @@ CREATE TABLE IF NOT EXISTS runners.proxies (
     is_residential BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    CONSTRAINT uq_runners_proxies_tenant_endpoint UNIQUE (tenant_id, host, port, protocol, username)
+    CONSTRAINT uq_workers_proxies_tenant_endpoint UNIQUE (tenant_id, host, port, protocol, username)
 );
 
-COMMENT ON TABLE runners.proxies IS '[Plugin: runners] Central multi-tenant pool of residential, datacenter, and mobile proxies';
+COMMENT ON TABLE workers.proxies IS '[Plugin: runners] Central multi-tenant pool of residential, datacenter, and mobile proxies';
 
-CREATE INDEX IF NOT EXISTS idx_runners_proxies_tenant_status ON runners.proxies (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_proxies_tenant_status ON workers.proxies (tenant_id, status);
 
 -- 3.3. Central Cloud Browser Profiles (GoLogin / AdsPower Architecture)
-CREATE TABLE IF NOT EXISTS runners.browsers (
+CREATE TABLE IF NOT EXISTS workers.browsers (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     name VARCHAR(128) NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS runners.browsers (
     accept_languages TEXT NOT NULL DEFAULT 'vi-VN,vi,en-US,en',
 
     -- Network, Proxy & WebRTC STUN Shielding
-    proxy_id UUID REFERENCES runners.proxies(id) ON DELETE SET NULL,
+    proxy_id UUID REFERENCES workers.proxies(id) ON DELETE SET NULL,
     custom_proxy TEXT,
     webrtc_mode VARCHAR(32) NOT NULL DEFAULT 'proxy_shielded',
 
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS runners.browsers (
 
     -- Distributed Lease Lock & Execution State (Last-Write-Wins with In-Use Advisory)
     status VARCHAR(32) NOT NULL DEFAULT 'idle',
-    locked_by_device_id UUID REFERENCES runners.devices(id) ON DELETE SET NULL,
+    locked_by_device_id UUID REFERENCES workers.devices(id) ON DELETE SET NULL,
     locked_at TIMESTAMPTZ,
     last_launched_at TIMESTAMPTZ,
 
@@ -122,18 +122,18 @@ CREATE TABLE IF NOT EXISTS runners.browsers (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
 
-    CONSTRAINT chk_runners_browsers_status CHECK (status IN ('idle', 'running', 'syncing', 'error'))
+    CONSTRAINT chk_workers_browsers_status CHECK (status IN ('idle', 'running', 'syncing', 'error'))
 );
 
-COMMENT ON TABLE runners.browsers IS '[Plugin: runners] Central cloud inventory of virtual anti-detect browser profiles, fingerprints, and session storage';
+COMMENT ON TABLE workers.browsers IS '[Plugin: runners] Central cloud inventory of virtual anti-detect browser profiles, fingerprints, and session storage';
 
-CREATE INDEX IF NOT EXISTS idx_runners_browsers_tenant_status ON runners.browsers (tenant_id, status);
-CREATE INDEX IF NOT EXISTS idx_runners_browsers_locked ON runners.browsers (locked_by_device_id);
-CREATE INDEX IF NOT EXISTS idx_runners_browsers_proxy_id ON runners.browsers (proxy_id);
-CREATE INDEX IF NOT EXISTS idx_runners_browsers_created_brin ON runners.browsers USING brin (created_at);
+CREATE INDEX IF NOT EXISTS idx_workers_browsers_tenant_status ON workers.browsers (tenant_id, status);
+CREATE INDEX IF NOT EXISTS idx_workers_browsers_locked ON workers.browsers (locked_by_device_id);
+CREATE INDEX IF NOT EXISTS idx_workers_browsers_proxy_id ON workers.browsers (proxy_id);
+CREATE INDEX IF NOT EXISTS idx_workers_browsers_created_brin ON workers.browsers USING brin (created_at);
 
 -- 3.4. Node-Local Discovered Browsers Inventory
-CREATE TABLE IF NOT EXISTS runners.node_browsers (
+CREATE TABLE IF NOT EXISTS workers.node_browsers (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
     tenant_id UUID NOT NULL,
     device_id UUID NOT NULL,
@@ -146,14 +146,14 @@ CREATE TABLE IF NOT EXISTS runners.node_browsers (
     last_seen_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
-    CONSTRAINT fk_runners_node_browsers_device FOREIGN KEY (tenant_id, device_id)
-        REFERENCES runners.devices (tenant_id, id) ON DELETE CASCADE,
-    CONSTRAINT uq_runners_node_browsers_profile UNIQUE (device_id, local_profile_id)
+    CONSTRAINT fk_workers_node_browsers_device FOREIGN KEY (tenant_id, device_id)
+        REFERENCES workers.devices (tenant_id, id) ON DELETE CASCADE,
+    CONSTRAINT uq_workers_node_browsers_profile UNIQUE (device_id, local_profile_id)
 );
 
-COMMENT ON TABLE runners.node_browsers IS '[Plugin: runners] Node-local browser profiles inventory discovered by edge workers';
+COMMENT ON TABLE workers.node_browsers IS '[Plugin: runners] Node-local browser profiles inventory discovered by edge workers';
 
-CREATE INDEX IF NOT EXISTS idx_runners_node_browsers_device ON runners.node_browsers (device_id);
+CREATE INDEX IF NOT EXISTS idx_workers_node_browsers_device ON workers.node_browsers (device_id);
 
 -- 4. Supabase Storage Bucket for Browser Profiles Session Archives
 DO $$ BEGIN
@@ -174,59 +174,59 @@ DO $$ BEGIN
 END $$;
 
 -- 5. Row Level Security Policies
-ALTER TABLE runners.devices ENABLE ROW LEVEL SECURITY;
-ALTER TABLE runners.proxies ENABLE ROW LEVEL SECURITY;
-ALTER TABLE runners.browsers ENABLE ROW LEVEL SECURITY;
-ALTER TABLE runners.node_browsers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workers.devices ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workers.proxies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workers.browsers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workers.node_browsers ENABLE ROW LEVEL SECURITY;
 
 DO $$ BEGIN
-    DROP POLICY IF EXISTS "devices_select" ON runners.devices;
-    DROP POLICY IF EXISTS "devices_manage" ON runners.devices;
-    DROP POLICY IF EXISTS "proxies_select" ON runners.proxies;
-    DROP POLICY IF EXISTS "proxies_manage" ON runners.proxies;
-    DROP POLICY IF EXISTS "browsers_select" ON runners.browsers;
-    DROP POLICY IF EXISTS "browsers_manage" ON runners.browsers;
-    DROP POLICY IF EXISTS "node_browsers_select" ON runners.node_browsers;
-    DROP POLICY IF EXISTS "node_browsers_manage" ON runners.node_browsers;
+    DROP POLICY IF EXISTS "devices_select" ON workers.devices;
+    DROP POLICY IF EXISTS "devices_manage" ON workers.devices;
+    DROP POLICY IF EXISTS "proxies_select" ON workers.proxies;
+    DROP POLICY IF EXISTS "proxies_manage" ON workers.proxies;
+    DROP POLICY IF EXISTS "browsers_select" ON workers.browsers;
+    DROP POLICY IF EXISTS "browsers_manage" ON workers.browsers;
+    DROP POLICY IF EXISTS "node_browsers_select" ON workers.node_browsers;
+    DROP POLICY IF EXISTS "node_browsers_manage" ON workers.node_browsers;
 EXCEPTION WHEN undefined_object THEN null;
 END $$;
 
-CREATE POLICY "devices_select" ON runners.devices
+CREATE POLICY "devices_select" ON workers.devices
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
-CREATE POLICY "devices_manage" ON runners.devices
+CREATE POLICY "devices_manage" ON workers.devices
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'runners:devices:manage') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'workers:devices:manage') OR public.is_tenant_admin(tenant_id));
 
-CREATE POLICY "proxies_select" ON runners.proxies
+CREATE POLICY "proxies_select" ON workers.proxies
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
-CREATE POLICY "proxies_manage" ON runners.proxies
+CREATE POLICY "proxies_manage" ON workers.proxies
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'runners:proxies:manage') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'workers:proxies:manage') OR public.is_tenant_admin(tenant_id));
 
-CREATE POLICY "browsers_select" ON runners.browsers
+CREATE POLICY "browsers_select" ON workers.browsers
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
-CREATE POLICY "browsers_manage" ON runners.browsers
+CREATE POLICY "browsers_manage" ON workers.browsers
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'runners:browsers:manage') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'workers:browsers:manage') OR public.is_tenant_admin(tenant_id));
 
-CREATE POLICY "node_browsers_select" ON runners.node_browsers
+CREATE POLICY "node_browsers_select" ON workers.node_browsers
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
-CREATE POLICY "node_browsers_manage" ON runners.node_browsers
+CREATE POLICY "node_browsers_manage" ON workers.node_browsers
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'runners:devices:manage') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'workers:devices:manage') OR public.is_tenant_admin(tenant_id));
 
 -- 6. Core Stored Procedures & RPC Functions (Hardened CWE-426 Protection)
 
 -- 6.1. Zero-Touch Device Enrollment
-CREATE OR REPLACE FUNCTION runners.enroll_device(
+CREATE OR REPLACE FUNCTION workers.enroll_device(
     p_machine_fingerprint VARCHAR(128),
     p_name VARCHAR(128),
     p_os_info VARCHAR(128) DEFAULT NULL,
@@ -265,7 +265,7 @@ BEGIN
     v_token_hash := encode(extensions.digest(v_raw_token, 'sha256'), 'hex');
 
     -- Upsert Device in registry
-    INSERT INTO runners.devices (
+    INSERT INTO workers.devices (
         tenant_id, name, machine_fingerprint, status, os_info,
         cpu_cores, ram_mb, capabilities, device_token_hash,
         metadata, last_heartbeat_at
@@ -278,12 +278,12 @@ BEGIN
     ON CONFLICT (tenant_id, machine_fingerprint)
     DO UPDATE SET
         name = EXCLUDED.name,
-        os_info = COALESCE(EXCLUDED.os_info, runners.devices.os_info),
+        os_info = COALESCE(EXCLUDED.os_info, workers.devices.os_info),
         cpu_cores = EXCLUDED.cpu_cores,
         ram_mb = EXCLUDED.ram_mb,
         capabilities = EXCLUDED.capabilities,
         device_token_hash = v_token_hash,
-        metadata = runners.devices.metadata || EXCLUDED.metadata,
+        metadata = workers.devices.metadata || EXCLUDED.metadata,
         status = 'idle',
         last_heartbeat_at = timezone('utc'::text, now()),
         updated_at = timezone('utc'::text, now())
@@ -301,7 +301,7 @@ END;
 $$;
 
 -- 6.2. Device Heartbeat & Telemetry
-CREATE OR REPLACE FUNCTION runners.heartbeat(
+CREATE OR REPLACE FUNCTION workers.heartbeat(
     p_device_id UUID,
     p_device_token TEXT,
     p_active_jobs INT DEFAULT 0,
@@ -319,20 +319,20 @@ BEGIN
     v_token_hash := encode(extensions.digest(p_device_token, 'sha256'), 'hex');
 
     SELECT id, tenant_id, status, config_override INTO v_device
-    FROM runners.devices
+    FROM workers.devices
     WHERE id = p_device_id AND device_token_hash = v_token_hash;
 
     IF v_device.id IS NULL THEN
         RETURN jsonb_build_object('success', false, 'error', 'Invalid device credentials');
     END IF;
 
-    UPDATE runners.devices
+    UPDATE workers.devices
     SET 
         active_jobs = p_active_jobs,
-        status = CASE WHEN p_active_jobs > 0 THEN 'busy'::runners.device_status ELSE 'idle'::runners.device_status END,
+        status = CASE WHEN p_active_jobs > 0 THEN 'busy'::workers.device_status ELSE 'idle'::workers.device_status END,
         last_heartbeat_at = timezone('utc'::text, now()),
         telemetry = p_telemetry,
-        metadata = runners.devices.metadata || jsonb_build_object('telemetry', p_telemetry)
+        metadata = workers.devices.metadata || jsonb_build_object('telemetry', p_telemetry)
     WHERE id = v_device.id;
 
     RETURN jsonb_build_object(
@@ -345,7 +345,7 @@ END;
 $$;
 
 -- 6.3. Acquire Browser Profile (Optimistic Overwrite & Advisory In-Use Warning)
-CREATE OR REPLACE FUNCTION runners.acquire_browser(
+CREATE OR REPLACE FUNCTION workers.acquire_browser(
     p_browser_id UUID,
     p_device_id UUID,
     p_device_token TEXT
@@ -371,7 +371,7 @@ BEGIN
 
     -- 1. Authenticate Device
     SELECT tenant_id, name INTO v_device_tenant_id, v_device_name
-    FROM runners.devices
+    FROM workers.devices
     WHERE id = p_device_id AND device_token_hash = v_token_hash;
 
     IF v_device_tenant_id IS NULL THEN
@@ -380,7 +380,7 @@ BEGIN
 
     -- 2. Fetch Browser Profile with Row Lock
     SELECT * INTO v_browser
-    FROM runners.browsers
+    FROM workers.browsers
     WHERE id = p_browser_id AND tenant_id = v_device_tenant_id
     FOR UPDATE;
 
@@ -395,7 +395,7 @@ BEGIN
         v_active_since := v_browser.locked_at;
 
         SELECT name INTO v_active_device_name
-        FROM runners.devices
+        FROM workers.devices
         WHERE id = v_active_device_id;
 
         IF v_active_device_name IS NULL THEN
@@ -405,7 +405,7 @@ BEGIN
 
     -- 4. Resolve Proxy Configuration
     IF v_browser.proxy_id IS NOT NULL THEN
-        SELECT * INTO v_proxy FROM runners.proxies WHERE id = v_browser.proxy_id AND tenant_id = v_device_tenant_id;
+        SELECT * INTO v_proxy FROM workers.proxies WHERE id = v_browser.proxy_id AND tenant_id = v_device_tenant_id;
         IF v_proxy.id IS NOT NULL THEN
             IF v_proxy.username IS NOT NULL AND v_proxy.username <> '' THEN
                 v_resolved_proxy := format('%s://%s:%s@%s:%s', v_proxy.protocol, v_proxy.username, COALESCE(v_proxy.password_hash, ''), v_proxy.host, v_proxy.port);
@@ -418,7 +418,7 @@ BEGIN
     END IF;
 
     -- 5. Optimistic Overwrite: Transfer active session tracking to requesting device
-    UPDATE runners.browsers
+    UPDATE workers.browsers
     SET 
         status = 'running',
         locked_by_device_id = p_device_id,
@@ -468,7 +468,7 @@ END;
 $$;
 
 -- 6.4. Release Browser Profile (Last-Write-Wins Session Storage Sync)
-CREATE OR REPLACE FUNCTION runners.release_browser(
+CREATE OR REPLACE FUNCTION workers.release_browser(
     p_browser_id UUID,
     p_device_id UUID,
     p_device_token TEXT,
@@ -493,7 +493,7 @@ BEGIN
 
     -- 1. Authenticate Device
     SELECT tenant_id INTO v_device_tenant_id
-    FROM runners.devices
+    FROM workers.devices
     WHERE id = p_device_id AND device_token_hash = v_token_hash;
 
     IF v_device_tenant_id IS NULL THEN
@@ -502,7 +502,7 @@ BEGIN
 
     -- 2. Fetch Browser Profile with Row Lock
     SELECT * INTO v_browser
-    FROM runners.browsers
+    FROM workers.browsers
     WHERE id = p_browser_id AND tenant_id = v_device_tenant_id
     FOR UPDATE;
 
@@ -516,7 +516,7 @@ BEGIN
     END IF;
 
     -- 4. Last-Write-Wins: Persist latest session snapshot and reset status to idle
-    UPDATE runners.browsers
+    UPDATE workers.browsers
     SET 
         status = 'idle',
         locked_by_device_id = NULL,
@@ -541,7 +541,7 @@ END;
 $$;
 
 -- 6.5. Create Browser Profile (Deterministic Fingerprints & Strict Tenant Scoping)
-CREATE OR REPLACE FUNCTION runners.create_browser(
+CREATE OR REPLACE FUNCTION workers.create_browser(
     p_name VARCHAR(128),
     p_fingerprint_seed BIGINT DEFAULT NULL,
     p_os_platform VARCHAR(32) DEFAULT 'windows',
@@ -566,7 +566,7 @@ DECLARE
 BEGIN
     -- Authenticate caller: If caller specified p_tenant_id, verify permission
     IF v_tenant_id IS NOT NULL THEN
-        IF auth.uid() IS NOT NULL AND NOT (public.has_tenant_permission(v_tenant_id, 'runners:browsers:manage') OR public.is_tenant_admin(v_tenant_id)) THEN
+        IF auth.uid() IS NOT NULL AND NOT (public.has_tenant_permission(v_tenant_id, 'workers:browsers:manage') OR public.is_tenant_admin(v_tenant_id)) THEN
             RAISE EXCEPTION 'Unauthorized: Insufficient permissions to create browser in specified tenant'
                 USING ERRCODE = '42501';
         END IF;
@@ -592,7 +592,7 @@ BEGIN
         v_seed := floor(random() * 2147483647)::bigint;
     END IF;
 
-    INSERT INTO runners.browsers (
+    INSERT INTO workers.browsers (
         tenant_id, name, browser_type, engine_version,
         fingerprint_seed, os_platform, os_version, browser_brand,
         cpu_cores, ram_gb, timezone, locale, accept_languages,
@@ -619,7 +619,7 @@ END;
 $$;
 
 -- 6.6. List Browser Profiles (Secure Tenant Scoping & Device Token Validation)
-CREATE OR REPLACE FUNCTION runners.list_browsers(
+CREATE OR REPLACE FUNCTION workers.list_browsers(
     p_device_id UUID DEFAULT NULL,
     p_device_token TEXT DEFAULT NULL
 )
@@ -637,7 +637,7 @@ BEGIN
     IF p_device_id IS NOT NULL AND p_device_token IS NOT NULL THEN
         v_token_hash := encode(extensions.digest(p_device_token, 'sha256'), 'hex');
         SELECT tenant_id INTO v_tenant_id
-        FROM runners.devices
+        FROM workers.devices
         WHERE id = p_device_id AND device_token_hash = v_token_hash;
     END IF;
 
@@ -683,7 +683,7 @@ BEGIN
             'updated_at', b.updated_at
         ) ORDER BY b.created_at ASC
     ), '[]'::jsonb) INTO v_browsers
-    FROM runners.browsers b
+    FROM workers.browsers b
     WHERE b.tenant_id = v_tenant_id;
 
     RETURN v_browsers;
@@ -703,7 +703,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN runners.heartbeat(p_device_id, p_device_token, p_active_jobs, p_telemetry);
+    RETURN workers.heartbeat(p_device_id, p_device_token, p_active_jobs, p_telemetry);
 END;
 $$;
 
@@ -718,7 +718,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN runners.acquire_browser(p_browser_id, p_device_id, p_device_token);
+    RETURN workers.acquire_browser(p_browser_id, p_device_id, p_device_token);
 END;
 $$;
 
@@ -738,7 +738,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN runners.release_browser(
+    RETURN workers.release_browser(
         p_browser_id, p_device_id, p_device_token,
         p_storage_path, p_storage_size_bytes, p_storage_hash,
         p_cookies_count, p_metadata
@@ -765,7 +765,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN runners.create_browser(
+    RETURN workers.create_browser(
         p_name => p_name,
         p_fingerprint_seed => p_fingerprint_seed,
         p_os_platform => p_os_platform,
@@ -791,12 +791,12 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN runners.list_browsers(p_device_id, p_device_token);
+    RETURN workers.list_browsers(p_device_id, p_device_token);
 END;
 $$;
 
 -- 6.7. Dead Lease Reaper Engine (Auto-Reap Stale Browser Locks)
-CREATE OR REPLACE FUNCTION runners.reap_stale_browser_locks(
+CREATE OR REPLACE FUNCTION workers.reap_stale_browser_locks(
     p_stale_interval INTERVAL DEFAULT '5 minutes'
 )
 RETURNS TABLE (
@@ -813,8 +813,8 @@ BEGIN
     RETURN QUERY
     WITH stale_locks AS (
         SELECT b.id, b.tenant_id, b.name, b.locked_by_device_id
-        FROM runners.browsers b
-        LEFT JOIN runners.devices d ON d.id = b.locked_by_device_id
+        FROM workers.browsers b
+        LEFT JOIN workers.devices d ON d.id = b.locked_by_device_id
         WHERE b.status = 'running'
           AND b.locked_by_device_id IS NOT NULL
           AND (
@@ -823,7 +823,7 @@ BEGIN
               OR (b.locked_at < (timezone('utc'::text, now()) - p_stale_interval) AND d.status = 'offline')
           )
     )
-    UPDATE runners.browsers b
+    UPDATE workers.browsers b
     SET 
         status = 'idle',
         locked_by_device_id = NULL,
@@ -849,20 +849,20 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    RETURN QUERY SELECT * FROM runners.reap_stale_browser_locks(p_stale_interval);
+    RETURN QUERY SELECT * FROM workers.reap_stale_browser_locks(p_stale_interval);
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION runners.reap_stale_browser_locks(INTERVAL) TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION workers.reap_stale_browser_locks(INTERVAL) TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION public.reap_stale_browser_locks(INTERVAL) TO authenticated, service_role;
 
 -- Secure Permissions & Grants (Device Token and JWT Authenticated)
-GRANT EXECUTE ON FUNCTION runners.enroll_device TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION runners.heartbeat TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION runners.acquire_browser TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION runners.release_browser TO authenticated, anon, service_role;
-GRANT EXECUTE ON FUNCTION runners.create_browser TO authenticated, service_role;
-GRANT EXECUTE ON FUNCTION runners.list_browsers TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION workers.enroll_device TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION workers.heartbeat TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION workers.acquire_browser TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION workers.release_browser TO authenticated, anon, service_role;
+GRANT EXECUTE ON FUNCTION workers.create_browser TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION workers.list_browsers TO authenticated, anon, service_role;
 
 GRANT EXECUTE ON FUNCTION public.heartbeat TO authenticated, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.acquire_browser TO authenticated, anon, service_role;
@@ -873,13 +873,13 @@ GRANT EXECUTE ON FUNCTION public.list_browsers TO authenticated, anon, service_r
 -- 8. Register Permissions into Base Core Dictionary
 INSERT INTO public.permissions (id, module, description)
 VALUES 
-    ('runners:devices:read',    'runners', 'View registered runner nodes and live status'),
-    ('runners:devices:manage',  'runners', 'Configure, pause, or remove runner devices'),
-    ('runners:devices:enroll',  'runners', 'Enroll new physical workstations and edge nodes'),
-    ('runners:proxies:read',    'runners', 'View proxy pool and health telemetry within tenant'),
-    ('runners:proxies:manage',  'runners', 'Create, update, delete, and assign proxies within tenant'),
-    ('runners:browsers:read',   'runners', 'View virtual browser profiles and fingerprint configurations'),
-    ('runners:browsers:manage', 'runners', 'Create, update, delete, and control virtual browser profiles')
+    ('workers:devices:read',    'runners', 'View registered runner nodes and live status'),
+    ('workers:devices:manage',  'runners', 'Configure, pause, or remove runner devices'),
+    ('workers:devices:enroll',  'runners', 'Enroll new physical workstations and edge nodes'),
+    ('workers:proxies:read',    'runners', 'View proxy pool and health telemetry within tenant'),
+    ('workers:proxies:manage',  'runners', 'Create, update, delete, and assign proxies within tenant'),
+    ('workers:browsers:read',   'runners', 'View virtual browser profiles and fingerprint configurations'),
+    ('workers:browsers:manage', 'runners', 'Create, update, delete, and control virtual browser profiles')
 ON CONFLICT (id) DO UPDATE SET 
     module = EXCLUDED.module,
     description = EXCLUDED.description;
@@ -889,9 +889,9 @@ INSERT INTO public.role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM public.roles r
 CROSS JOIN (
     VALUES 
-        ('runners:devices:read'), ('runners:devices:manage'), ('runners:devices:enroll'),
-        ('runners:proxies:read'), ('runners:proxies:manage'),
-        ('runners:browsers:read'), ('runners:browsers:manage')
+        ('workers:devices:read'), ('workers:devices:manage'), ('workers:devices:enroll'),
+        ('workers:proxies:read'), ('workers:proxies:manage'),
+        ('workers:browsers:read'), ('workers:browsers:manage')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name IN ('owner', 'admin')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -900,8 +900,8 @@ INSERT INTO public.role_permissions (role_id, permission_id)
 SELECT r.id, p.id FROM public.roles r
 CROSS JOIN (
     VALUES 
-        ('runners:devices:read'), ('runners:proxies:read'), ('runners:browsers:read'),
-        ('runners:browsers:manage')
+        ('workers:devices:read'), ('workers:proxies:read'), ('workers:browsers:read'),
+        ('workers:browsers:manage')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;

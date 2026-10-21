@@ -1,0 +1,22 @@
+{
+  "id": "browsers",
+  "name": "Cloud Browser Profiles & Antidetect Engine Catalog",
+  "version": "1.0.0",
+  "schema": "browsers",
+  "description": "Virtual antidetect browser profiles, deterministic hardware fingerprints, remote Chromium engine release catalog, and session storage sync",
+  "dependencies": ["core-iam"],
+  "tables": [
+    "browsers.releases",
+    "browsers.profiles",
+    "browsers.fingerprint_templates"
+  ],
+  "permissions": [
+    "browsers:releases:read",
+    "browsers:releases:manage",
+    "browsers:profiles:read",
+    "browsers:profiles:write",
+    "browsers:profiles:manage",
+    "browsers:templates:read",
+    "browsers:templates:manage"
+  ]
+}

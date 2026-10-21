@@ -13,6 +13,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Đảm bảo các schema ứng dụng cốt lõi tồn tại cho PostgREST và Plugin Engine
 CREATE SCHEMA IF NOT EXISTS runners;
+CREATE SCHEMA IF NOT EXISTS workers;
+CREATE SCHEMA IF NOT EXISTS browsers;
 CREATE SCHEMA IF NOT EXISTS automation;
 CREATE SCHEMA IF NOT EXISTS media;
 CREATE SCHEMA IF NOT EXISTS billing;
@@ -20,6 +22,8 @@ CREATE SCHEMA IF NOT EXISTS events;
 CREATE SCHEMA IF NOT EXISTS commerce;
 
 GRANT USAGE ON SCHEMA runners TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA workers TO anon, authenticated, service_role;
+GRANT USAGE ON SCHEMA browsers TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA automation TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA media TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA billing TO anon, authenticated, service_role;

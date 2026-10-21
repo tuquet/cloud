@@ -1,0 +1,20 @@
+{
+  "id": "workers",
+  "name": "Workers & Compute Fleet",
+  "version": "1.0.0",
+  "schema": "workers",
+  "description": "Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, central cloud browsers, and live telemetry",
+  "dependencies": ["core-iam"],
+  "tables": [
+    "workers.devices",
+    "workers.proxies",
+    "workers.node_browsers"
+  ],
+  "permissions": [
+    "workers:devices:read",
+    "workers:devices:manage",
+    "workers:devices:enroll",
+    "workers:proxies:read",
+    "workers:proxies:manage"
+  ]
+}

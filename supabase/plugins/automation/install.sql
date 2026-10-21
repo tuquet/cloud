@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS automation.campaign_runs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     workflow_id UUID,
-    runner_id UUID,
+    worker_id UUID,
     name VARCHAR(255) NOT NULL,
     status automation.campaign_status NOT NULL DEFAULT 'pending',
     total_tasks INT NOT NULL DEFAULT 0 CHECK (total_tasks >= 0),
@@ -114,7 +114,7 @@ CREATE TABLE IF NOT EXISTS automation.campaign_runs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     CONSTRAINT fk_automation_campaign_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automation.workflows(tenant_id, id) ON DELETE SET NULL,
-    CONSTRAINT fk_automation_campaign_runner FOREIGN KEY (tenant_id, runner_id) REFERENCES runners.devices(tenant_id, id) ON DELETE SET NULL
+    CONSTRAINT fk_automation_campaign_worker FOREIGN KEY (tenant_id, worker_id) REFERENCES workers.devices(tenant_id, id) ON DELETE SET NULL
 );
 
 -- 3.4. Execution Logs
@@ -167,7 +167,7 @@ CREATE INDEX IF NOT EXISTS idx_automation_schedules_tenant ON automation.schedul
 
 -- 5.1. High-Performance Atomic Campaign Claiming (`FOR UPDATE SKIP LOCKED`)
 CREATE OR REPLACE FUNCTION automation.claim_next_campaign_run(
-    p_runner_id UUID,
+    p_worker_id UUID,
     p_batch_size INT DEFAULT 1
 )
 RETURNS SETOF automation.campaign_runs
@@ -179,11 +179,11 @@ DECLARE
     v_tenant_id UUID;
 BEGIN
     SELECT tenant_id INTO v_tenant_id
-    FROM runners.devices
-    WHERE id = p_runner_id AND status IN ('idle', 'running');
+    FROM workers.devices
+    WHERE id = p_worker_id AND status IN ('idle', 'running');
 
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'Runner % is invalid or offline', p_runner_id;
+        RAISE EXCEPTION 'Runner % is invalid or offline', p_worker_id;
     END IF;
 
     RETURN QUERY
@@ -198,7 +198,7 @@ BEGIN
     )
     UPDATE automation.campaign_runs r
     SET 
-        runner_id = p_runner_id,
+        worker_id = p_worker_id,
         status = 'running',
         started_at = timezone('utc'::text, now()),
         updated_at = timezone('utc'::text, now())
@@ -222,14 +222,14 @@ DECLARE
 BEGIN
     WITH dead_runners AS (
         SELECT id, tenant_id
-        FROM runners.devices
+        FROM workers.devices
         WHERE last_heartbeat_at < (timezone('utc'::text, now()) - p_stale_interval)
            OR status = 'offline'
     ),
     stale_runs AS (
         SELECT r.id
         FROM automation.campaign_runs r
-        JOIN dead_runners d ON r.runner_id = d.id AND r.tenant_id = d.tenant_id
+        JOIN dead_runners d ON r.worker_id = d.id AND r.tenant_id = d.tenant_id
         WHERE r.status = 'running'
         FOR UPDATE OF r SKIP LOCKED
     )

@@ -19,7 +19,8 @@ echo "===================================================================="
 if [[ "$ACTION" == "uninstall" ]]; then
     CANONICAL_PLUGINS=(
         "automation:supabase/plugins/automation/uninstall.sql:Automation Cloud Bridge (schema: automation)"
-        "runners:supabase/plugins/runners/uninstall.sql:Runners & Compute Fleet (schema: runners)"
+        "browsers:supabase/plugins/browsers/uninstall.sql:Cloud Browser Profiles (schema: browsers)"
+        "workers:supabase/plugins/workers/uninstall.sql:Workers & Compute Fleet (schema: workers)"
         "webhooks:supabase/plugins/webhooks/uninstall.sql:Asynchronous Outbox & Webhooks (schema: events)"
         "subscriptions:supabase/plugins/subscriptions/uninstall.sql:Subscriptions & Quota (schema: billing)"
         "storage:supabase/plugins/storage/uninstall.sql:Media Storage Assets (schema: media)"
@@ -29,7 +30,8 @@ else
         "storage:supabase/plugins/storage/install.sql:Media Storage Assets (schema: media)"
         "subscriptions:supabase/plugins/subscriptions/install.sql:Subscriptions & Quota (schema: billing)"
         "webhooks:supabase/plugins/webhooks/install.sql:Asynchronous Outbox & Webhooks (schema: events)"
-        "runners:supabase/plugins/runners/install.sql:Runners & Compute Fleet (schema: runners)"
+        "workers:supabase/plugins/workers/install.sql:Workers & Compute Fleet (schema: workers)"
+        "browsers:supabase/plugins/browsers/install.sql:Cloud Browser Profiles (schema: browsers)"
         "automation:supabase/plugins/automation/install.sql:Automation Cloud Bridge (schema: automation)"
     )
 fi

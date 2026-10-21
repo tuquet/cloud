@@ -9,7 +9,7 @@ param (
     [ValidateSet('local', 'dev', 'linked')]
     [string]$Target = 'local',
 
-    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'runners', 'automation')]
+    [ValidateSet('all', 'storage', 'subscriptions', 'webhooks', 'workers', 'browsers', 'runners', 'automation')]
     [string]$Plugin = 'all',
 
     [ValidateSet('install', 'uninstall')]
@@ -31,7 +31,8 @@ $CanonicalOrder = @(
     @{ Id = 'storage';       Install = 'supabase/plugins/storage/install.sql';       Uninstall = 'supabase/plugins/storage/uninstall.sql';       Desc = 'Media Storage Assets (schema: media)' },
     @{ Id = 'subscriptions'; Install = 'supabase/plugins/subscriptions/install.sql'; Uninstall = 'supabase/plugins/subscriptions/uninstall.sql'; Desc = 'Subscriptions & Quota (schema: billing)' },
     @{ Id = 'webhooks';      Install = 'supabase/plugins/webhooks/install.sql';      Uninstall = 'supabase/plugins/webhooks/uninstall.sql';      Desc = 'Asynchronous Outbox & Webhooks (schema: events)' },
-    @{ Id = 'runners';       Install = 'supabase/plugins/runners/install.sql';       Uninstall = 'supabase/plugins/runners/uninstall.sql';       Desc = 'Runners & Compute Fleet (schema: runners)' },
+    @{ Id = 'workers';       Install = 'supabase/plugins/workers/install.sql';       Uninstall = 'supabase/plugins/workers/uninstall.sql';       Desc = 'Workers & Compute Fleet (schema: workers)' },
+    @{ Id = 'browsers';      Install = 'supabase/plugins/browsers/install.sql';      Uninstall = 'supabase/plugins/browsers/uninstall.sql';      Desc = 'Cloud Browser Profiles & Engine Catalog (schema: browsers)' },
     @{ Id = 'automation';     Install = 'supabase/plugins/automation/install.sql';     Uninstall = 'supabase/plugins/automation/uninstall.sql';     Desc = 'Automation Cloud Bridge (schema: automation)' }
 )
 

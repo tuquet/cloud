@@ -1,6 +1,6 @@
 -- ============================================================================
--- TUQUET-CLOUD PLUGIN: RUNNERS & COMPUTE FLEET (UNINSTALLATION SCRIPT)
--- Plugin ID: runners
+-- TUQUET-CLOUD PLUGIN: workers & COMPUTE FLEET (UNINSTALLATION SCRIPT)
+-- Plugin ID: workers
 -- ============================================================================
 
 -- 1. Drop Public PostgREST Facades
@@ -12,11 +12,11 @@ DROP FUNCTION IF EXISTS public.list_browsers(UUID, TEXT);
 DROP FUNCTION IF EXISTS public.reap_stale_browser_locks(INTERVAL);
 
 -- 2. Unregister Plugin from Catalog
-SELECT public.unregister_plugin('runners', TRUE);
+SELECT public.unregister_plugin('workers', TRUE);
 
 -- 3. Revoke permissions and role mappings
-DELETE FROM public.role_permissions WHERE permission_id LIKE 'runners:%';
-DELETE FROM public.permissions WHERE module = 'runners';
+DELETE FROM public.role_permissions WHERE permission_id LIKE 'workers:%';
+DELETE FROM public.permissions WHERE module = 'workers';
 
 -- 4. Clean up Storage Bucket (if exists)
 DO $$ BEGIN
@@ -26,4 +26,4 @@ DO $$ BEGIN
 END $$;
 
 -- 5. Drop Schema and Cascading Objects
-DROP SCHEMA IF EXISTS runners CASCADE;
+DROP SCHEMA IF EXISTS workers CASCADE;
