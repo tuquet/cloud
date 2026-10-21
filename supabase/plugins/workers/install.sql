@@ -687,7 +687,8 @@ BEGIN
             'locked_by_device_id', b.locked_by_device_id,
             'locked_at', b.locked_at,
             'last_synced_at', b.last_synced_at,
-            'updated_at', b.updated_at
+            'updated_at', b.updated_at,
+            'metadata', b.metadata
         ) ORDER BY b.created_at ASC
     ), '[]'::jsonb) INTO v_browsers
     FROM workers.browsers b
