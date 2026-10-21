@@ -833,6 +833,7 @@ END;
 $$;
 
 -- 6.7. Dead Lease Reaper Engine (Auto-Reap Stale Browser Locks)
+DROP FUNCTION IF EXISTS workers.reap_stale_browser_locks(INTERVAL);
 CREATE OR REPLACE FUNCTION workers.reap_stale_browser_locks(
     p_stale_interval INTERVAL DEFAULT '5 minutes'
 )
@@ -872,6 +873,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.reap_stale_browser_locks(INTERVAL);
 CREATE OR REPLACE FUNCTION public.reap_stale_browser_locks(
     p_stale_interval INTERVAL DEFAULT '5 minutes'
 )
