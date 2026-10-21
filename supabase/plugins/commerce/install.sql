@@ -274,7 +274,7 @@ BEGIN
         v_cat_specter,
         'residential-proxy-pack',
         'Proxy Dan Cu Tinh (Cap Thang Vao Workspace)',
-        'Tu dong khoi tao va gan Proxy truc tiep vao bang runners.proxies cua Tenant',
+        'Tu dong khoi tao va gan Proxy truc tiep vao bang workers.proxies cua Tenant',
         'resource',
         'tenant_only',
         TRUE,
@@ -657,7 +657,7 @@ BEGIN
                 LOOP
                     -- Parse host:port:username:password
                     v_parts := string_to_array(v_stock.secret_payload, ':');
-                    INSERT INTO runners.proxies (
+                    INSERT INTO workers.proxies (
                         tenant_id,
                         host,
                         port,

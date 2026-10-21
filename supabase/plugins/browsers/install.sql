@@ -549,6 +549,6 @@ DO $$ BEGIN
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'runners') THEN
-        CREATE OR REPLACE VIEW runners.browsers AS SELECT * FROM browsers.profiles;
+        CREATE OR REPLACE VIEW workers.browsers AS SELECT * FROM browsers.profiles;
     END IF;
 END $$;

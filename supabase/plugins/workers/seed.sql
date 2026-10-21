@@ -1,13 +1,13 @@
 -- ============================================================================
--- TUQUET-CLOUD PLUGIN: RUNNERS (SEED DATA)
+-- TUQUET-CLOUD PLUGIN: WORKERS (SEED DATA)
 -- Description: Foundation proxies and cloud browser profiles
--- NOTE: runners.devices is NOT seeded here.
+-- NOTE: WORKERS.devices is NOT seeded here.
 --       Physical devices/workstations are dynamically enrolled via Tauri Desk
---       or 'tuquet runner start' using the RPC function runners.enroll_device().
+--       or 'tuquet worker start' using the RPC function WORKERS.enroll_device().
 -- ============================================================================
 
 -- Ensure a default local bridge proxy is available for testing
-INSERT INTO runners.proxies (
+INSERT INTO workers.proxies (
     id, tenant_id, host, port, protocol, country_code, city, status, latency_ms, tags
 ) VALUES (
     'fa000000-0000-0000-0000-000000000001',
