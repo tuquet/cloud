@@ -691,6 +691,37 @@ END;
 $$;
 
 -- 7. Public PostgREST Facades (Clean Public Routing for /rest/v1/rpc/)
+CREATE OR REPLACE FUNCTION public.enroll_device(
+    p_machine_fingerprint VARCHAR(128),
+    p_name VARCHAR(128),
+    p_os_info VARCHAR(128) DEFAULT NULL,
+    p_cpu_cores INT DEFAULT 1,
+    p_ram_mb INT DEFAULT 1024,
+    p_capabilities JSONB DEFAULT '[]'::jsonb,
+    p_metadata JSONB DEFAULT '{}'::jsonb,
+    p_enrollment_token TEXT DEFAULT NULL,
+    p_tenant_id UUID DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $
+BEGIN
+    RETURN workers.enroll_device(
+        p_machine_fingerprint,
+        p_name,
+        p_os_info,
+        p_cpu_cores,
+        p_ram_mb,
+        p_capabilities,
+        p_metadata,
+        p_enrollment_token,
+        p_tenant_id
+    );
+END;
+$;
+
 CREATE OR REPLACE FUNCTION public.heartbeat(
     p_device_id UUID,
     p_device_token TEXT,
@@ -864,6 +895,7 @@ GRANT EXECUTE ON FUNCTION workers.release_browser TO authenticated, anon, servic
 GRANT EXECUTE ON FUNCTION workers.create_browser TO authenticated, service_role;
 GRANT EXECUTE ON FUNCTION workers.list_browsers TO authenticated, anon, service_role;
 
+GRANT EXECUTE ON FUNCTION public.enroll_device TO authenticated, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.heartbeat TO authenticated, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.acquire_browser TO authenticated, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.release_browser TO authenticated, anon, service_role;
