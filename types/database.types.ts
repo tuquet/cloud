@@ -1586,6 +1586,10 @@ export type Database = {
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: { _tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
+      is_valid_browser_storage_tenant: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
+      }
       list_browsers: {
         Args: { p_device_id?: string; p_device_token?: string }
         Returns: Json
