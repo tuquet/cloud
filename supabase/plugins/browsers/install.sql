@@ -17,7 +17,7 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON FUNCTIONS TO authentica
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON SEQUENCES TO authenticated, service_role;
 
 -- 2. Storage Bucket for Browser Profile Session Archives (.zip, .tar.zst)
-DO $ BEGIN
+DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'buckets') THEN
         INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
         VALUES (
@@ -106,7 +106,7 @@ DO $ BEGIN
                 )
             );
     END IF;
-END $;
+END $$;
 
 -- 3. Core Tables
 
@@ -414,7 +414,7 @@ BEGIN
 
     RETURN jsonb_build_object('success', true);
 END;
-$;
+$$;
 
 -- 5.4. Upsert Profile (Local CLI -> Central Cloud Sync)
 CREATE OR REPLACE FUNCTION browsers.upsert_profile(
@@ -442,7 +442,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, extensions, browsers, workers
-AS $
+AS $$
 DECLARE
     v_token_hash TEXT;
     v_device_tenant_id UUID;
@@ -507,7 +507,7 @@ BEGIN
         'storage_hash', p_storage_hash
     );
 END;
-$;
+$$;
 
 -- 5.3. Reap Stale Profile Locks
 CREATE OR REPLACE FUNCTION browsers.reap_stale_profile_locks(
@@ -572,7 +572,7 @@ CREATE OR REPLACE FUNCTION public.upsert_browser_profile(
     p_cookies_count INT DEFAULT 0,
     p_metadata JSONB DEFAULT NULL
 )
-RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $
+RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $$
     SELECT browsers.upsert_profile(
         p_profile_id, p_device_id, p_device_token, p_name, p_fingerprint_seed,
         p_screen_width, p_screen_height, p_device_pixel_ratio,
@@ -581,7 +581,7 @@ RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $
         p_storage_path, p_storage_size_bytes, p_storage_hash,
         p_cookies_count, p_metadata
     );
-$;
+$$;
 
 DROP FUNCTION IF EXISTS public.reap_stale_browser_locks(INTERVAL);
 CREATE OR REPLACE FUNCTION public.reap_stale_browser_locks(p_stale_interval INTERVAL DEFAULT INTERVAL '10 minutes')
