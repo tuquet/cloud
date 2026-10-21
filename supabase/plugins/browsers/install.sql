@@ -33,8 +33,7 @@ DO $$ BEGIN
             allowed_mime_types = EXCLUDED.allowed_mime_types;
     END IF;
 
-    -- RLS Policies for browser-profiles storage bucket
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
         DROP POLICY IF EXISTS "browser_profiles_storage_select" ON storage.objects;
         CREATE POLICY "browser_profiles_storage_select" ON storage.objects
             FOR SELECT TO authenticated, anon
@@ -42,11 +41,7 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
-                    OR EXISTS (
-                        SELECT 1 FROM workers.devices d
-                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
-                    )
+                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
                 )
             );
 
@@ -57,11 +52,7 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
-                    OR EXISTS (
-                        SELECT 1 FROM workers.devices d
-                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
-                    )
+                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
                 )
             );
 
@@ -72,22 +63,14 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
-                    OR EXISTS (
-                        SELECT 1 FROM workers.devices d
-                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
-                    )
+                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
                 )
             )
             WITH CHECK (
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
-                    OR EXISTS (
-                        SELECT 1 FROM workers.devices d
-                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
-                    )
+                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
                 )
             );
 
@@ -98,15 +81,25 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
-                    OR EXISTS (
-                        SELECT 1 FROM workers.devices d
-                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
-                    )
+                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
                 )
             );
     END IF;
-END $$;
+END $;
+
+-- 2.1. Helper for validating tenant folder in browser-profiles storage bucket
+CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $
+    SELECT (
+        p_tenant_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM public.tenants WHERE id = p_tenant_id AND status = 'active')
+    );
+$;
+GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(UUID) TO authenticated, anon, service_role;
 
 -- 3. Core Tables
 
