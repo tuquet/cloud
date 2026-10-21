@@ -17,6 +17,30 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON FUNCTIONS TO authentica
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON SEQUENCES TO authenticated, service_role;
 
 -- 1.1. Storage Helper for Validating Tenant Folder in browser-profiles Bucket
+CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_text TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
+DECLARE
+    v_uuid UUID;
+BEGIN
+    IF p_tenant_text IS NULL OR length(p_tenant_text) < 32 THEN
+        RETURN FALSE;
+    END IF;
+
+    BEGIN
+        v_uuid := p_tenant_text::uuid;
+    EXCEPTION WHEN OTHERS THEN
+        RETURN FALSE;
+    END;
+
+    RETURN EXISTS (SELECT 1 FROM public.tenants WHERE id = v_uuid AND status = 'active');
+END;
+$$;
+GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(TEXT) TO authenticated, anon, service_role;
+
 CREATE OR REPLACE FUNCTION public.is_valid_browser_storage_tenant(p_tenant_id UUID)
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -29,6 +53,7 @@ AS $$
     );
 $$;
 GRANT EXECUTE ON FUNCTION public.is_valid_browser_storage_tenant(UUID) TO authenticated, anon, service_role;
+
 
 -- 2. Storage Bucket for Browser Profile Session Archives (.zip, .tar.zst)
 DO $$ BEGIN
@@ -55,7 +80,7 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
+                    OR public.is_valid_browser_storage_tenant(split_part(name, '/', 1))
                 )
             );
 
@@ -66,7 +91,7 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
+                    OR public.is_valid_browser_storage_tenant(split_part(name, '/', 1))
                 )
             );
 
@@ -77,14 +102,14 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
+                    OR public.is_valid_browser_storage_tenant(split_part(name, '/', 1))
                 )
             )
             WITH CHECK (
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
+                    OR public.is_valid_browser_storage_tenant(split_part(name, '/', 1))
                 )
             );
 
@@ -95,7 +120,7 @@ DO $$ BEGIN
                 bucket_id = 'browser-profiles'
                 AND (
                     auth.role() = 'service_role'
-                    OR public.is_valid_browser_storage_tenant(public.safe_cast_uuid((storage.foldername(name))[1]))
+                    OR public.is_valid_browser_storage_tenant(split_part(name, '/', 1))
                 )
             );
     END IF;
