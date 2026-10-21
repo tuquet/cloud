@@ -2,28 +2,34 @@ name: Deploy Database to Supabase Cloud
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - 'supabase/migrations/**'
-      - 'supabase/plugins/**'
-      - 'supabase/config.toml'
+    tags:
+      - 'uat-v*'       # UAT / Staging tag (Enables reset & re-seed)
+      - 'v*'           # Production tag (Safe incremental migration only)
   workflow_dispatch:
     inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'uat'
+        type: choice
+        options:
+          - 'uat'
+          - 'production'
       action:
         description: 'Deployment action to perform'
         required: true
-        default: 'reset_and_deploy'
+        default: 'push_migrations'
         type: choice
         options:
+          - 'reset_and_deploy'
           - 'push_migrations'
           - 'full_deploy'
           - 'apply_plugins'
           - 'dry_run'
       project_ref:
-        description: 'Supabase project ref'
+        description: 'Optional custom Supabase project ref override'
         required: false
-        default: 'dswhacsoaxgpfnkaxnhz'
+        default: ''
 
 permissions:
   contents: write
@@ -34,18 +40,49 @@ concurrency:
 
 jobs:
   deploy:
-    name: Deploy to Cloud (${{ inputs.project_ref || 'dswhacsoaxgpfnkaxnhz' }})
+    name: Deploy (${{ github.ref_name || inputs.environment }})
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
-    env:
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-      PROJECT_REF: ${{ inputs.project_ref || secrets.SUPABASE_PROJECT_ID || 'dswhacsoaxgpfnkaxnhz' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Resolve Target Environment & Security Guardrails
+        run: |
+          set -e
+          REF_NAME="${{ github.ref_name }}"
+          INPUT_ENV="${{ inputs.environment }}"
+          INPUT_ACTION="${{ inputs.action }}"
+
+          if [[ "$REF_NAME" == uat-* ]] || [[ "$INPUT_ENV" == "uat" ]]; then
+            echo "ENV_NAME=uat" >> $GITHUB_ENV
+            TARGET_REF="${{ inputs.project_ref || secrets.SUPABASE_UAT_PROJECT_ID || 'dswhacsoaxgpfnkaxnhz' }}"
+            TARGET_PASS="${{ secrets.SUPABASE_UAT_DB_PASSWORD || secrets.SUPABASE_DB_PASSWORD }}"
+            DEFAULT_ACT="reset_and_deploy"
+          else
+            echo "ENV_NAME=production" >> $GITHUB_ENV
+            TARGET_REF="${{ inputs.project_ref || secrets.SUPABASE_PROD_PROJECT_ID || secrets.SUPABASE_PROJECT_ID }}"
+            TARGET_PASS="${{ secrets.SUPABASE_PROD_DB_PASSWORD || secrets.SUPABASE_DB_PASSWORD }}"
+            DEFAULT_ACT="push_migrations"
+          fi
+
+          CHOSEN_ACTION="${INPUT_ACTION:-$DEFAULT_ACT}"
+
+          # CRITICAL SAFETY GUARDRAIL: Never allow reset_and_deploy in production!
+          if [[ "$REF_NAME" == v* || "$INPUT_ENV" == "production" ]] && [[ "$CHOSEN_ACTION" == "reset_and_deploy" ]]; then
+            echo "[-] CRITICAL SECURITY GUARDRAIL: 'reset_and_deploy' is strictly forbidden in Production!" >&2
+            exit 1
+          fi
+
+          echo "PROJECT_REF=$TARGET_REF" >> $GITHUB_ENV
+          echo "SUPABASE_DB_PASSWORD=$TARGET_PASS" >> $GITHUB_ENV
+          echo "DEPLOY_ACTION=$CHOSEN_ACTION" >> $GITHUB_ENV
+          echo "SUPABASE_ACCESS_TOKEN=${{ secrets.SUPABASE_ACCESS_TOKEN }}" >> $GITHUB_ENV
+
+          echo "==> Target Environment: $INPUT_ENV (ref: $REF_NAME)"
+          echo "==> Target Project Ref: $TARGET_REF"
+          echo "==> Target Action: $CHOSEN_ACTION"
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
@@ -64,8 +101,7 @@ jobs:
       - name: Execute Deployment
         run: |
           set -e
-          ACTION="${{ inputs.action || 'push_migrations' }}"
-          echo "Executing deployment action: $ACTION"
+          echo "Executing deployment action: $DEPLOY_ACTION on environment: $ENV_NAME"
 
           echo "==> Ensuring remote migration history is synchronized..."
           if [ -n "$SUPABASE_DB_PASSWORD" ]; then
@@ -76,7 +112,7 @@ jobs:
             supabase migration repair --linked --status applied 20261013000001 || true
           fi
 
-          case "$ACTION" in
+          case "$DEPLOY_ACTION" in
             "reset_and_deploy")
               echo "==> Step 0: Resetting remote linked database to pristine state..."
               if [ -n "$SUPABASE_DB_PASSWORD" ]; then
@@ -118,7 +154,7 @@ jobs:
               bash scripts/plugins/apply_plugins.sh linked all install true
               ;;
             *)
-              echo "Unknown action: $ACTION"
+              echo "Unknown action: $DEPLOY_ACTION"
               exit 1
               ;;
           esac
@@ -144,7 +180,7 @@ jobs:
         run: |
           mkdir -p types
           echo "==> Generating TypeScript definitions from Supabase Cloud..."
-          supabase gen types typescript --linked --schema public,workers,browsers,automation,billing,events,media > types/database.types.ts
+          supabase gen types typescript --linked --schema public,workers,automation,billing,events,media > types/database.types.ts
           echo "==> Generated $(wc -l < types/database.types.ts) lines of TypeScript definitions."
 
       - name: Upload TypeScript Types Artifact
@@ -163,8 +199,8 @@ jobs:
           if [[ -n $(git status --porcelain types/database.types.ts) ]]; then
             git add types/database.types.ts
             git commit -m "chore(types): auto-generate database.types.ts from cloud schema [skip ci]"
-            git push origin main
-            echo "Generated types committed and pushed to main."
+            git push origin HEAD:${{ github.ref_name }} || true
+            echo "Generated types committed."
           else
             echo "No changes in database types."
           fi
@@ -174,16 +210,3 @@ jobs:
         run: |
           echo "==> Running Cloud Gateway Smoke Test..."
           node scripts/testing/smoke_test_cloud.mjs
-
-  notify:
-    name: Notify Telegram
-    needs: [deploy]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Send Telegram Notification
-        uses: tuquet/bot@main
-        with:
-          bot-token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          chat-id: ${{ secrets.TELEGRAM_CHAT_ID }}
-          status: ${{ needs.deploy.result }}
