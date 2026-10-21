@@ -1,41 +1,30 @@
-<div align="center">
-  <img src="https://tuquet.com/icons/cloud.svg" width="76" height="76" alt="Cloud Logo" />
-  <h1>Cloud (`tuquet cloud`)</h1>
-  <p><strong>Multi-Tenant Foundation & Central Control Plane for Supabase & PostgreSQL 15+</strong></p>
+# Tuquet Cloud
 
-  <p>
-    <a href="https://docs.tuquet.com/en/tuquet/cloud/"><img src="https://img.shields.io/badge/Docs-VitePress%20Hub-blue.svg" alt="Documentation Hub" /></a>
-    <a href="https://supabase.com"><img src="https://img.shields.io/badge/Supabase-PostgreSQL%2015+-brightgreen.svg" alt="Supabase" /></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License" /></a>
-  </p>
+> Centralized Supabase control plane, multi-tenant isolation, realtime event dispatch, and telemetry foundation.
 
-  <p>
-    <strong><a href="https://docs.tuquet.com/en/tuquet/cloud/">📖 Đọc toàn bộ tài liệu kỹ thuật tại Documentation Hub &rarr;</a></strong>
-  </p>
-</div>
+Official Documentation & Guides: **[https://docs.tuquet.com/en/cloud/](https://docs.tuquet.com/en/cloud/)**
 
 ---
 
-## 📌 Tổng Quan (Overview)
+## Setup & Migrations
 
-**Cloud** là tầng điều khiển trung tâm (Control Plane) cho hạm đội tự động hóa phân tán. Được xây dựng trên nền tảng Supabase và PostgreSQL 15+, Cloud cung cấp kiến trúc đa người dùng (Multi-tenant Micro-kernel), cơ chế phân quyền RBAC dựa trên Claims trong JWT token và hệ thống ghi nhận sự kiện Transactional Outbox bất đồng bộ.
-
-* **Ủy quyền phân tán & RLS Lease**: Đảm bảo thiết bị tại biên (edge worker) tự động đăng ký và nhận lệnh bảo mật qua token không cần round-trip phức tạp.
-* **Kiến trúc Plugin Module**: Tách biệt lõi hệ thống bất biến với các plugin nghiệp vụ (`runners`, `automation`, `storage`, `webhooks`, `subscriptions`).
-* **Data Engine & Migration Wizard**: Tự động phân tích cây phụ thuộc (DAG Topological Sort) giúp dễ dàng may đo module theo nhu cầu khách hàng doanh nghiệp; tối ưu hóa tốc độ ghi bằng BRIN index và hàng đợi phi xung đột (`FOR UPDATE SKIP LOCKED`).
-
-## ⚡ Sử Dụng Nhanh (Quickstart)
+Link and apply database migrations locally using the Supabase CLI:
 
 ```bash
-# Kiểm tra định danh và trạng thái thiết bị trên Cloud Fleet
-tuquet cloud whoami
-
-# Đăng ký thiết bị hiện tại vào hạm đội Runner
-tuquet cloud enroll
+supabase link --project-ref <project-id>
+supabase db push
 ```
 
-## 📚 Tài Liệu Kỹ Thuật Tập Trung (SSOT)
+---
 
-Toàn bộ đặc tả kiến trúc Micro-kernel, mô hình RLS Lease, cấu trúc schema cơ sở dữ liệu và quy trình migration được bảo trì duy nhất tại Documentation Hub:
+## Documentation
 
-👉 **[https://docs.tuquet.com/en/tuquet/cloud/](https://docs.tuquet.com/en/tuquet/cloud/)**
+Complete database schemas, RLS policies, remote procedure calls, and API documentation are maintained at the official Documentation SSOT:
+
+👉 **[https://docs.tuquet.com/en/cloud/](https://docs.tuquet.com/en/cloud/)**
+
+---
+
+## License
+
+[MIT](LICENSE) © Tuquet
