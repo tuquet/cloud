@@ -14,6 +14,118 @@ export type Database = {
   }
   automation: {
     Tables: {
+      campaign_runs: {
+        Row: {
+          completed_tasks: number
+          created_at: string
+          ended_at: string | null
+          error_message: string | null
+          failed_tasks: number
+          id: string
+          name: string
+          parameters: Json
+          result_summary: Json
+          started_at: string | null
+          status: Database["automation"]["Enums"]["campaign_status"]
+          tenant_id: string
+          total_tasks: number
+          triggered_by: string | null
+          updated_at: string
+          worker_id: string | null
+          workflow_id: string | null
+        }
+        Insert: {
+          completed_tasks?: number
+          created_at?: string
+          ended_at?: string | null
+          error_message?: string | null
+          failed_tasks?: number
+          id?: string
+          name: string
+          parameters?: Json
+          result_summary?: Json
+          started_at?: string | null
+          status?: Database["automation"]["Enums"]["campaign_status"]
+          tenant_id: string
+          total_tasks?: number
+          triggered_by?: string | null
+          updated_at?: string
+          worker_id?: string | null
+          workflow_id?: string | null
+        }
+        Update: {
+          completed_tasks?: number
+          created_at?: string
+          ended_at?: string | null
+          error_message?: string | null
+          failed_tasks?: number
+          id?: string
+          name?: string
+          parameters?: Json
+          result_summary?: Json
+          started_at?: string | null
+          status?: Database["automation"]["Enums"]["campaign_status"]
+          tenant_id?: string
+          total_tasks?: number
+          triggered_by?: string | null
+          updated_at?: string
+          worker_id?: string | null
+          workflow_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_automation_campaign_workflow"
+            columns: ["tenant_id", "workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["tenant_id", "id"]
+          },
+        ]
+      }
+      execution_logs: {
+        Row: {
+          campaign_run_id: string
+          id: number
+          level: Database["automation"]["Enums"]["log_level"]
+          logged_at: string
+          message: string
+          node_id: string | null
+          payload: Json
+          step_name: string | null
+          tenant_id: string
+        }
+        Insert: {
+          campaign_run_id: string
+          id?: never
+          level?: Database["automation"]["Enums"]["log_level"]
+          logged_at?: string
+          message: string
+          node_id?: string | null
+          payload?: Json
+          step_name?: string | null
+          tenant_id: string
+        }
+        Update: {
+          campaign_run_id?: string
+          id?: never
+          level?: Database["automation"]["Enums"]["log_level"]
+          logged_at?: string
+          message?: string
+          node_id?: string | null
+          payload?: Json
+          step_name?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_logs_campaign_run_id_fkey"
+            columns: ["campaign_run_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       packages: {
         Row: {
           created_at: string
@@ -72,134 +184,7 @@ export type Database = {
           variables?: Json
           version?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_workflows_packages_created_by"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_workflows_packages_tenant"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      },
-      campaign_runs: {
-        Row: {
-          completed_tasks: number
-          created_at: string
-          ended_at: string | null
-          error_message: string | null
-          failed_tasks: number
-          id: string
-          name: string
-          parameters: Json
-          result_summary: Json
-          runner_id: string | null
-          started_at: string | null
-          status: Database["automation"]["Enums"]["campaign_status"]
-          tenant_id: string
-          total_tasks: number
-          triggered_by: string | null
-          updated_at: string
-          workflow_id: string | null
-        }
-        Insert: {
-          completed_tasks?: number
-          created_at?: string
-          ended_at?: string | null
-          error_message?: string | null
-          failed_tasks?: number
-          id?: string
-          name: string
-          parameters?: Json
-          result_summary?: Json
-          runner_id?: string | null
-          started_at?: string | null
-          status?: Database["automation"]["Enums"]["campaign_status"]
-          tenant_id: string
-          total_tasks?: number
-          triggered_by?: string | null
-          updated_at?: string
-          workflow_id?: string | null
-        }
-        Update: {
-          completed_tasks?: number
-          created_at?: string
-          ended_at?: string | null
-          error_message?: string | null
-          failed_tasks?: number
-          id?: string
-          name?: string
-          parameters?: Json
-          result_summary?: Json
-          runner_id?: string | null
-          started_at?: string | null
-          status?: Database["automation"]["Enums"]["campaign_status"]
-          tenant_id?: string
-          total_tasks?: number
-          triggered_by?: string | null
-          updated_at?: string
-          workflow_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fk_automa_campaign_workflow"
-            columns: ["tenant_id", "workflow_id"]
-            isOneToOne: false
-            referencedRelation: "workflows"
-            referencedColumns: ["tenant_id", "id"]
-          },
-        ]
-      }
-      execution_logs: {
-        Row: {
-          campaign_run_id: string
-          id: number
-          level: Database["automation"]["Enums"]["log_level"]
-          logged_at: string
-          message: string
-          node_id: string | null
-          payload: Json
-          step_name: string | null
-          tenant_id: string
-        }
-        Insert: {
-          campaign_run_id: string
-          id?: never
-          level?: Database["automation"]["Enums"]["log_level"]
-          logged_at?: string
-          message: string
-          node_id?: string | null
-          payload?: Json
-          step_name?: string | null
-          tenant_id: string
-        }
-        Update: {
-          campaign_run_id?: string
-          id?: never
-          level?: Database["automation"]["Enums"]["log_level"]
-          logged_at?: string
-          message?: string
-          node_id?: string | null
-          payload?: Json
-          step_name?: string | null
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "execution_logs_campaign_run_id_fkey"
-            columns: ["campaign_run_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_runs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       schedules: {
         Row: {
@@ -246,7 +231,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_automa_schedules_workflow"
+            foreignKeyName: "fk_automation_schedules_workflow"
             columns: ["tenant_id", "workflow_id"]
             isOneToOne: false
             referencedRelation: "workflows"
@@ -307,7 +292,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      claim_next_campaign_run: {
+        Args: { p_batch_size?: number; p_worker_id: string }
+        Returns: {
+          completed_tasks: number
+          created_at: string
+          ended_at: string | null
+          error_message: string | null
+          failed_tasks: number
+          id: string
+          name: string
+          parameters: Json
+          result_summary: Json
+          started_at: string | null
+          status: Database["automation"]["Enums"]["campaign_status"]
+          tenant_id: string
+          total_tasks: number
+          triggered_by: string | null
+          updated_at: string
+          worker_id: string | null
+          workflow_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "campaign_runs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      reap_stale_campaign_runs: {
+        Args: { p_stale_interval?: string }
+        Returns: number
+      }
     }
     Enums: {
       campaign_status:
@@ -380,6 +396,145 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      payment_gateway_secrets: {
+        Row: {
+          gateway_id: string
+          secret_config: Json
+          updated_at: string
+        }
+        Insert: {
+          gateway_id: string
+          secret_config?: Json
+          updated_at?: string
+        }
+        Update: {
+          gateway_id?: string
+          secret_config?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_gateway_secrets_gateway_id_fkey"
+            columns: ["gateway_id"]
+            isOneToOne: true
+            referencedRelation: "payment_gateways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_gateways: {
+        Row: {
+          channel: Database["billing"]["Enums"]["payment_channel"]
+          created_at: string
+          currency: string
+          driver: string
+          id: string
+          is_active: boolean
+          name: string
+          public_config: Json
+          rate_per_credit: number
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          channel: Database["billing"]["Enums"]["payment_channel"]
+          created_at?: string
+          currency?: string
+          driver: string
+          id: string
+          is_active?: boolean
+          name: string
+          public_config?: Json
+          rate_per_credit?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          channel?: Database["billing"]["Enums"]["payment_channel"]
+          created_at?: string
+          currency?: string
+          driver?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          public_config?: Json
+          rate_per_credit?: number
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      payment_intents: {
+        Row: {
+          amount_credits: number
+          buyer_email: string | null
+          checkout_payload: Json
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          gateway_id: string
+          id: string
+          paid_at: string | null
+          pay_amount: number
+          pay_currency: string
+          provider_tx_id: string | null
+          status: Database["billing"]["Enums"]["payment_intent_status"]
+          target_id: string
+          target_type: Database["billing"]["Enums"]["payment_target_type"]
+          tenant_id: string | null
+          transfer_code: string
+          updated_at: string
+        }
+        Insert: {
+          amount_credits: number
+          buyer_email?: string | null
+          checkout_payload?: Json
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          gateway_id: string
+          id?: string
+          paid_at?: string | null
+          pay_amount: number
+          pay_currency: string
+          provider_tx_id?: string | null
+          status?: Database["billing"]["Enums"]["payment_intent_status"]
+          target_id: string
+          target_type: Database["billing"]["Enums"]["payment_target_type"]
+          tenant_id?: string | null
+          transfer_code: string
+          updated_at?: string
+        }
+        Update: {
+          amount_credits?: number
+          buyer_email?: string | null
+          checkout_payload?: Json
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          gateway_id?: string
+          id?: string
+          paid_at?: string | null
+          pay_amount?: number
+          pay_currency?: string
+          provider_tx_id?: string | null
+          status?: Database["billing"]["Enums"]["payment_intent_status"]
+          target_id?: string
+          target_type?: Database["billing"]["Enums"]["payment_target_type"]
+          tenant_id?: string | null
+          transfer_code?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_intents_gateway_id_fkey"
+            columns: ["gateway_id"]
+            isOneToOne: false
+            referencedRelation: "payment_gateways"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       plans: {
         Row: {
@@ -497,6 +652,86 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_transactions: {
+        Row: {
+          amount_credits: number
+          balance_after_credits: number
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          tenant_id: string
+          tx_type: Database["billing"]["Enums"]["wallet_tx_type"]
+          wallet_id: string
+        }
+        Insert: {
+          amount_credits: number
+          balance_after_credits: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id: string
+          tx_type: Database["billing"]["Enums"]["wallet_tx_type"]
+          wallet_id: string
+        }
+        Update: {
+          amount_credits?: number
+          balance_after_credits?: number
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          tenant_id?: string
+          tx_type?: Database["billing"]["Enums"]["wallet_tx_type"]
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance_credits: number
+          created_at: string
+          id: string
+          tenant_id: string
+          total_spent_credits: number
+          total_topped_up_credits: number
+          updated_at: string
+        }
+        Insert: {
+          balance_credits?: number
+          created_at?: string
+          id?: string
+          tenant_id: string
+          total_spent_credits?: number
+          total_topped_up_credits?: number
+          updated_at?: string
+        }
+        Update: {
+          balance_credits?: number
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          total_spent_credits?: number
+          total_topped_up_credits?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -505,6 +740,52 @@ export type Database = {
       check_tenant_quota: {
         Args: { _increment?: number; _metric_name: string; _tenant_id: string }
         Returns: boolean
+      }
+      create_payment_intent: {
+        Args: {
+          _amount_credits: number
+          _buyer_email?: string
+          _gateway_id: string
+          _target_id: string
+          _target_type: Database["billing"]["Enums"]["payment_target_type"]
+          _tenant_id?: string
+        }
+        Returns: Json
+      }
+      credit_tenant_wallet: {
+        Args: {
+          _amount_credits: number
+          _description?: string
+          _reference_id?: string
+          _reference_type?: string
+          _tenant_id: string
+          _tx_type?: Database["billing"]["Enums"]["wallet_tx_type"]
+        }
+        Returns: number
+      }
+      debit_tenant_wallet: {
+        Args: {
+          _amount_credits: number
+          _description?: string
+          _reference_id?: string
+          _reference_type?: string
+          _tenant_id: string
+          _tx_type?: Database["billing"]["Enums"]["wallet_tx_type"]
+        }
+        Returns: number
+      }
+      get_active_gateways: {
+        Args: never
+        Returns: {
+          channel: Database["billing"]["Enums"]["payment_channel"]
+          currency: string
+          driver: string
+          id: string
+          name: string
+          public_config: Json
+          rate_per_credit: number
+          sort_order: number
+        }[]
       }
       get_next_receiving_account: {
         Args: { _amount_vnd?: number }
@@ -536,8 +817,37 @@ export type Database = {
         Args: { _increment?: number; _metric_name: string; _tenant_id: string }
         Returns: number
       }
+      settle_payment_intent: {
+        Args: {
+          _actual_pay_amount?: number
+          _force_approve?: boolean
+          _intent_id?: string
+          _provider_tx_id?: string
+          _raw_metadata?: Json
+          _transfer_code?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
+      payment_channel:
+        | "internal_wallet"
+        | "bank_transfer"
+        | "e_wallet"
+        | "card_intl"
+        | "crypto"
+      payment_intent_status:
+        | "pending"
+        | "processing"
+        | "manual_review"
+        | "succeeded"
+        | "failed"
+        | "expired"
+        | "refunded"
+      payment_target_type:
+        | "wallet_topup"
+        | "commerce_order"
+        | "subscription_upgrade"
       subscription_status:
         | "free_tier"
         | "trialing"
@@ -545,6 +855,12 @@ export type Database = {
         | "past_due"
         | "canceled"
         | "unpaid"
+      wallet_tx_type:
+        | "topup"
+        | "purchase"
+        | "refund"
+        | "admin_adjustment"
+        | "bonus"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1183,210 +1499,7 @@ export type Database = {
       }
     }
     Views: {
-      inbox_domains: {
-        Row: {
-          catch_all_enabled: boolean | null
-          cloudflare_zone_id: string | null
-          created_at: string | null
-          domain_name: string | null
-          id: string | null
-          metadata: Json | null
-          status: "active" | "pending_verification" | "disabled" | null
-          tenant_id: string | null
-          total_emails_received: number | null
-          updated_at: string | null
-          webhook_secret: string | null
-        }
-        Insert: {
-          catch_all_enabled?: boolean | null
-          cloudflare_zone_id?: string | null
-          created_at?: string | null
-          domain_name?: string | null
-          id?: string | null
-          metadata?: Json | null
-          status?: "active" | "pending_verification" | "disabled" | null
-          tenant_id?: string | null
-          total_emails_received?: number | null
-          updated_at?: string | null
-          webhook_secret?: string | null
-        }
-        Update: {
-          catch_all_enabled?: boolean | null
-          cloudflare_zone_id?: string | null
-          created_at?: string | null
-          domain_name?: string | null
-          id?: string | null
-          metadata?: Json | null
-          status?: "active" | "pending_verification" | "disabled" | null
-          tenant_id?: string | null
-          total_emails_received?: number | null
-          updated_at?: string | null
-          webhook_secret?: string | null
-        }
-        Relationships: []
-      }
-      inbox_emails: {
-        Row: {
-          assigned_browser_id: string | null
-          body_html: string | null
-          body_text: string | null
-          created_at: string | null
-          domain: string | null
-          domain_id: string | null
-          has_otp: boolean | null
-          id: string | null
-          message_id: string | null
-          metadata: Json | null
-          raw_headers: Json | null
-          received_at: string | null
-          recipient: string | null
-          sender: string | null
-          subject: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          assigned_browser_id?: string | null
-          body_html?: string | null
-          body_text?: string | null
-          created_at?: string | null
-          domain?: never
-          domain_id?: string | null
-          has_otp?: boolean | null
-          id?: string | null
-          message_id?: never
-          metadata?: Json | null
-          raw_headers?: never
-          received_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          subject?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          assigned_browser_id?: string | null
-          body_html?: string | null
-          body_text?: string | null
-          created_at?: string | null
-          domain?: never
-          domain_id?: string | null
-          has_otp?: boolean | null
-          id?: string | null
-          message_id?: never
-          metadata?: Json | null
-          raw_headers?: never
-          received_at?: string | null
-          recipient?: string | null
-          sender?: string | null
-          subject?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: []
-      }
-      inbox_links: {
-        Row: {
-          created_at: string | null
-          email_id: string | null
-          id: string | null
-          is_consumed: boolean | null
-          link_type:
-            | "activation"
-            | "password_reset"
-            | "magic_login"
-            | "other"
-            | null
-          metadata: Json | null
-          recipient: string | null
-          tenant_id: string | null
-          url: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email_id?: string | null
-          id?: string | null
-          is_consumed?: boolean | null
-          link_type?:
-            | "activation"
-            | "password_reset"
-            | "magic_login"
-            | "other"
-            | null
-          metadata?: Json | null
-          recipient?: string | null
-          tenant_id?: string | null
-          url?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email_id?: string | null
-          id?: string | null
-          is_consumed?: boolean | null
-          link_type?:
-            | "activation"
-            | "password_reset"
-            | "magic_login"
-            | "other"
-            | null
-          metadata?: Json | null
-          recipient?: string | null
-          tenant_id?: string | null
-          url?: string | null
-        }
-        Relationships: []
-      }
-      inbox_otps: {
-        Row: {
-          code: string | null
-          consumed_at: string | null
-          consumed_by: string | null
-          consumed_by_device_id: string | null
-          created_at: string | null
-          email_id: string | null
-          expires_at: string | null
-          id: string | null
-          is_consumed: boolean | null
-          metadata: Json | null
-          otp_code: string | null
-          recipient: string | null
-          sender_service: string | null
-          service_name: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          code?: string | null
-          consumed_at?: string | null
-          consumed_by?: never
-          consumed_by_device_id?: string | null
-          created_at?: string | null
-          email_id?: string | null
-          expires_at?: string | null
-          id?: string | null
-          is_consumed?: boolean | null
-          metadata?: Json | null
-          otp_code?: string | null
-          recipient?: string | null
-          sender_service?: string | null
-          service_name?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          code?: string | null
-          consumed_at?: string | null
-          consumed_by?: never
-          consumed_by_device_id?: string | null
-          created_at?: string | null
-          email_id?: string | null
-          expires_at?: string | null
-          id?: string | null
-          is_consumed?: boolean | null
-          metadata?: Json | null
-          otp_code?: string | null
-          recipient?: string | null
-          sender_service?: string | null
-          service_name?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       accept_invitation: { Args: { p_token: string }; Returns: Json }
@@ -1398,12 +1511,11 @@ export type Database = {
         }
         Returns: Json
       }
-      consume_otp: {
+      acquire_browser_profile: {
         Args: {
-          p_device_id?: string
-          p_otp_id?: string
-          p_recipient?: string
-          p_tenant_id?: string
+          p_device_id: string
+          p_device_token: string
+          p_profile_id: string
         }
         Returns: Json
       }
@@ -1457,22 +1569,6 @@ export type Database = {
         }
         Returns: Json
       }
-      ingest_email: {
-        Args: {
-          p_assigned_browser_id?: string
-          p_body_html?: string
-          p_body_text: string
-          p_link_type?: string
-          p_link_url?: string
-          p_otp_code?: string
-          p_recipient: string
-          p_sender: string
-          p_sender_service?: string
-          p_subject: string
-          p_tenant_id: string
-        }
-        Returns: Json
-      }
       is_platform_admin: { Args: never; Returns: boolean }
       is_tenant_admin: { Args: { _tenant_id: string }; Returns: boolean }
       is_tenant_member: { Args: { _tenant_id: string }; Returns: boolean }
@@ -1482,12 +1578,7 @@ export type Database = {
       }
       reap_stale_browser_locks: {
         Args: { p_stale_interval?: string }
-        Returns: {
-          browser_name: string
-          dead_device_id: string
-          reaped_browser_id: string
-          tenant_id: string
-        }[]
+        Returns: number
       }
       register_plugin: {
         Args: {
@@ -1515,6 +1606,19 @@ export type Database = {
         }
         Returns: Json
       }
+      release_browser_profile: {
+        Args: {
+          p_cookies_count?: number
+          p_device_id: string
+          p_device_token: string
+          p_metadata?: Json
+          p_profile_id: string
+          p_storage_hash?: string
+          p_storage_path?: string
+          p_storage_size_bytes?: number
+        }
+        Returns: Json
+      }
       resolve_plugin_dependencies: {
         Args: { p_target_plugins: string[] }
         Returns: {
@@ -1527,6 +1631,30 @@ export type Database = {
       }
       safe_cast_uuid: { Args: { val: string }; Returns: string }
       unregister_plugin: { Args: { p_id: string }; Returns: undefined }
+      upsert_browser_profile: {
+        Args: {
+          p_cookies_count?: number
+          p_cpu_cores?: number
+          p_device_id: string
+          p_device_pixel_ratio?: number
+          p_device_token: string
+          p_fingerprint_seed: number
+          p_locale?: string
+          p_metadata?: Json
+          p_name: string
+          p_os_platform?: string
+          p_profile_id: string
+          p_proxy?: string
+          p_ram_gb?: number
+          p_screen_height?: number
+          p_screen_width?: number
+          p_storage_hash?: string
+          p_storage_path?: string
+          p_storage_size_bytes?: number
+          p_timezone?: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       invitation_status: "pending" | "accepted" | "revoked" | "expired"
@@ -1538,119 +1666,8 @@ export type Database = {
       [_ in never]: never
     }
   }
-  runners: {
+  workers: {
     Tables: {
-      browsers: {
-        Row: {
-          accept_languages: string
-          browser_brand: string
-          browser_type: string
-          cookies_count: number
-          cpu_cores: number
-          created_at: string
-          custom_proxy: string | null
-          engine_version: string
-          fingerprint_seed: number
-          id: string
-          last_launched_at: string | null
-          last_synced_at: string | null
-          locale: string
-          locked_at: string | null
-          locked_by_device_id: string | null
-          metadata: Json
-          name: string
-          os_platform: string
-          os_version: string
-          proxy_id: string | null
-          ram_gb: number
-          status: string
-          storage_hash: string | null
-          storage_path: string | null
-          storage_size_bytes: number
-          tenant_id: string
-          timezone: string
-          updated_at: string
-          webrtc_mode: string
-        }
-        Insert: {
-          accept_languages?: string
-          browser_brand?: string
-          browser_type?: string
-          cookies_count?: number
-          cpu_cores?: number
-          created_at?: string
-          custom_proxy?: string | null
-          engine_version?: string
-          fingerprint_seed?: number
-          id?: string
-          last_launched_at?: string | null
-          last_synced_at?: string | null
-          locale?: string
-          locked_at?: string | null
-          locked_by_device_id?: string | null
-          metadata?: Json
-          name: string
-          os_platform?: string
-          os_version?: string
-          proxy_id?: string | null
-          ram_gb?: number
-          status?: string
-          storage_hash?: string | null
-          storage_path?: string | null
-          storage_size_bytes?: number
-          tenant_id: string
-          timezone?: string
-          updated_at?: string
-          webrtc_mode?: string
-        }
-        Update: {
-          accept_languages?: string
-          browser_brand?: string
-          browser_type?: string
-          cookies_count?: number
-          cpu_cores?: number
-          created_at?: string
-          custom_proxy?: string | null
-          engine_version?: string
-          fingerprint_seed?: number
-          id?: string
-          last_launched_at?: string | null
-          last_synced_at?: string | null
-          locale?: string
-          locked_at?: string | null
-          locked_by_device_id?: string | null
-          metadata?: Json
-          name?: string
-          os_platform?: string
-          os_version?: string
-          proxy_id?: string | null
-          ram_gb?: number
-          status?: string
-          storage_hash?: string | null
-          storage_path?: string | null
-          storage_size_bytes?: number
-          tenant_id?: string
-          timezone?: string
-          updated_at?: string
-          webrtc_mode?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "browsers_locked_by_device_id_fkey"
-            columns: ["locked_by_device_id"]
-            isOneToOne: false
-            referencedRelation: "devices"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "browsers_proxy_id_fkey"
-            columns: ["proxy_id"]
-            isOneToOne: false
-            referencedRelation: "proxies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       devices: {
         Row: {
           active_jobs: number
@@ -1666,7 +1683,8 @@ export type Database = {
           os_info: string | null
           ram_mb: number
           registered_at: string
-          status: Database["runners"]["Enums"]["device_status"]
+          status: Database["workers"]["Enums"]["device_status"]
+          telemetry: Json
           tenant_id: string
           updated_at: string
           version: string
@@ -1685,7 +1703,8 @@ export type Database = {
           os_info?: string | null
           ram_mb?: number
           registered_at?: string
-          status?: Database["runners"]["Enums"]["device_status"]
+          status?: Database["workers"]["Enums"]["device_status"]
+          telemetry?: Json
           tenant_id: string
           updated_at?: string
           version?: string
@@ -1704,7 +1723,8 @@ export type Database = {
           os_info?: string | null
           ram_mb?: number
           registered_at?: string
-          status?: Database["runners"]["Enums"]["device_status"]
+          status?: Database["workers"]["Enums"]["device_status"]
+          telemetry?: Json
           tenant_id?: string
           updated_at?: string
           version?: string
@@ -1756,7 +1776,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_runners_node_browsers_device"
+            foreignKeyName: "fk_workers_node_browsers_device"
             columns: ["tenant_id", "device_id"]
             isOneToOne: false
             referencedRelation: "devices"
@@ -1829,7 +1849,135 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      browsers: {
+        Row: {
+          accept_languages: string | null
+          browser_brand: string | null
+          browser_type: string | null
+          cookies_count: number | null
+          cpu_cores: number | null
+          created_at: string | null
+          custom_proxy: string | null
+          device_pixel_ratio: number | null
+          engine_version: string | null
+          extensions: Json | null
+          fingerprint_seed: number | null
+          group_name: string | null
+          id: string | null
+          last_launched_at: string | null
+          last_synced_at: string | null
+          locale: string | null
+          locked_at: string | null
+          locked_by_device_id: string | null
+          metadata: Json | null
+          name: string | null
+          os_platform: string | null
+          os_version: string | null
+          proxy_id: string | null
+          ram_gb: number | null
+          screen_height: number | null
+          screen_width: number | null
+          sec_ch_ua: string | null
+          sec_ch_ua_mobile: boolean | null
+          sec_ch_ua_platform: string | null
+          startup_flags: Json | null
+          status: string | null
+          storage_hash: string | null
+          storage_path: string | null
+          storage_size_bytes: number | null
+          tags: string[] | null
+          tenant_id: string | null
+          timezone: string | null
+          updated_at: string | null
+          user_agent: string | null
+          webrtc_mode: string | null
+        }
+        Insert: {
+          accept_languages?: string | null
+          browser_brand?: string | null
+          browser_type?: string | null
+          cookies_count?: number | null
+          cpu_cores?: number | null
+          created_at?: string | null
+          custom_proxy?: string | null
+          device_pixel_ratio?: number | null
+          engine_version?: string | null
+          extensions?: Json | null
+          fingerprint_seed?: number | null
+          group_name?: string | null
+          id?: string | null
+          last_launched_at?: string | null
+          last_synced_at?: string | null
+          locale?: string | null
+          locked_at?: string | null
+          locked_by_device_id?: string | null
+          metadata?: Json | null
+          name?: string | null
+          os_platform?: string | null
+          os_version?: string | null
+          proxy_id?: string | null
+          ram_gb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
+          sec_ch_ua?: string | null
+          sec_ch_ua_mobile?: boolean | null
+          sec_ch_ua_platform?: string | null
+          startup_flags?: Json | null
+          status?: string | null
+          storage_hash?: string | null
+          storage_path?: string | null
+          storage_size_bytes?: number | null
+          tags?: string[] | null
+          tenant_id?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_agent?: string | null
+          webrtc_mode?: string | null
+        }
+        Update: {
+          accept_languages?: string | null
+          browser_brand?: string | null
+          browser_type?: string | null
+          cookies_count?: number | null
+          cpu_cores?: number | null
+          created_at?: string | null
+          custom_proxy?: string | null
+          device_pixel_ratio?: number | null
+          engine_version?: string | null
+          extensions?: Json | null
+          fingerprint_seed?: number | null
+          group_name?: string | null
+          id?: string | null
+          last_launched_at?: string | null
+          last_synced_at?: string | null
+          locale?: string | null
+          locked_at?: string | null
+          locked_by_device_id?: string | null
+          metadata?: Json | null
+          name?: string | null
+          os_platform?: string | null
+          os_version?: string | null
+          proxy_id?: string | null
+          ram_gb?: number | null
+          screen_height?: number | null
+          screen_width?: number | null
+          sec_ch_ua?: string | null
+          sec_ch_ua_mobile?: boolean | null
+          sec_ch_ua_platform?: string | null
+          startup_flags?: Json | null
+          status?: string | null
+          storage_hash?: string | null
+          storage_path?: string | null
+          storage_size_bytes?: number | null
+          tags?: string[] | null
+          tenant_id?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+          user_agent?: string | null
+          webrtc_mode?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       acquire_browser: {
@@ -1866,6 +2014,7 @@ export type Database = {
           p_name: string
           p_os_info?: string
           p_ram_mb?: number
+          p_tenant_id?: string
         }
         Returns: Json
       }
@@ -2049,6 +2198,27 @@ export const Constants = {
   },
   billing: {
     Enums: {
+      payment_channel: [
+        "internal_wallet",
+        "bank_transfer",
+        "e_wallet",
+        "card_intl",
+        "crypto",
+      ],
+      payment_intent_status: [
+        "pending",
+        "processing",
+        "manual_review",
+        "succeeded",
+        "failed",
+        "expired",
+        "refunded",
+      ],
+      payment_target_type: [
+        "wallet_topup",
+        "commerce_order",
+        "subscription_upgrade",
+      ],
       subscription_status: [
         "free_tier",
         "trialing",
@@ -2056,6 +2226,13 @@ export const Constants = {
         "past_due",
         "canceled",
         "unpaid",
+      ],
+      wallet_tx_type: [
+        "topup",
+        "purchase",
+        "refund",
+        "admin_adjustment",
+        "bonus",
       ],
     },
   },
@@ -2075,7 +2252,7 @@ export const Constants = {
       tenant_status: ["active", "suspended", "archived"],
     },
   },
-  runners: {
+  workers: {
     Enums: {
       device_status: ["offline", "idle", "busy", "maintenance", "disabled"],
     },
