@@ -20,4 +20,4 @@ INSERT INTO workers.proxies (
     'active',
     5,
     ARRAY['Local Bridge SOCKS5', 'Tuquet-Bridge']
-) ON CONFLICT (tenant_id, host, port, protocol, username) DO NOTHING;
+) ON CONFLICT (id) DO NOTHING;

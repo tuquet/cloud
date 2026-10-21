@@ -87,7 +87,7 @@ foreach ($item in $TargetPlugins) {
     Write-Host "    [OK] Successfully applied $sqlFile" -ForegroundColor Green
 
     # Apply seed data if available and requested during install
-    if ($Action -eq 'install' -and ($pluginId -eq 'automation' -or $pluginId -eq 'workers') -and $WithSeed) {
+    if ($Action -eq 'install' -and $WithSeed) {
         $seedFile = "supabase/plugins/$pluginId/seed.sql"
         if (Test-Path $seedFile) {
             Write-Host "    --> Applying sample data: $seedFile" -ForegroundColor DarkYellow
