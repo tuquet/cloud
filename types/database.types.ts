@@ -14,7 +14,51 @@ export type Database = {
   }
   automation: {
     Tables: {
-      campaign_runs: {
+      execution_logs: {
+        Row: {
+          id: number
+          job_id: string
+          level: Database["automation"]["Enums"]["log_level"]
+          logged_at: string
+          message: string
+          node_id: string | null
+          payload: Json
+          step_name: string | null
+          tenant_id: string
+        }
+        Insert: {
+          id?: never
+          job_id: string
+          level?: Database["automation"]["Enums"]["log_level"]
+          logged_at?: string
+          message: string
+          node_id?: string | null
+          payload?: Json
+          step_name?: string | null
+          tenant_id: string
+        }
+        Update: {
+          id?: never
+          job_id?: string
+          level?: Database["automation"]["Enums"]["log_level"]
+          logged_at?: string
+          message?: string
+          node_id?: string | null
+          payload?: Json
+          step_name?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_logs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
         Row: {
           completed_tasks: number
           created_at: string
@@ -26,7 +70,7 @@ export type Database = {
           parameters: Json
           result_summary: Json
           started_at: string | null
-          status: Database["automation"]["Enums"]["campaign_status"]
+          status: Database["automation"]["Enums"]["job_status"]
           tenant_id: string
           total_tasks: number
           triggered_by: string | null
@@ -45,7 +89,7 @@ export type Database = {
           parameters?: Json
           result_summary?: Json
           started_at?: string | null
-          status?: Database["automation"]["Enums"]["campaign_status"]
+          status?: Database["automation"]["Enums"]["job_status"]
           tenant_id: string
           total_tasks?: number
           triggered_by?: string | null
@@ -64,7 +108,7 @@ export type Database = {
           parameters?: Json
           result_summary?: Json
           started_at?: string | null
-          status?: Database["automation"]["Enums"]["campaign_status"]
+          status?: Database["automation"]["Enums"]["job_status"]
           tenant_id?: string
           total_tasks?: number
           triggered_by?: string | null
@@ -74,55 +118,11 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_automation_campaign_workflow"
+            foreignKeyName: "fk_automation_job_workflow"
             columns: ["tenant_id", "workflow_id"]
             isOneToOne: false
             referencedRelation: "workflows"
             referencedColumns: ["tenant_id", "id"]
-          },
-        ]
-      }
-      execution_logs: {
-        Row: {
-          campaign_run_id: string
-          id: number
-          level: Database["automation"]["Enums"]["log_level"]
-          logged_at: string
-          message: string
-          node_id: string | null
-          payload: Json
-          step_name: string | null
-          tenant_id: string
-        }
-        Insert: {
-          campaign_run_id: string
-          id?: never
-          level?: Database["automation"]["Enums"]["log_level"]
-          logged_at?: string
-          message: string
-          node_id?: string | null
-          payload?: Json
-          step_name?: string | null
-          tenant_id: string
-        }
-        Update: {
-          campaign_run_id?: string
-          id?: never
-          level?: Database["automation"]["Enums"]["log_level"]
-          logged_at?: string
-          message?: string
-          node_id?: string | null
-          payload?: Json
-          step_name?: string | null
-          tenant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "execution_logs_campaign_run_id_fkey"
-            columns: ["campaign_run_id"]
-            isOneToOne: false
-            referencedRelation: "campaign_runs"
-            referencedColumns: ["id"]
           },
         ]
       }
@@ -292,7 +292,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      claim_next_campaign_run: {
+      claim_next_job: {
         Args: { p_batch_size?: number; p_worker_id: string }
         Returns: {
           completed_tasks: number
@@ -305,7 +305,7 @@ export type Database = {
           parameters: Json
           result_summary: Json
           started_at: string | null
-          status: Database["automation"]["Enums"]["campaign_status"]
+          status: Database["automation"]["Enums"]["job_status"]
           tenant_id: string
           total_tasks: number
           triggered_by: string | null
@@ -315,18 +315,15 @@ export type Database = {
         }[]
         SetofOptions: {
           from: "*"
-          to: "campaign_runs"
+          to: "jobs"
           isOneToOne: false
           isSetofReturn: true
         }
       }
-      reap_stale_campaign_runs: {
-        Args: { p_stale_interval?: string }
-        Returns: number
-      }
+      reap_stale_jobs: { Args: { p_stale_interval?: string }; Returns: number }
     }
     Enums: {
-      campaign_status:
+      job_status:
         | "pending"
         | "queued"
         | "running"
@@ -2201,7 +2198,7 @@ export type CompositeTypes<
 export const Constants = {
   automation: {
     Enums: {
-      campaign_status: [
+      job_status: [
         "pending",
         "queued",
         "running",
