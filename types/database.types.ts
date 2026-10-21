@@ -1536,6 +1536,20 @@ export type Database = {
         Returns: Json
       }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      enroll_device: {
+        Args: {
+          p_capabilities?: Json
+          p_cpu_cores?: number
+          p_enrollment_token?: string
+          p_machine_fingerprint: string
+          p_metadata?: Json
+          p_name: string
+          p_os_info?: string
+          p_ram_mb?: number
+          p_tenant_id?: string
+        }
+        Returns: Json
+      }
       get_installed_plugins: {
         Args: never
         Returns: {
