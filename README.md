@@ -21,7 +21,7 @@
 **Cloud** là tầng điều khiển trung tâm (Control Plane) cho hạm đội tự động hóa phân tán. Được xây dựng trên nền tảng Supabase và PostgreSQL 15+, Cloud cung cấp kiến trúc đa người dùng (Multi-tenant Micro-kernel), cơ chế phân quyền RBAC dựa trên Claims trong JWT token và hệ thống ghi nhận sự kiện Transactional Outbox bất đồng bộ.
 
 * **Ủy quyền phân tán & RLS Lease**: Đảm bảo thiết bị tại biên (edge worker) tự động đăng ký và nhận lệnh bảo mật qua token không cần round-trip phức tạp.
-* **Kiến trúc Plugin Module**: Tách biệt lõi hệ thống bất biến với các plugin nghiệp vụ (`runners`, `automa`, `storage`, `webhooks`, `subscriptions`).
+* **Kiến trúc Plugin Module**: Tách biệt lõi hệ thống bất biến với các plugin nghiệp vụ (`runners`, `workflows`, `storage`, `webhooks`, `subscriptions`).
 * **Data Engine & Migration Wizard**: Tự động phân tích cây phụ thuộc (DAG Topological Sort) giúp dễ dàng may đo module theo nhu cầu khách hàng doanh nghiệp; tối ưu hóa tốc độ ghi bằng BRIN index và hàng đợi phi xung đột (`FOR UPDATE SKIP LOCKED`).
 
 ## ⚡ Sử Dụng Nhanh (Quickstart)

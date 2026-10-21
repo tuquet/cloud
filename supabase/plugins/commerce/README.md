@@ -3,7 +3,7 @@
 > **Plugin ID**: `commerce`  
 > **Schema**: `commerce`  
 > **Version**: `1.0.0`  
-> **Dependencies**: `["subscriptions", "runners", "automa", "storage"]`
+> **Dependencies**: `["subscriptions", "runners", "workflows", "storage"]`
 
 ## 1. Overview
 
@@ -14,7 +14,7 @@ Provides the Central Platform Digital Store and Automated Fulfillment engine for
 1. **`serial_stock`**: Text/serial inventory (`uid|pass|2fa`, license keys, vouchers) with row-level `FOR UPDATE SKIP LOCKED` reservation and zero double-selling guarantees.
 2. **`resource`**: Automated provisioning of ecosystem assets directly into the buyer's workspace (`buyer_tenant_id`):
    - `proxy_pool`: Claims proxy lines from `commerce.stock_items` and inserts into `runners.proxies`.
-   - `automa_workflow`: Clones template workflows into `automa.workflows`.
+   - `automa_workflow`: Clones template workflows into `workflows.workflows`.
    - `plan_upgrade`: Activates or extends SaaS plans in `billing.subscriptions`.
 3. **`digital_file`**: Downloadable assets (`media.assets`) with configurable `max_downloads` and `expires_at`.
 4. **`wallet_credit`**: Prepaid `Xu` credit packages (with optional `bonus_credits`) automatically credited via `billing.credit_tenant_wallet()`.

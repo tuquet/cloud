@@ -7,7 +7,7 @@
   "dependencies": [
     "subscriptions",
     "runners",
-    "automa",
+    "workflows",
     "storage"
   ],
   "tables": [

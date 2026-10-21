@@ -3,7 +3,7 @@
 -- Description: Foundation data for Testing Admin Console & Multi-Tenancy
 -- Universal Password for ALL accounts: Tuquet1102@
 -- NOTE: runners.devices is NOT seeded here (dynamically enrolled via Tauri Desk)
---       automa.campaign_runs is NOT seeded here (dynamically created on Run)
+--       workflows.campaign_runs is NOT seeded here (dynamically created on Run)
 -- ============================================================================
 
 SET search_path = public, extensions, auth;
@@ -312,11 +312,11 @@ BEGIN
     END IF;
 END $$;
 
--- 8. Sample Automa Workflows (Published AST graphs ready to be run)
+-- 8. Sample Workflows (Published AST graphs ready to be run)
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'automa' AND table_name = 'workflows') THEN
-        INSERT INTO automa.workflows (
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'workflows' AND table_name = 'workflows') THEN
+        INSERT INTO workflows.workflows (
             id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
         ) VALUES 
             (

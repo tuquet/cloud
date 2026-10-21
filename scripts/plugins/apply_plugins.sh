@@ -18,7 +18,7 @@ echo "===================================================================="
 
 if [[ "$ACTION" == "uninstall" ]]; then
     CANONICAL_PLUGINS=(
-        "automa:supabase/plugins/automa/uninstall.sql:Automa Cloud Bridge (schema: automa)"
+        "workflows:supabase/plugins/workflows/uninstall.sql:Workflows Cloud Bridge (schema: workflows)"
         "runners:supabase/plugins/runners/uninstall.sql:Runners & Compute Fleet (schema: runners)"
         "webhooks:supabase/plugins/webhooks/uninstall.sql:Asynchronous Outbox & Webhooks (schema: events)"
         "subscriptions:supabase/plugins/subscriptions/uninstall.sql:Subscriptions & Quota (schema: billing)"
@@ -30,7 +30,7 @@ else
         "subscriptions:supabase/plugins/subscriptions/install.sql:Subscriptions & Quota (schema: billing)"
         "webhooks:supabase/plugins/webhooks/install.sql:Asynchronous Outbox & Webhooks (schema: events)"
         "runners:supabase/plugins/runners/install.sql:Runners & Compute Fleet (schema: runners)"
-        "automa:supabase/plugins/automa/install.sql:Automa Cloud Bridge (schema: automa)"
+        "workflows:supabase/plugins/workflows/install.sql:Workflows Cloud Bridge (schema: workflows)"
     )
 fi
 
@@ -60,7 +60,7 @@ for item in "${CANONICAL_PLUGINS[@]}"; do
     fi
     echo "    [OK] Successfully applied $sql_file"
 
-    if [[ "$ACTION" == "install" && ("$plugin_id" == "automa" || "$plugin_id" == "runners") && "$WITH_SEED" == "true" ]]; then
+    if [[ "$ACTION" == "install" && (("$plugin_id" == "workflows" || "$plugin_id" == "automa") || "$plugin_id" == "runners") && "$WITH_SEED" == "true" ]]; then
         seed_file="supabase/plugins/$plugin_id/seed.sql"
         if [[ -f "$seed_file" ]]; then
             echo "    --> Applying sample data: $seed_file"

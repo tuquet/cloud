@@ -23,7 +23,7 @@ flowchart TD
         MEDIA["Media Storage (schema: media)"]
         BILLING["SaaS Billing & Quotas (schema: billing)"]
         EVENTS["Transactional Outbox (schema: events)"]
-        AUTOMA["Automation Fleet Bridge (schema: automa)"]
+        WORKFLOWS["Workflows Fleet Bridge (schema: workflows)"]
         CUSTOM["Future Plugins (CRM, AI, Notifications)"]
     end
 
@@ -69,13 +69,13 @@ flowchart TD
 - [x] **Master Plugin Registry & Migration Wizard DAG Engine:**
   - [x] `public.system_plugins` tracks active plugins with `is_system` protection.
   - [x] `public.resolve_plugin_dependencies` runs in-database Recursive CTE Topological Sort (DAG) for automated Migration Wizard tailoring.
-  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `runners` $\rightarrow$ `automa`).
+  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `runners` $\rightarrow$ `workflows`).
 - [x] **5 First-Party Enterprise Plugins:**
   - [x] `storage` (Schema: `media`): Metadata catalog & dual-layer Supabase Storage RLS.
   - [x] `subscriptions` (Schema: `billing`): SaaS plans, subscriptions, and usage meters.
   - [x] `webhooks` (Schema: `events`): Transactional Outbox pattern with `FOR UPDATE SKIP LOCKED` batching & zero-latency `pg_notify`.
   - [x] `runners` (Schema: `runners`): Workstations, proxy pool, cloud browsers, storage sync, and automated dead lease reaper.
-  - [x] `automa` (Schema: `automa`): Workflows, campaign runs, and telemetry streams with BRIN indexing.
+  - [x] `workflows` (Schema: `workflows`): Workflows, campaign runs, and telemetry streams with BRIN indexing.
 - [x] **Documentation & Anti-Hallucination Standards:**
   - [x] Canonical Terminology Dictionary (`docs/terminology_dictionary.md`).
   - [x] Technical Architecture & Extension Contract (`docs/architecture.md`).
@@ -113,7 +113,7 @@ flowchart TD
    - Implement PostgreSQL Declarative Table Partitioning (HASH or LIST) for high-growth append-only tables:
      - `public.audit_logs`
      - `events.outbox` and `events.deliveries`
-     - `automa.execution_logs`
+     - `workflows.execution_logs`
 2. **Supabase Database Branching & CI/CD Migrations:**
    - Setup GitHub Actions pipeline with Supabase CLI database branching for preview environments.
    - Automated schema linter and migration verification on pull requests.

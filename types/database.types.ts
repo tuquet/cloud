@@ -12,7 +12,7 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.17"
   }
-  automa: {
+  workflows: {
     Tables: {
       campaign_runs: {
         Row: {
@@ -27,7 +27,7 @@ export type Database = {
           result_summary: Json
           runner_id: string | null
           started_at: string | null
-          status: Database["automa"]["Enums"]["campaign_status"]
+          status: Database["workflows"]["Enums"]["campaign_status"]
           tenant_id: string
           total_tasks: number
           triggered_by: string | null
@@ -46,7 +46,7 @@ export type Database = {
           result_summary?: Json
           runner_id?: string | null
           started_at?: string | null
-          status?: Database["automa"]["Enums"]["campaign_status"]
+          status?: Database["workflows"]["Enums"]["campaign_status"]
           tenant_id: string
           total_tasks?: number
           triggered_by?: string | null
@@ -65,7 +65,7 @@ export type Database = {
           result_summary?: Json
           runner_id?: string | null
           started_at?: string | null
-          status?: Database["automa"]["Enums"]["campaign_status"]
+          status?: Database["workflows"]["Enums"]["campaign_status"]
           tenant_id?: string
           total_tasks?: number
           triggered_by?: string | null
@@ -86,7 +86,7 @@ export type Database = {
         Row: {
           campaign_run_id: string
           id: number
-          level: Database["automa"]["Enums"]["log_level"]
+          level: Database["workflows"]["Enums"]["log_level"]
           logged_at: string
           message: string
           node_id: string | null
@@ -97,7 +97,7 @@ export type Database = {
         Insert: {
           campaign_run_id: string
           id?: never
-          level?: Database["automa"]["Enums"]["log_level"]
+          level?: Database["workflows"]["Enums"]["log_level"]
           logged_at?: string
           message: string
           node_id?: string | null
@@ -108,7 +108,7 @@ export type Database = {
         Update: {
           campaign_run_id?: string
           id?: never
-          level?: Database["automa"]["Enums"]["log_level"]
+          level?: Database["workflows"]["Enums"]["log_level"]
           logged_at?: string
           message?: string
           node_id?: string | null
@@ -189,7 +189,7 @@ export type Database = {
           id: string
           name: string
           settings: Json
-          status: Database["automa"]["Enums"]["workflow_status"]
+          status: Database["workflows"]["Enums"]["workflow_status"]
           tenant_id: string
           updated_at: string
           variables: Json
@@ -204,7 +204,7 @@ export type Database = {
           id?: string
           name: string
           settings?: Json
-          status?: Database["automa"]["Enums"]["workflow_status"]
+          status?: Database["workflows"]["Enums"]["workflow_status"]
           tenant_id: string
           updated_at?: string
           variables?: Json
@@ -219,7 +219,7 @@ export type Database = {
           id?: string
           name?: string
           settings?: Json
-          status?: Database["automa"]["Enums"]["workflow_status"]
+          status?: Database["workflows"]["Enums"]["workflow_status"]
           tenant_id?: string
           updated_at?: string
           variables?: Json
@@ -1957,7 +1957,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  automa: {
+  workflows: {
     Enums: {
       campaign_status: [
         "pending",

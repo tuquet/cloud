@@ -74,7 +74,7 @@ Write-Host "    [OK] Database core migrations applied successfully." -Foreground
 
 # 3. Step 2: Apply Plugins in Canonical Order
 if ($WithPlugins) {
-    Write-Host "`n--> Step 2/4: Applying canonical plugins (storage, subscriptions, webhooks, runners, automa)..." -ForegroundColor Yellow
+    Write-Host "`n--> Step 2/4: Applying canonical plugins (storage, subscriptions, webhooks, runners, workflows)..." -ForegroundColor Yellow
     $pluginScript = "scripts/plugins/apply_plugins.ps1"
     if (Test-Path $pluginScript) {
         & powershell -ExecutionPolicy Bypass -File $pluginScript -Target $Target -Plugin all -Action install 2>&1 | Out-Host

@@ -519,7 +519,7 @@ DECLARE
     v_parts TEXT[];
     v_proxy_id UUID;
     v_workflow_id UUID;
-    v_template_wf automa.workflows%ROWTYPE;
+    v_template_wf workflows.workflows%ROWTYPE;
     v_credit_amount BIGINT;
     v_bonus_credits BIGINT;
     v_total_credited BIGINT;
@@ -720,13 +720,13 @@ BEGIN
                     v_item.fulfilled_quantity := v_item.fulfilled_quantity + 1;
                 END LOOP;
 
-            ELSIF v_subtype = 'automa_workflow' THEN
+            ELSIF v_subtype = 'workflow' OR v_subtype = 'automa_workflow' THEN
                 FOR i IN 1..v_needed LOOP
                     SELECT * INTO v_template_wf
-                    FROM automa.workflows
+                    FROM workflows.workflows
                     WHERE id = public.safe_cast_uuid(v_variant.fulfillment_payload->>'template_workflow_id');
 
-                    INSERT INTO automa.workflows (
+                    INSERT INTO workflows.workflows (
                         tenant_id,
                         name,
                         description,
@@ -764,7 +764,7 @@ BEGIN
                         v_order.buyer_tenant_id,
                         'resource',
                         jsonb_build_object(
-                            'resource_subtype', 'automa_workflow',
+                            'resource_subtype', 'workflow',
                             'workflow_id', v_workflow_id,
                             'workflow_name', COALESCE(v_template_wf.name, v_item.product_name)
                         ),
@@ -1460,7 +1460,7 @@ SELECT public.register_plugin(
     'Digital Products Store & Auto-Fulfillment',
     '1.0.0',
     'commerce',
-    ARRAY['subscriptions', 'runners', 'automa', 'storage']::TEXT[],
+    ARRAY['subscriptions', 'runners', 'workflows', 'storage']::TEXT[],
     'Multi-category digital products catalog, zero-double-selling serialized stock inventory, order state machine, and atomic auto-fulfillment',
     FALSE,
     '{"guest_checkout_enabled": true, "reservation_ttl_minutes": 15}'::jsonb

@@ -23,7 +23,7 @@ Write-Host "====================================================================
 
 $TestFiles = @(
     "tests/db/01_verify_core_iam.sql",
-    "tests/db/02_verify_automa_plugin.sql",
+    "tests/db/02_verify_workflows_plugin.sql",
     "tests/db/02b_verify_runners_plugin.sql",
     "tests/db/02c_verify_cloud_browsers.sql",
     "tests/db/02d_verify_overwrite_and_advisory_warning.sql",

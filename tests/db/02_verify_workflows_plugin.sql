@@ -1,6 +1,6 @@
 -- ============================================================================
--- TEST SUITE: 02_VERIFY_AUTOMA_PLUGIN.SQL
--- Description: Verification for Automa Cloud Bridge schema, tables, and RLS
+-- TEST SUITE: 02_VERIFY_WORKFLOWS_PLUGIN.SQL
+-- Description: Verification for Workflows Cloud Bridge schema, tables, and RLS
 -- ============================================================================
 
 DO $$
@@ -12,25 +12,25 @@ DECLARE
     ];
     v_rls_disabled TEXT[] := ARRAY[]::TEXT[];
 BEGIN
-    RAISE NOTICE '>>> [TEST 1] Verifying schema automa and tables...';
+    RAISE NOTICE '>>> [TEST 1] Verifying schema workflows and tables...';
     
-    IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'automa') THEN
-        RAISE EXCEPTION 'FAILED: Schema automa does not exist!';
+    IF NOT EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'workflows') THEN
+        RAISE EXCEPTION 'FAILED: Schema workflows does not exist!';
     END IF;
 
     FOREACH v_tbl IN ARRAY v_expected_tables LOOP
         IF NOT EXISTS (
             SELECT 1 FROM information_schema.tables 
-            WHERE table_schema = 'automa' AND table_name = v_tbl
+            WHERE table_schema = 'workflows' AND table_name = v_tbl
         ) THEN
             v_missing_tables := array_append(v_missing_tables, v_tbl);
         END IF;
     END LOOP;
 
     IF array_length(v_missing_tables, 1) > 0 THEN
-        RAISE EXCEPTION 'FAILED: Missing tables in schema automa: %', v_missing_tables;
+        RAISE EXCEPTION 'FAILED: Missing tables in schema workflows: %', v_missing_tables;
     ELSE
-        RAISE NOTICE ' [PASS] All 4 Automa Tables exist in schema automa.';
+        RAISE NOTICE ' [PASS] All 4 Workflows Tables exist in schema workflows.';
     END IF;
 
     -- Verify RLS is enabled on all 4 tables
@@ -38,7 +38,7 @@ BEGIN
     FOREACH v_tbl IN ARRAY v_expected_tables LOOP
         IF NOT EXISTS (
             SELECT 1 FROM pg_tables
-            WHERE schemaname = 'automa' AND tablename = v_tbl AND rowsecurity = true
+            WHERE schemaname = 'workflows' AND tablename = v_tbl AND rowsecurity = true
         ) THEN
             v_rls_disabled := array_append(v_rls_disabled, v_tbl);
         END IF;
@@ -47,24 +47,24 @@ BEGIN
     IF array_length(v_rls_disabled, 1) > 0 THEN
         RAISE EXCEPTION 'FAILED: RLS is disabled on tables: %', v_rls_disabled;
     ELSE
-        RAISE NOTICE ' [PASS] RLS is active on 100%% of schema automa tables.';
+        RAISE NOTICE ' [PASS] RLS is active on 100%% of schema workflows tables.';
     END IF;
 
     -- Verify Master Plugin Registry Entry
     RAISE NOTICE '>>> [TEST 3] Verifying Plugin Registry entry...';
     IF NOT EXISTS (
-        SELECT 1 FROM public.system_plugins WHERE id = 'automa' AND status = 'installed'
+        SELECT 1 FROM public.system_plugins WHERE id = 'workflows' AND status = 'installed'
     ) THEN
-        RAISE EXCEPTION 'FAILED: Plugin automa is not registered as installed in public.system_plugins!';
+        RAISE EXCEPTION 'FAILED: Plugin workflows is not registered as installed in public.system_plugins!';
     ELSE
-        RAISE NOTICE ' [PASS] Plugin automa is active in public.system_plugins.';
+        RAISE NOTICE ' [PASS] Plugin workflows is active in public.system_plugins.';
     END IF;
 
     -- Verify Atomic Permissions
-    RAISE NOTICE '>>> [TEST 4] Verifying Automa Atomic Permissions...';
-    IF (SELECT count(*) FROM public.permissions WHERE module = 'automa') < 6 THEN
-        RAISE EXCEPTION 'FAILED: Fewer than 6 automa permissions registered in public.permissions!';
+    RAISE NOTICE '>>> [TEST 4] Verifying Workflows Atomic Permissions...';
+    IF (SELECT count(*) FROM public.permissions WHERE module = 'workflows') < 6 THEN
+        RAISE EXCEPTION 'FAILED: Fewer than 6 workflows permissions registered in public.permissions!';
     ELSE
-        RAISE NOTICE ' [PASS] All 6 Automa permissions registered successfully.';
+        RAISE NOTICE ' [PASS] All 6 Workflows permissions registered successfully.';
     END IF;
 END $$;

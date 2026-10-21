@@ -134,7 +134,7 @@ jobs:
         run: |
           mkdir -p types
           echo "==> Generating TypeScript definitions from Supabase Cloud..."
-          supabase gen types typescript --linked --schema public,runners,automa,billing,events,media > types/database.types.ts
+          supabase gen types typescript --linked --schema public,runners,workflows,billing,events,media > types/database.types.ts
           echo "==> Generated $(wc -l < types/database.types.ts) lines of TypeScript definitions."
 
       - name: Upload TypeScript Types Artifact
