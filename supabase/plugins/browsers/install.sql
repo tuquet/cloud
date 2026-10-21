@@ -196,6 +196,9 @@ CREATE TABLE IF NOT EXISTS browsers.profiles (
     -- Network, Proxy & WebRTC STUN Shielding (--proxy-server, --disable-non-proxied-udp)
     proxy_id UUID,
     custom_proxy TEXT,
+    change_ip_url TEXT,
+    auto_timezone BOOLEAN NOT NULL DEFAULT true,
+    auto_locale BOOLEAN NOT NULL DEFAULT true,
     webrtc_mode VARCHAR(32) NOT NULL DEFAULT 'proxy_shielded',
 
     -- Session Snapshot & Storage Sync (.zip)

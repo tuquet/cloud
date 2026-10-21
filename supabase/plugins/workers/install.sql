@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS workers.proxies (
     error_count INT NOT NULL DEFAULT 0,
     tags TEXT[] NOT NULL DEFAULT '{}'::text[],
     is_residential BOOLEAN NOT NULL DEFAULT false,
+    change_ip_url TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     CONSTRAINT uq_workers_proxies_tenant_endpoint UNIQUE (tenant_id, host, port, protocol, username)
