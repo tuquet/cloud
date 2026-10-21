@@ -423,7 +423,7 @@ END $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'system_plugins') THEN
-        INSERT INTO public.system_plugins (id, name, description, version, is_core, status, schema_name)
+        INSERT INTO public.system_plugins (id, name, description, version, is_system, status, schema_name)
         VALUES
             ('core-iam', 'Core IAM & Workspaces', 'Nền tảng xác thực, phân quyền và quản lý tổ chức đa người dùng', '1.0.0', true, 'installed', 'public'),
             ('workers', 'Workers & Fleet Engine', 'Hạ tầng quản lý thiết bị, trình duyệt đám mây và proxy mạng', '1.0.0', true, 'installed', 'workers'),
