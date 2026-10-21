@@ -706,7 +706,7 @@ RETURNS JSONB
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
-AS $
+AS $$
 BEGIN
     RETURN workers.enroll_device(
         p_machine_fingerprint,
@@ -720,7 +720,7 @@ BEGIN
         p_tenant_id
     );
 END;
-$;
+$$;
 
 CREATE OR REPLACE FUNCTION public.heartbeat(
     p_device_id UUID,
