@@ -155,6 +155,18 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (
+        SELECT 1 FROM pg_proc WHERE proname = 'upsert_profile' AND pronamespace = 'browsers'::regnamespace
+    ) THEN
+        RAISE EXCEPTION 'FAILED: Function browsers.upsert_profile does not exist!';
+    END IF;
+
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_proc WHERE proname = 'upsert_browser_profile' AND pronamespace = 'public'::regnamespace
+    ) THEN
+        RAISE EXCEPTION 'FAILED: Wrapper function public.upsert_browser_profile does not exist!';
+    END IF;
+
+    IF NOT EXISTS (
         SELECT 1 FROM information_schema.views WHERE table_schema = 'workers' AND table_name = 'browsers'
     ) THEN
         RAISE EXCEPTION 'FAILED: Backward compatibility view workers.browsers does not exist!';

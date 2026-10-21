@@ -16,8 +16,8 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON TABLES TO authenticated
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON FUNCTIONS TO authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA browsers GRANT ALL ON SEQUENCES TO authenticated, service_role;
 
--- 2. Storage Bucket for Browser Profile Session Archives (.zip)
-DO $$ BEGIN
+-- 2. Storage Bucket for Browser Profile Session Archives (.zip, .tar.zst)
+DO $ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'buckets') THEN
         INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
         VALUES (
@@ -25,14 +25,88 @@ DO $$ BEGIN
             'browser-profiles',
             false,
             268435456, -- 256 MB max per profile archive
-            ARRAY['application/zip', 'application/x-zip-compressed', 'application/octet-stream']
+            ARRAY['application/zip', 'application/x-zip-compressed', 'application/octet-stream', 'application/zstd', 'application/x-tar']
         )
         ON CONFLICT (id) DO UPDATE SET
             public = EXCLUDED.public,
             file_size_limit = EXCLUDED.file_size_limit,
             allowed_mime_types = EXCLUDED.allowed_mime_types;
     END IF;
-END $$;
+
+    -- RLS Policies for browser-profiles storage bucket
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'storage' AND table_name = 'objects') THEN
+        DROP POLICY IF EXISTS "browser_profiles_storage_select" ON storage.objects;
+        CREATE POLICY "browser_profiles_storage_select" ON storage.objects
+            FOR SELECT TO authenticated, anon
+            USING (
+                bucket_id = 'browser-profiles'
+                AND (
+                    auth.role() = 'service_role'
+                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
+                    OR EXISTS (
+                        SELECT 1 FROM workers.devices d
+                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
+                    )
+                )
+            );
+
+        DROP POLICY IF EXISTS "browser_profiles_storage_insert" ON storage.objects;
+        CREATE POLICY "browser_profiles_storage_insert" ON storage.objects
+            FOR INSERT TO authenticated, anon
+            WITH CHECK (
+                bucket_id = 'browser-profiles'
+                AND (
+                    auth.role() = 'service_role'
+                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
+                    OR EXISTS (
+                        SELECT 1 FROM workers.devices d
+                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
+                    )
+                )
+            );
+
+        DROP POLICY IF EXISTS "browser_profiles_storage_update" ON storage.objects;
+        CREATE POLICY "browser_profiles_storage_update" ON storage.objects
+            FOR UPDATE TO authenticated, anon
+            USING (
+                bucket_id = 'browser-profiles'
+                AND (
+                    auth.role() = 'service_role'
+                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
+                    OR EXISTS (
+                        SELECT 1 FROM workers.devices d
+                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
+                    )
+                )
+            )
+            WITH CHECK (
+                bucket_id = 'browser-profiles'
+                AND (
+                    auth.role() = 'service_role'
+                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
+                    OR EXISTS (
+                        SELECT 1 FROM workers.devices d
+                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
+                    )
+                )
+            );
+
+        DROP POLICY IF EXISTS "browser_profiles_storage_delete" ON storage.objects;
+        CREATE POLICY "browser_profiles_storage_delete" ON storage.objects
+            FOR DELETE TO authenticated, anon
+            USING (
+                bucket_id = 'browser-profiles'
+                AND (
+                    auth.role() = 'service_role'
+                    OR public.safe_cast_uuid((storage.foldername(name))[1]) IN (SELECT public.get_user_tenant_ids())
+                    OR EXISTS (
+                        SELECT 1 FROM workers.devices d
+                        WHERE d.tenant_id = public.safe_cast_uuid((storage.foldername(name))[1])
+                    )
+                )
+            );
+    END IF;
+END $;
 
 -- 3. Core Tables
 
@@ -340,7 +414,100 @@ BEGIN
 
     RETURN jsonb_build_object('success', true);
 END;
-$$;
+$;
+
+-- 5.4. Upsert Profile (Local CLI -> Central Cloud Sync)
+CREATE OR REPLACE FUNCTION browsers.upsert_profile(
+    p_profile_id UUID,
+    p_device_id UUID,
+    p_device_token TEXT,
+    p_name VARCHAR(128),
+    p_fingerprint_seed BIGINT,
+    p_screen_width INT DEFAULT 1920,
+    p_screen_height INT DEFAULT 1080,
+    p_device_pixel_ratio NUMERIC DEFAULT 1.0,
+    p_os_platform VARCHAR(32) DEFAULT 'windows',
+    p_cpu_cores INT DEFAULT 8,
+    p_ram_gb INT DEFAULT 16,
+    p_proxy TEXT DEFAULT NULL,
+    p_timezone VARCHAR(64) DEFAULT NULL,
+    p_locale VARCHAR(32) DEFAULT NULL,
+    p_storage_path TEXT DEFAULT NULL,
+    p_storage_size_bytes BIGINT DEFAULT 0,
+    p_storage_hash VARCHAR(64) DEFAULT NULL,
+    p_cookies_count INT DEFAULT 0,
+    p_metadata JSONB DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions, browsers, workers
+AS $
+DECLARE
+    v_token_hash TEXT;
+    v_device_tenant_id UUID;
+    v_profile_id UUID;
+BEGIN
+    v_token_hash := encode(extensions.digest(p_device_token, 'sha256'), 'hex');
+
+    -- Authenticate Device
+    SELECT tenant_id INTO v_device_tenant_id
+    FROM workers.devices
+    WHERE id = p_device_id AND device_token_hash = v_token_hash;
+
+    IF v_device_tenant_id IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Invalid device credentials');
+    END IF;
+
+    v_profile_id := COALESCE(p_profile_id, extensions.gen_random_uuid());
+
+    INSERT INTO browsers.profiles (
+        id, tenant_id, name, fingerprint_seed,
+        screen_width, screen_height, device_pixel_ratio,
+        os_platform, cpu_cores, ram_gb,
+        proxy, timezone, locale,
+        storage_path, storage_size_bytes, storage_hash,
+        cookies_count, metadata,
+        status, last_synced_at, updated_at
+    )
+    VALUES (
+        v_profile_id, v_device_tenant_id, p_name, p_fingerprint_seed,
+        COALESCE(p_screen_width, 1920), COALESCE(p_screen_height, 1080), COALESCE(p_device_pixel_ratio, 1.0),
+        COALESCE(p_os_platform, 'windows'), COALESCE(p_cpu_cores, 8), COALESCE(p_ram_gb, 16),
+        p_proxy, p_timezone, p_locale,
+        p_storage_path, COALESCE(p_storage_size_bytes, 0), p_storage_hash,
+        COALESCE(p_cookies_count, 0), COALESCE(p_metadata, '{}'::jsonb),
+        'idle', timezone('utc'::text, now()), timezone('utc'::text, now())
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        name = EXCLUDED.name,
+        fingerprint_seed = EXCLUDED.fingerprint_seed,
+        screen_width = EXCLUDED.screen_width,
+        screen_height = EXCLUDED.screen_height,
+        device_pixel_ratio = EXCLUDED.device_pixel_ratio,
+        os_platform = EXCLUDED.os_platform,
+        cpu_cores = EXCLUDED.cpu_cores,
+        ram_gb = EXCLUDED.ram_gb,
+        proxy = COALESCE(EXCLUDED.proxy, browsers.profiles.proxy),
+        timezone = COALESCE(EXCLUDED.timezone, browsers.profiles.timezone),
+        locale = COALESCE(EXCLUDED.locale, browsers.profiles.locale),
+        storage_path = COALESCE(EXCLUDED.storage_path, browsers.profiles.storage_path),
+        storage_size_bytes = CASE WHEN EXCLUDED.storage_size_bytes > 0 THEN EXCLUDED.storage_size_bytes ELSE browsers.profiles.storage_size_bytes END,
+        storage_hash = COALESCE(EXCLUDED.storage_hash, browsers.profiles.storage_hash),
+        cookies_count = COALESCE(EXCLUDED.cookies_count, browsers.profiles.cookies_count),
+        metadata = CASE WHEN p_metadata IS NOT NULL THEN browsers.profiles.metadata || p_metadata ELSE browsers.profiles.metadata END,
+        last_synced_at = timezone('utc'::text, now()),
+        updated_at = timezone('utc'::text, now());
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'profile_id', v_profile_id,
+        'tenant_id', v_device_tenant_id,
+        'storage_path', p_storage_path,
+        'storage_hash', p_storage_hash
+    );
+END;
+$;
 
 -- 5.3. Reap Stale Profile Locks
 CREATE OR REPLACE FUNCTION browsers.reap_stale_profile_locks(
@@ -382,6 +549,39 @@ CREATE OR REPLACE FUNCTION public.release_browser_profile(
 RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $$
     SELECT browsers.release_profile(p_profile_id, p_device_id, p_device_token, p_storage_path, p_storage_size_bytes, p_storage_hash, p_cookies_count, p_metadata);
 $$;
+
+DROP FUNCTION IF EXISTS public.upsert_browser_profile(UUID, UUID, TEXT, VARCHAR, BIGINT, INT, INT, NUMERIC, VARCHAR, INT, INT, TEXT, VARCHAR, VARCHAR, TEXT, BIGINT, VARCHAR, INT, JSONB);
+CREATE OR REPLACE FUNCTION public.upsert_browser_profile(
+    p_profile_id UUID,
+    p_device_id UUID,
+    p_device_token TEXT,
+    p_name VARCHAR(128),
+    p_fingerprint_seed BIGINT,
+    p_screen_width INT DEFAULT 1920,
+    p_screen_height INT DEFAULT 1080,
+    p_device_pixel_ratio NUMERIC DEFAULT 1.0,
+    p_os_platform VARCHAR(32) DEFAULT 'windows',
+    p_cpu_cores INT DEFAULT 8,
+    p_ram_gb INT DEFAULT 16,
+    p_proxy TEXT DEFAULT NULL,
+    p_timezone VARCHAR(64) DEFAULT NULL,
+    p_locale VARCHAR(32) DEFAULT NULL,
+    p_storage_path TEXT DEFAULT NULL,
+    p_storage_size_bytes BIGINT DEFAULT 0,
+    p_storage_hash VARCHAR(64) DEFAULT NULL,
+    p_cookies_count INT DEFAULT 0,
+    p_metadata JSONB DEFAULT NULL
+)
+RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $
+    SELECT browsers.upsert_profile(
+        p_profile_id, p_device_id, p_device_token, p_name, p_fingerprint_seed,
+        p_screen_width, p_screen_height, p_device_pixel_ratio,
+        p_os_platform, p_cpu_cores, p_ram_gb,
+        p_proxy, p_timezone, p_locale,
+        p_storage_path, p_storage_size_bytes, p_storage_hash,
+        p_cookies_count, p_metadata
+    );
+$;
 
 DROP FUNCTION IF EXISTS public.reap_stale_browser_locks(INTERVAL);
 CREATE OR REPLACE FUNCTION public.reap_stale_browser_locks(p_stale_interval INTERVAL DEFAULT INTERVAL '10 minutes')
