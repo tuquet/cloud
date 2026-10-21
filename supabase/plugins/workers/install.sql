@@ -81,6 +81,12 @@ COMMENT ON TABLE workers.proxies IS '[Plugin: runners] Central multi-tenant pool
 
 CREATE INDEX IF NOT EXISTS idx_workers_proxies_tenant_status ON workers.proxies (tenant_id, status);
 
+DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.views WHERE table_schema = 'workers' AND table_name = 'browsers') THEN
+        DROP VIEW workers.browsers CASCADE;
+    END IF;
+END $$;
+
 -- 3.3. Central Cloud Browser Profiles (GoLogin / AdsPower Architecture)
 CREATE TABLE IF NOT EXISTS workers.browsers (
     id UUID PRIMARY KEY DEFAULT extensions.gen_random_uuid(),
