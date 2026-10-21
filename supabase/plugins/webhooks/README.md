@@ -55,7 +55,7 @@ erDiagram
 The queue of events awaiting asynchronous broadcast. Optimized via partial index `WHERE status = 'pending'`:
 * `id` (`UUID PRIMARY KEY`): Unique event identifier.
 * `tenant_id` (`UUID REFERENCES public.tenants`): Originating tenant identifier.
-* `event_type` (`TEXT`): Event topic (e.g. `member.joined`, `workflow.published`, `campaign.completed`).
+* `event_type` (`TEXT`): Event topic (e.g. `member.joined`, `workflow.published`, `job.completed`).
 * `payload` (`JSONB`): Event payload data.
 * `status`: Enum (`pending`, `processing`, `delivered`, `failed`).
 * `retry_count` (`INT`): Number of dispatch attempts.
@@ -86,7 +86,7 @@ Any stored procedure, database trigger, or backend service can emit events into 
 ```sql
 SELECT events.emit_event(
     _tenant_id => 'b000...-0001'::uuid,
-    _event_type => 'campaign.completed',
+    _event_type => 'job.completed',
     _payload => '{"campaign_id": "c101", "total_tasks": 50, "status": "success"}'::jsonb
 );
 ```
@@ -132,7 +132,7 @@ const { data: sub, error } = await supabase
     tenant_id: myTenantId,
     target_url: 'https://webhook.site/my-endpoint',
     secret: 'whsec_9843a8b27...',
-    event_types: ['member.joined', 'automa.campaign.*']
+    event_types: ['member.joined', 'automation.job.*']
   })
   .select()
   .single();

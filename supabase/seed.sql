@@ -2,8 +2,8 @@
 -- SUPABASE SEED DATA: TUQUET ECOSYSTEM (DEVELOPMENT & QA ENVIRONMENT)
 -- Description: Foundation data for Testing Admin Console & Multi-Tenancy
 -- Universal Password for ALL accounts: Tuquet1102@
--- NOTE: runners.devices is NOT seeded here (dynamically enrolled via Tauri Desk)
---       automation.campaign_runs is NOT seeded here (dynamically created on Run)
+-- NOTE: workers.devices is NOT seeded here (dynamically enrolled via Tauri Desk)
+--       automation.jobs is NOT seeded here (dynamically created on Run)
 -- ============================================================================
 
 SET search_path = public, extensions, auth;
@@ -225,8 +225,8 @@ END $$;
 -- 6. Central Proxy Pool (Seed 10 Proxies across VN, SG, US, JP)
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'proxies') THEN
-        INSERT INTO runners.proxies (
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'workers' AND table_name = 'proxies') THEN
+        INSERT INTO workers.proxies (
             id, tenant_id, host, port, protocol, country_code, city, status, latency_ms, tags, is_residential
         )
         SELECT 
@@ -252,8 +252,8 @@ END $$;
 -- Note: locked_by_device_id is NULL (unlocked, ready to be launched by enrolled device)
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'browsers') THEN
-        INSERT INTO runners.browsers (
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'workers' AND table_name = 'browsers') THEN
+        INSERT INTO workers.browsers (
             id, tenant_id, name, browser_type, engine_version,
             fingerprint_seed, os_platform, os_version, browser_brand,
             cpu_cores, ram_gb, timezone, locale, accept_languages,
@@ -383,7 +383,7 @@ BEGIN
         INSERT INTO commerce.categories (id, slug, name, description, icon, sort_order)
         VALUES 
             (v_cat_proxy, 'proxies', 'Hạ Tầng Proxy', 'Bể proxy dân cư và datacenter tốc độ cao', 'globe', 1),
-            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Runner & Bot', 'cpu', 2),
+            (v_cat_soft, 'software', 'Bản Quyền Phần Mềm', 'Giấy phép kích hoạt Worker & Bot', 'cpu', 2),
             (v_cat_xu, 'xu-packages', 'Gói Nạp Xu', 'Gói tín dụng Xu nạp tiền vào ví tổ chức', 'wallet', 3)
         ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name;
     END IF;
@@ -398,8 +398,8 @@ BEGIN
                 'resource', 'public'
             ),
             (
-                v_prod_soft, v_cat_soft, 'runner-pro-1y',
-                'Bản Quyền Runner Pro (1 Năm)',
+                v_prod_soft, v_cat_soft, 'worker-pro-1y',
+                'Bản Quyền Worker Pro (1 Năm)',
                 'Mã bản quyền kích hoạt không giới hạn worker nodes trên 1 máy trạm',
                 'digital_file', 'public'
             )
@@ -410,11 +410,26 @@ END $$;
 -- 10. Clean Stale Mock Devices (Ensure device list reflects ONLY real client enrollments)
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'runners' AND table_name = 'devices') THEN
-        DELETE FROM runners.devices WHERE id IN (
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'workers' AND table_name = 'devices') THEN
+        DELETE FROM workers.devices WHERE id IN (
             'd0000000-0000-0000-0000-000000000001',
             'd0000000-0000-0000-0000-000000000002',
             'd0000000-0000-0000-0000-000000000003'
         );
+    END IF;
+END $$;
+
+-- 11. Core & Extension System Plugins Registry (SSOT)
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'system_plugins') THEN
+        INSERT INTO public.system_plugins (id, name, description, version, is_core, status, schema_name)
+        VALUES
+            ('core-iam', 'Core IAM & Workspaces', 'Nền tảng xác thực, phân quyền và quản lý tổ chức đa người dùng', '1.0.0', true, 'installed', 'public'),
+            ('workers', 'Workers & Fleet Engine', 'Hạ tầng quản lý thiết bị, trình duyệt đám mây và proxy mạng', '1.0.0', true, 'installed', 'workers'),
+            ('automa', 'Automation Workflow Engine', 'Bộ máy thực thi kịch bản tự động hóa đồ thị AST và chiến dịch', '1.0.0', true, 'installed', 'automation'),
+            ('subscriptions', 'Billing & Subscriptions', 'Cơ chế thanh toán, gói dịch vụ định kỳ và ví điểm tín dụng', '1.0.0', true, 'installed', 'billing'),
+            ('commerce', 'Digital Commerce Storefront', 'Sàn giao dịch tài nguyên số, key bản quyền và bảo hành tự động', '1.0.0', false, 'installed', 'commerce')
+        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, version = EXCLUDED.version;
     END IF;
 END $$;

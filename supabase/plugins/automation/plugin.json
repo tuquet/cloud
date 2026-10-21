@@ -5,7 +5,7 @@
   "schema": "automation",
   "description": "Distributed browser automation engine coordinator, composite package blocks, campaign executions, and telemetry logs",
   "dependencies": [
-    "runners"
+    "workers"
   ],
   "tables": [
     "automation.workflows",

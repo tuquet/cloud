@@ -1,8 +1,8 @@
 -- ============================================================================
--- TUQUET-CLOUD PLUGIN: RUNNERS & COMPUTE FLEET (INSTALLATION SCRIPT)
--- Plugin ID: runners
+-- TUQUET-CLOUD PLUGIN: WORKERS & COMPUTE FLEET (INSTALLATION SCRIPT)
+-- Plugin ID: workers
 -- Version: 1.0.0
--- Architecture: PostgreSQL Dedicated Schema Isolation (schema: runners)
+-- Architecture: PostgreSQL Dedicated Schema Isolation (schema: workers)
 -- Features: Fleet Workstations, Node Browsers, Proxy Pool Management,
 --           GoLogin-style Cloud Browsers with Deterministic Fingerprints,
 --           Distributed Lease Locking (Last-Write-Wins with In-Use Advisory),
@@ -10,7 +10,7 @@
 -- ============================================================================
 
 -- 1. Create Dedicated Schema & Permissions
-CREATE SCHEMA IF NOT EXISTS runners;
+CREATE SCHEMA IF NOT EXISTS workers;
 GRANT USAGE ON SCHEMA workers TO authenticated, service_role, anon;
 ALTER DEFAULT PRIVILEGES IN SCHEMA workers GRANT ALL ON TABLES TO authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA workers GRANT ALL ON FUNCTIONS TO authenticated, service_role;
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS workers.devices (
     CONSTRAINT uq_workers_devices_tenant_id UNIQUE (tenant_id, id)
 );
 
-COMMENT ON TABLE workers.devices IS '[Plugin: runners] Registered physical workstations and edge worker nodes';
+COMMENT ON TABLE workers.devices IS '[Plugin: workers] Registered physical workstations and edge worker nodes';
 
 CREATE INDEX IF NOT EXISTS idx_workers_devices_tenant_status ON workers.devices (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_workers_devices_heartbeat ON workers.devices (last_heartbeat_at);
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS workers.proxies (
     CONSTRAINT uq_workers_proxies_tenant_endpoint UNIQUE (tenant_id, host, port, protocol, username)
 );
 
-COMMENT ON TABLE workers.proxies IS '[Plugin: runners] Central multi-tenant pool of residential, datacenter, and mobile proxies';
+COMMENT ON TABLE workers.proxies IS '[Plugin: workers] Central multi-tenant pool of residential, datacenter, and mobile proxies';
 
 CREATE INDEX IF NOT EXISTS idx_workers_proxies_tenant_status ON workers.proxies (tenant_id, status);
 
@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS workers.browsers (
     CONSTRAINT chk_workers_browsers_status CHECK (status IN ('idle', 'running', 'syncing', 'error'))
 );
 
-COMMENT ON TABLE workers.browsers IS '[Plugin: runners] Central cloud inventory of virtual anti-detect browser profiles, fingerprints, and session storage';
+COMMENT ON TABLE workers.browsers IS '[Plugin: workers] Central cloud inventory of virtual anti-detect browser profiles, fingerprints, and session storage';
 
 CREATE INDEX IF NOT EXISTS idx_workers_browsers_tenant_status ON workers.browsers (tenant_id, status);
 CREATE INDEX IF NOT EXISTS idx_workers_browsers_locked ON workers.browsers (locked_by_device_id);
@@ -158,7 +158,7 @@ CREATE TABLE IF NOT EXISTS workers.node_browsers (
     CONSTRAINT uq_workers_node_browsers_profile UNIQUE (device_id, local_profile_id)
 );
 
-COMMENT ON TABLE workers.node_browsers IS '[Plugin: runners] Node-local browser profiles inventory discovered by edge workers';
+COMMENT ON TABLE workers.node_browsers IS '[Plugin: workers] Node-local browser profiles inventory discovered by edge workers';
 
 CREATE INDEX IF NOT EXISTS idx_workers_node_browsers_device ON workers.node_browsers (device_id);
 
@@ -268,7 +268,7 @@ BEGIN
     END IF;
 
     -- Generate Device Secret Token (Raw token returned to client, SHA-256 hash stored)
-    v_raw_token := 'tqr_sec_' || encode(extensions.gen_random_bytes(24), 'hex');
+    v_raw_token := 'tqw_sec_' || encode(extensions.gen_random_bytes(24), 'hex');
     v_token_hash := encode(extensions.digest(v_raw_token, 'sha256'), 'hex');
 
     -- Upsert Device in registry
@@ -915,13 +915,13 @@ GRANT EXECUTE ON FUNCTION public.list_browsers TO authenticated, anon, service_r
 -- 8. Register Permissions into Base Core Dictionary
 INSERT INTO public.permissions (id, module, description)
 VALUES 
-    ('workers:devices:read',    'runners', 'View registered runner nodes and live status'),
-    ('workers:devices:manage',  'runners', 'Configure, pause, or remove runner devices'),
-    ('workers:devices:enroll',  'runners', 'Enroll new physical workstations and edge nodes'),
-    ('workers:proxies:read',    'runners', 'View proxy pool and health telemetry within tenant'),
-    ('workers:proxies:manage',  'runners', 'Create, update, delete, and assign proxies within tenant'),
-    ('workers:browsers:read',   'runners', 'View virtual browser profiles and fingerprint configurations'),
-    ('workers:browsers:manage', 'runners', 'Create, update, delete, and control virtual browser profiles')
+    ('workers:devices:read',    'workers', 'View registered worker nodes and live status'),
+    ('workers:devices:manage',  'workers', 'Configure, pause, or remove worker devices'),
+    ('workers:devices:enroll',  'workers', 'Enroll new physical workstations and edge nodes'),
+    ('workers:proxies:read',    'workers', 'View proxy pool and health telemetry within tenant'),
+    ('workers:proxies:manage',  'workers', 'Create, update, delete, and assign proxies within tenant'),
+    ('workers:browsers:read',   'workers', 'View virtual browser profiles and fingerprint configurations'),
+    ('workers:browsers:manage', 'workers', 'Create, update, delete, and control virtual browser profiles')
 ON CONFLICT (id) DO UPDATE SET 
     module = EXCLUDED.module,
     description = EXCLUDED.description;
@@ -950,10 +950,10 @@ ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 9. Register Plugin in Master Registry Table
 SELECT public.register_plugin(
-    'runners',
-    'Runners & Compute Fleet',
+    'workers',
+    'Workers & Compute Fleet',
     '1.0.0',
-    'runners',
+    'workers',
     ARRAY[]::TEXT[],
     'Universal distributed execution engine nodes, hardware fingerprinting, device enrollment, and live telemetry',
     FALSE,

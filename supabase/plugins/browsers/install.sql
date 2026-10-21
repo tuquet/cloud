@@ -769,8 +769,4 @@ DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'workers') THEN
         CREATE OR REPLACE VIEW workers.browsers AS SELECT * FROM browsers.profiles;
     END IF;
-
-    IF EXISTS (SELECT 1 FROM information_schema.schemata WHERE schema_name = 'runners') THEN
-        CREATE OR REPLACE VIEW workers.browsers AS SELECT * FROM browsers.profiles;
-    END IF;
 END $$;

@@ -3,7 +3,7 @@
 -- Plugin ID: automation
 -- Version: 1.0.0
 -- Architecture: PostgreSQL Dedicated Schema Isolation (schema: automation)
--- Dependencies: ["runners"]
+-- Dependencies: ["workers"]
 -- Specification: 100% Official Automa AST & Package Blocks Specification
 -- ============================================================================
 
@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS automation.packages (
 
 COMMENT ON TABLE automation.packages IS '[Plugin: automation] Official Automa Composite Block Packages for workflow modular assembly and marketplace sharing';
 
--- 3.3. jobs (Consumes Compute Node from schema runners)
+-- 3.3. jobs (Consumes Compute Node from schema workers)
 CREATE TABLE IF NOT EXISTS automation.jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -183,7 +183,7 @@ BEGIN
     WHERE id = p_worker_id AND status IN ('idle', 'running');
 
     IF v_tenant_id IS NULL THEN
-        RAISE EXCEPTION 'Runner % is invalid or offline', p_worker_id;
+        RAISE EXCEPTION 'Worker % is invalid or offline', p_worker_id;
     END IF;
 
     RETURN QUERY
@@ -215,12 +215,12 @@ CREATE OR REPLACE FUNCTION automation.reap_stale_jobs(
 RETURNS INT
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = automation, runners, public, pg_temp
+SET search_path = automation, workers, public, pg_temp
 AS $$
 DECLARE
     v_reaped_count INT := 0;
 BEGIN
-    WITH dead_runners AS (
+    WITH dead_workers AS (
         SELECT id, tenant_id
         FROM workers.devices
         WHERE last_heartbeat_at < (timezone('utc'::text, now()) - p_stale_interval)
@@ -229,14 +229,14 @@ BEGIN
     stale_runs AS (
         SELECT r.id
         FROM automation.jobs r
-        JOIN dead_runners d ON r.worker_id = d.id AND r.tenant_id = d.tenant_id
+        JOIN dead_workers d ON r.worker_id = d.id AND r.tenant_id = d.tenant_id
         WHERE r.status = 'running'
         FOR UPDATE OF r SKIP LOCKED
     )
     UPDATE automation.jobs r
     SET 
         status = 'failed',
-        error_message = 'Runner node heartbeat timed out (Dead Lease Reaper)',
+        error_message = 'Worker node heartbeat timed out (Dead Lease Reaper)',
         ended_at = timezone('utc'::text, now()),
         updated_at = timezone('utc'::text, now())
     FROM stale_runs s
@@ -380,7 +380,7 @@ SELECT public.register_plugin(
     'Automation Cloud Bridge',
     '1.0.0',
     'automation',
-    ARRAY['runners']::TEXT[],
+    ARRAY['workers']::TEXT[],
     'Distributed browser automation coordinator, composite package blocks, batch job executions, and telemetry',
     FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb

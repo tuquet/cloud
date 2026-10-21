@@ -3,7 +3,7 @@
 -- Plugin ID: commerce
 -- Version: 1.0.0
 -- Architecture: PostgreSQL Dedicated Schema Isolation (schema: commerce)
--- Dependencies: ["subscriptions", "runners", "automa", "storage"]
+-- Dependencies: ["subscriptions", "workers", "automa", "storage"]
 -- ============================================================================
 
 -- 1. Create Dedicated Schema & Grants
@@ -278,7 +278,7 @@ BEGIN
         'resource',
         'tenant_only',
         TRUE,
-        ARRAY['proxy', 'tuquet', 'runners'],
+        ARRAY['proxy', 'tuquet', 'workers'],
         '{"resource_subtype": "proxy_pool"}'::jsonb,
         2
     )
@@ -1519,7 +1519,7 @@ SELECT public.register_plugin(
     'Digital Products Store & Auto-Fulfillment',
     '1.0.0',
     'commerce',
-    ARRAY['subscriptions', 'runners', 'automation', 'storage']::TEXT[],
+    ARRAY['subscriptions', 'workers', 'automation', 'storage']::TEXT[],
     'Multi-category digital products catalog, zero-double-selling serialized stock inventory, order state machine, and atomic auto-fulfillment',
     FALSE,
     '{"guest_checkout_enabled": true, "reservation_ttl_minutes": 15}'::jsonb

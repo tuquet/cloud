@@ -6,7 +6,7 @@
   "description": "Multi-category digital products catalog, zero-double-selling serialized stock inventory, order state machine, and atomic auto-fulfillment across serials, ecosystem resources, digital files, and Xu wallet credits",
   "dependencies": [
     "subscriptions",
-    "runners",
+    "workers",
     "automation",
     "storage"
   ],

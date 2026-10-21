@@ -128,7 +128,7 @@ BEGIN
     END IF;
     RAISE NOTICE ' [PASS] Instant Xu wallet checkout deducted 50 Xu and delivered serial_stock atomically.';
 
-    RAISE NOTICE '>>> [TEST 6] Verifying Ecosystem Resource Provisioning (runners.proxies)...';
+    RAISE NOTICE '>>> [TEST 6] Verifying Ecosystem Resource Provisioning (workers.proxies)...';
     PERFORM commerce.import_stock_batch(
         v_proxy_variant_id,
         ARRAY['198.51.100.25:10800:pxuser1:pxpass1'],
@@ -145,12 +145,12 @@ BEGIN
     );
 
     IF NOT EXISTS (
-        SELECT 1 FROM runners.proxies
+        SELECT 1 FROM workers.proxies
         WHERE tenant_id = v_test_tenant_id AND host = '198.51.100.25' AND port = 10800
     ) THEN
-        RAISE EXCEPTION 'FAILED: Proxy resource was not provisioned into runners.proxies!';
+        RAISE EXCEPTION 'FAILED: Proxy resource was not provisioned into workers.proxies!';
     END IF;
-    RAISE NOTICE ' [PASS] proxy_pool resource automatically provisioned into runners.proxies.';
+    RAISE NOTICE ' [PASS] proxy_pool resource automatically provisioned into workers.proxies.';
 
     RAISE NOTICE '>>> [TEST 7] Verifying Guest Checkout, Webhook Settlement Trigger & Claim Token Lookup...';
     v_guest_order_res := commerce.create_checkout_order(

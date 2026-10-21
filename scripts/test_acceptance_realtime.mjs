@@ -33,12 +33,12 @@ async function main() {
     console.log(`      Device Name:  ${identity.name}`);
     console.log(`      Environment:  ${(identity.env || 'prod').toUpperCase()} (${identity.cloud_url})`);
 
-    // 2. Dispatch Job into Supabase automation.campaign_runs
-    console.log(`\n[2/5] Dispatching job into Supabase (automation.campaign_runs)...`);
+    // 2. Dispatch Job into Supabase automation.jobs
+    console.log(`\n[2/5] Dispatching job into Supabase (automation.jobs)...`);
     const promptText = "State the mathematical constant pi to 5 decimal places in 1 short sentence";
     const runPayload = {
         tenant_id: TENANT_ID,
-        runner_id: identity.device_id,
+        worker_id: identity.device_id,
         name: "E2E Acceptance Test: Realtime Claude-AGY Dispatch",
         status: "pending",
         parameters: {
@@ -48,7 +48,7 @@ async function main() {
         started_at: new Date().toISOString()
     };
 
-    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/campaign_runs`, {
+    const insertRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs`, {
         method: "POST",
         headers: {
             "apikey": SERVICE_KEY,
@@ -63,7 +63,7 @@ async function main() {
 
     if (!insertRes.ok) {
         const errText = await insertRes.text();
-        throw new Error(`Failed to insert campaign run: ${insertRes.status} ${errText}`);
+        throw new Error(`Failed to insert job: ${insertRes.status} ${errText}`);
     }
 
     const [createdRun] = await insertRes.json();
@@ -136,9 +136,9 @@ async function main() {
         throw new Error(`runner execution failed with exit code ${exitCode}`);
     }
 
-    // 4. Update Supabase automation.campaign_runs to completed
-    console.log(`\n[4/5] Updating Supabase (automation.campaign_runs) with completed status and result summary...`);
-    const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/campaign_runs?id=eq.${createdRun.id}`, {
+    // 4. Update Supabase automation.jobs to completed
+    console.log(`\n[4/5] Updating Supabase (automation.jobs) with completed status and result summary...`);
+    const updateRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${createdRun.id}`, {
         method: "PATCH",
         headers: {
             "apikey": SERVICE_KEY,
@@ -160,13 +160,13 @@ async function main() {
     });
 
     if (!updateRes.ok) {
-        throw new Error(`Failed to update campaign run: ${updateRes.status}`);
+        throw new Error(`Failed to update job: ${updateRes.status}`);
     }
     console.log(`      Status updated to: COMPLETED`);
 
     // 5. Verification & Acceptance Assertions
     console.log(`\n[5/5] Performing Final Acceptance Verification on Supabase DB...`);
-    const verifyRunRes = await fetch(`${SUPABASE_URL}/rest/v1/campaign_runs?id=eq.${createdRun.id}&select=*`, {
+    const verifyRunRes = await fetch(`${SUPABASE_URL}/rest/v1/jobs?id=eq.${createdRun.id}&select=*`, {
         headers: {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,
@@ -175,7 +175,7 @@ async function main() {
     });
     const [finalRun] = await verifyRunRes.json();
 
-    const verifyLogsRes = await fetch(`${SUPABASE_URL}/rest/v1/execution_logs?campaign_run_id=eq.${createdRun.id}&select=id,level,message`, {
+    const verifyLogsRes = await fetch(`${SUPABASE_URL}/rest/v1/execution_logs?job_id=eq.${createdRun.id}&select=id,level,message`, {
         headers: {
             "apikey": SERVICE_KEY,
             "Authorization": `Bearer ${SERVICE_KEY}`,

@@ -69,12 +69,12 @@ flowchart TD
 - [x] **Master Plugin Registry & Migration Wizard DAG Engine:**
   - [x] `public.system_plugins` tracks active plugins with `is_system` protection.
   - [x] `public.resolve_plugin_dependencies` runs in-database Recursive CTE Topological Sort (DAG) for automated Migration Wizard tailoring.
-  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `runners` $\rightarrow$ `automation`).
+  - [x] `scripts/plugins/apply_plugins.ps1` automates topological installations (`storage` $\rightarrow$ `subscriptions` $\rightarrow$ `webhooks` $\rightarrow$ `workers` $\rightarrow$ `automation`).
 - [x] **5 First-Party Enterprise Plugins:**
   - [x] `storage` (Schema: `media`): Metadata catalog & dual-layer Supabase Storage RLS.
   - [x] `subscriptions` (Schema: `billing`): SaaS plans, subscriptions, and usage meters.
   - [x] `webhooks` (Schema: `events`): Transactional Outbox pattern with `FOR UPDATE SKIP LOCKED` batching & zero-latency `pg_notify`.
-  - [x] `runners` (Schema: `runners`): Workstations, proxy pool, cloud browsers, storage sync, and automated dead lease reaper.
+  - [x] `workers` (Schema: `workers`): Workstations, proxy pool, cloud browsers, storage sync, and automated dead lease reaper.
   - [x] `automation` (Schema: `automation`): Workflows, campaign runs, and telemetry streams with BRIN indexing.
 - [x] **Documentation & Anti-Hallucination Standards:**
   - [x] Canonical Terminology Dictionary (`docs/terminology_dictionary.md`).
