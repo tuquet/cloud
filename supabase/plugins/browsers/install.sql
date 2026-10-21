@@ -383,6 +383,7 @@ RETURNS JSONB LANGUAGE sql SECURITY DEFINER AS $$
     SELECT browsers.release_profile(p_profile_id, p_device_id, p_device_token, p_storage_path, p_storage_size_bytes, p_storage_hash, p_cookies_count, p_metadata);
 $$;
 
+DROP FUNCTION IF EXISTS public.reap_stale_browser_locks(INTERVAL);
 CREATE OR REPLACE FUNCTION public.reap_stale_browser_locks(p_stale_interval INTERVAL DEFAULT INTERVAL '10 minutes')
 RETURNS INT LANGUAGE sql SECURITY DEFINER AS $$
     SELECT browsers.reap_stale_profile_locks(p_stale_interval);
