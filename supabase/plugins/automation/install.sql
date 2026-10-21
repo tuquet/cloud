@@ -22,7 +22,7 @@ EXCEPTION
 END $$;
 
 DO $$ BEGIN
-    CREATE TYPE automation.campaign_status AS ENUM ('pending', 'queued', 'running', 'paused', 'completed', 'failed', 'cancelled');
+    CREATE TYPE automation.job_status AS ENUM ('pending', 'queued', 'running', 'paused', 'completed', 'failed', 'cancelled');
 EXCEPTION
     WHEN duplicate_object THEN null;
 END $$;
@@ -94,14 +94,14 @@ CREATE TABLE IF NOT EXISTS automation.packages (
 
 COMMENT ON TABLE automation.packages IS '[Plugin: automation] Official Automa Composite Block Packages for workflow modular assembly and marketplace sharing';
 
--- 3.3. Campaign Runs (Consumes Compute Node from schema runners)
-CREATE TABLE IF NOT EXISTS automation.campaign_runs (
+-- 3.3. jobs (Consumes Compute Node from schema runners)
+CREATE TABLE IF NOT EXISTS automation.jobs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
     workflow_id UUID,
     worker_id UUID,
     name VARCHAR(255) NOT NULL,
-    status automation.campaign_status NOT NULL DEFAULT 'pending',
+    status automation.job_status NOT NULL DEFAULT 'pending',
     total_tasks INT NOT NULL DEFAULT 0 CHECK (total_tasks >= 0),
     completed_tasks INT NOT NULL DEFAULT 0 CHECK (completed_tasks >= 0),
     failed_tasks INT NOT NULL DEFAULT 0 CHECK (failed_tasks >= 0),
@@ -113,15 +113,15 @@ CREATE TABLE IF NOT EXISTS automation.campaign_runs (
     triggered_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
-    CONSTRAINT fk_automation_campaign_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automation.workflows(tenant_id, id) ON DELETE SET NULL,
-    CONSTRAINT fk_automation_campaign_worker FOREIGN KEY (tenant_id, worker_id) REFERENCES workers.devices(tenant_id, id) ON DELETE SET NULL
+    CONSTRAINT fk_automation_job_workflow FOREIGN KEY (tenant_id, workflow_id) REFERENCES automation.workflows(tenant_id, id) ON DELETE SET NULL,
+    CONSTRAINT fk_automation_job_worker FOREIGN KEY (tenant_id, worker_id) REFERENCES workers.devices(tenant_id, id) ON DELETE SET NULL
 );
 
 -- 3.4. Execution Logs
 CREATE TABLE IF NOT EXISTS automation.execution_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
-    campaign_run_id UUID NOT NULL REFERENCES automation.campaign_runs(id) ON DELETE CASCADE,
+    job_id UUID NOT NULL REFERENCES automation.jobs(id) ON DELETE CASCADE,
     node_id VARCHAR(64),
     step_name VARCHAR(128),
     level automation.log_level NOT NULL DEFAULT 'info',
@@ -155,22 +155,22 @@ CREATE INDEX IF NOT EXISTS idx_automation_workflows_vars_gin ON automation.workf
 CREATE INDEX IF NOT EXISTS idx_automation_packages_tenant ON automation.packages (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_packages_data_gin ON automation.packages USING gin (data jsonb_path_ops);
 
-CREATE INDEX IF NOT EXISTS idx_automation_campaigns_tenant ON automation.campaign_runs (tenant_id, status, created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_automation_campaigns_params_gin ON automation.campaign_runs USING gin (parameters jsonb_path_ops);
+CREATE INDEX IF NOT EXISTS idx_automation_jobs_tenant ON automation.jobs (tenant_id, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_jobs_params_gin ON automation.jobs USING gin (parameters jsonb_path_ops);
 
-CREATE INDEX IF NOT EXISTS idx_automation_logs_campaign ON automation.execution_logs (tenant_id, campaign_run_id, logged_at DESC);
+CREATE INDEX IF NOT EXISTS idx_automation_logs_job ON automation.execution_logs (tenant_id, job_id, logged_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_logs_logged_at_brin ON automation.execution_logs USING brin (logged_at);
 
 CREATE INDEX IF NOT EXISTS idx_automation_schedules_tenant ON automation.schedules (tenant_id, is_active);
 
 -- 5. Business Logic Functions & Procedures
 
--- 5.1. High-Performance Atomic Campaign Claiming (`FOR UPDATE SKIP LOCKED`)
-CREATE OR REPLACE FUNCTION automation.claim_next_campaign_run(
+-- 5.1. High-Performance Atomic job Claiming (`FOR UPDATE SKIP LOCKED`)
+CREATE OR REPLACE FUNCTION automation.claim_next_job(
     p_worker_id UUID,
     p_batch_size INT DEFAULT 1
 )
-RETURNS SETOF automation.campaign_runs
+RETURNS SETOF automation.jobs
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = automation, public, pg_temp
@@ -189,14 +189,14 @@ BEGIN
     RETURN QUERY
     WITH candidate_runs AS (
         SELECT id
-        FROM automation.campaign_runs
+        FROM automation.jobs
         WHERE tenant_id = v_tenant_id
           AND status = 'queued'
         ORDER BY created_at ASC
         LIMIT p_batch_size
         FOR UPDATE SKIP LOCKED
     )
-    UPDATE automation.campaign_runs r
+    UPDATE automation.jobs r
     SET 
         worker_id = p_worker_id,
         status = 'running',
@@ -209,7 +209,7 @@ END;
 $$;
 
 -- 5.2. Automated Dead-Run Reaper (Self-Healing Fleet Manager)
-CREATE OR REPLACE FUNCTION automation.reap_stale_campaign_runs(
+CREATE OR REPLACE FUNCTION automation.reap_stale_jobs(
     p_stale_interval INTERVAL DEFAULT INTERVAL '10 minutes'
 )
 RETURNS INT
@@ -228,12 +228,12 @@ BEGIN
     ),
     stale_runs AS (
         SELECT r.id
-        FROM automation.campaign_runs r
+        FROM automation.jobs r
         JOIN dead_runners d ON r.worker_id = d.id AND r.tenant_id = d.tenant_id
         WHERE r.status = 'running'
         FOR UPDATE OF r SKIP LOCKED
     )
-    UPDATE automation.campaign_runs r
+    UPDATE automation.jobs r
     SET 
         status = 'failed',
         error_message = 'Runner node heartbeat timed out (Dead Lease Reaper)',
@@ -247,8 +247,8 @@ BEGIN
 END;
 $$;
 
--- 5.3. Real-Time Notification Trigger for Queued Campaigns
-CREATE OR REPLACE FUNCTION automation.notify_campaign_queued()
+-- 5.3. Real-Time Notification Trigger for Queued jobs
+CREATE OR REPLACE FUNCTION automation.notify_job_queued()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -256,9 +256,9 @@ AS $$
 BEGIN
     IF NEW.status = 'queued' AND (OLD IS NULL OR OLD.status <> 'queued') THEN
         PERFORM pg_notify(
-            'automation_campaign_dispatch',
+            'automation_job_dispatch',
             json_build_object(
-                'campaign_run_id', NEW.id,
+                'job_id', NEW.id,
                 'tenant_id', NEW.tenant_id,
                 'workflow_id', NEW.workflow_id
             )::text
@@ -268,16 +268,16 @@ BEGIN
 END;
 $$;
 
-DROP TRIGGER IF EXISTS trg_automation_campaign_notify ON automation.campaign_runs;
-CREATE TRIGGER trg_automation_campaign_notify
-    AFTER INSERT OR UPDATE OF status ON automation.campaign_runs
+DROP TRIGGER IF EXISTS trg_automation_job_notify ON automation.jobs;
+CREATE TRIGGER trg_automation_job_notify
+    AFTER INSERT OR UPDATE OF status ON automation.jobs
     FOR EACH ROW
-    EXECUTE FUNCTION automation.notify_campaign_queued();
+    EXECUTE FUNCTION automation.notify_job_queued();
 
 -- 6. Row Level Security
 ALTER TABLE automation.workflows ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automation.packages ENABLE ROW LEVEL SECURITY;
-ALTER TABLE automation.campaign_runs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE automation.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automation.execution_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE automation.schedules ENABLE ROW LEVEL SECURITY;
 
@@ -303,16 +303,16 @@ CREATE POLICY "packages_manage" ON automation.packages
     FOR ALL TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'automation:packages:manage') OR public.is_tenant_admin(tenant_id));
 
--- 6.3. campaigns policies
-DROP POLICY IF EXISTS "campaigns_select" ON automation.campaign_runs;
-CREATE POLICY "campaigns_select" ON automation.campaign_runs
+-- 6.3. jobs policies
+DROP POLICY IF EXISTS "jobs_select" ON automation.jobs;
+CREATE POLICY "jobs_select" ON automation.jobs
     FOR SELECT TO authenticated
     USING (public.is_tenant_member(tenant_id));
 
-DROP POLICY IF EXISTS "campaigns_run" ON automation.campaign_runs;
-CREATE POLICY "campaigns_run" ON automation.campaign_runs
+DROP POLICY IF EXISTS "jobs_run" ON automation.jobs;
+CREATE POLICY "jobs_run" ON automation.jobs
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'automation:campaigns:run') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'automation:jobs:run') OR public.is_tenant_admin(tenant_id));
 
 -- 6.4. logs policies
 DROP POLICY IF EXISTS "logs_select" ON automation.execution_logs;
@@ -323,7 +323,7 @@ CREATE POLICY "logs_select" ON automation.execution_logs
 DROP POLICY IF EXISTS "logs_insert" ON automation.execution_logs;
 CREATE POLICY "logs_insert" ON automation.execution_logs
     FOR INSERT TO authenticated
-    WITH CHECK (public.has_tenant_permission(tenant_id, 'automation:campaigns:run') OR public.is_tenant_admin(tenant_id));
+    WITH CHECK (public.has_tenant_permission(tenant_id, 'automation:jobs:run') OR public.is_tenant_admin(tenant_id));
 
 -- 6.5. schedules policies
 DROP POLICY IF EXISTS "schedules_select" ON automation.schedules;
@@ -334,7 +334,7 @@ CREATE POLICY "schedules_select" ON automation.schedules
 DROP POLICY IF EXISTS "schedules_manage" ON automation.schedules;
 CREATE POLICY "schedules_manage" ON automation.schedules
     FOR ALL TO authenticated
-    USING (public.has_tenant_permission(tenant_id, 'automation:campaigns:manage') OR public.is_tenant_admin(tenant_id));
+    USING (public.has_tenant_permission(tenant_id, 'automation:jobs:manage') OR public.is_tenant_admin(tenant_id));
 
 -- 7. Register Permissions into Base Core Dictionary
 INSERT INTO public.permissions (id, module, description)
@@ -343,9 +343,9 @@ VALUES
     ('automation:workflows:manage', 'automation', 'Create, edit, and delete automation workflows'),
     ('automation:packages:read',    'automation', 'View reusable composite block packages'),
     ('automation:packages:manage',  'automation', 'Create, edit, and publish block packages'),
-    ('automation:campaigns:read',   'automation', 'View campaign runs and telemetry'),
-    ('automation:campaigns:run',    'automation', 'Trigger automation workflow executions'),
-    ('automation:campaigns:manage', 'automation', 'Configure campaign schedules'),
+    ('automation:jobs:read',   'automation', 'View jobs and telemetry'),
+    ('automation:jobs:run',    'automation', 'Trigger automation workflow executions'),
+    ('automation:jobs:manage', 'automation', 'Configure job schedules'),
     ('automation:logs:read',        'automation', 'View execution telemetry logs')
 ON CONFLICT (id) DO UPDATE SET description = EXCLUDED.description;
 
@@ -356,7 +356,7 @@ CROSS JOIN (
     VALUES 
         ('automation:workflows:read'), ('automation:workflows:manage'),
         ('automation:packages:read'), ('automation:packages:manage'),
-        ('automation:campaigns:read'), ('automation:campaigns:run'), ('automation:campaigns:manage'), ('automation:logs:read')
+        ('automation:jobs:read'), ('automation:jobs:run'), ('automation:jobs:manage'), ('automation:logs:read')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name IN ('owner', 'admin')
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -367,7 +367,7 @@ CROSS JOIN (
     VALUES 
         ('automation:workflows:read'),
         ('automation:packages:read'),
-        ('automation:campaigns:read'), ('automation:campaigns:run'), ('automation:logs:read')
+        ('automation:jobs:read'), ('automation:jobs:run'), ('automation:logs:read')
 ) AS p(id)
 WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
@@ -381,7 +381,7 @@ SELECT public.register_plugin(
     '1.0.0',
     'automation',
     ARRAY['runners']::TEXT[],
-    'Distributed browser automation coordinator, composite package blocks, batch campaign executions, and telemetry',
+    'Distributed browser automation coordinator, composite package blocks, batch job executions, and telemetry',
     FALSE,
     '{"author": "Tuquet Team", "license": "MIT"}'::jsonb
 );

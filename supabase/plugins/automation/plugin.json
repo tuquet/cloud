@@ -10,7 +10,7 @@
   "tables": [
     "automation.workflows",
     "automation.packages",
-    "automation.campaign_runs",
+    "automation.jobs",
     "automation.execution_logs",
     "automation.schedules"
   ],
@@ -19,9 +19,9 @@
     "automation:workflows:manage",
     "automation:packages:read",
     "automation:packages:manage",
-    "automation:campaigns:read",
-    "automation:campaigns:run",
-    "automation:campaigns:manage",
+    "automation:jobs:read",
+    "automation:jobs:run",
+    "automation:jobs:manage",
     "automation:logs:read"
   ]
 }

@@ -8,7 +8,7 @@ DECLARE
     v_missing_tables TEXT[] := ARRAY[]::TEXT[];
     v_tbl TEXT;
     v_expected_tables TEXT[] := ARRAY[
-        'workflows', 'packages', 'campaign_runs', 'execution_logs', 'schedules'
+        'workflows', 'packages', 'jobs', 'execution_logs', 'schedules'
     ];
     v_rls_disabled TEXT[] := ARRAY[]::TEXT[];
 BEGIN
@@ -73,18 +73,18 @@ BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_proc p
         JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'automation' AND p.proname = 'claim_next_campaign_run'
+        WHERE n.nspname = 'automation' AND p.proname = 'claim_next_job'
     ) THEN
-        RAISE EXCEPTION 'FAILED: automation.claim_next_campaign_run function not found!';
+        RAISE EXCEPTION 'FAILED: automation.claim_next_job function not found!';
     END IF;
 
     IF NOT EXISTS (
         SELECT 1 FROM pg_proc p
         JOIN pg_namespace n ON p.pronamespace = n.oid
-        WHERE n.nspname = 'automation' AND p.proname = 'reap_stale_campaign_runs'
+        WHERE n.nspname = 'automation' AND p.proname = 'reap_stale_jobs'
     ) THEN
-        RAISE EXCEPTION 'FAILED: automation.reap_stale_campaign_runs function not found!';
+        RAISE EXCEPTION 'FAILED: automation.reap_stale_jobs function not found!';
     END IF;
 
-    RAISE NOTICE ' [PASS] Both claim_next_campaign_run and reap_stale_campaign_runs exist in automation schema.';
+    RAISE NOTICE ' [PASS] Both claim_next_job and reap_stale_jobs exist in automation schema.';
 END $$;
