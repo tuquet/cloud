@@ -34,19 +34,23 @@ CREATE INDEX IF NOT EXISTS idx_storage_assets_file_path ON media.assets (bucket_
 -- RLS
 ALTER TABLE media.assets ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "assets_select" ON media.assets;
 CREATE POLICY "assets_select" ON media.assets
     FOR SELECT TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:read') OR public.is_tenant_member(tenant_id));
 
+DROP POLICY IF EXISTS "assets_insert" ON media.assets;
 CREATE POLICY "assets_insert" ON media.assets
     FOR INSERT TO authenticated
     WITH CHECK (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "assets_update" ON media.assets;
 CREATE POLICY "assets_update" ON media.assets
     FOR UPDATE TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id))
     WITH CHECK (public.has_tenant_permission(tenant_id, 'media:upload') OR public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "assets_delete" ON media.assets;
 CREATE POLICY "assets_delete" ON media.assets
     FOR DELETE TO authenticated
     USING (public.has_tenant_permission(tenant_id, 'media:delete') OR public.is_tenant_admin(tenant_id));

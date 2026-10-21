@@ -169,12 +169,15 @@ ALTER TABLE events.outbox ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events.subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events.deliveries ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "outbox_select_admin" ON events.outbox;
 CREATE POLICY "outbox_select_admin" ON events.outbox FOR SELECT TO authenticated
     USING (tenant_id IS NOT NULL AND public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "subscriptions_all_admin" ON events.subscriptions;
 CREATE POLICY "subscriptions_all_admin" ON events.subscriptions FOR ALL TO authenticated
     USING (public.is_tenant_admin(tenant_id));
 
+DROP POLICY IF EXISTS "deliveries_select_admin" ON events.deliveries;
 CREATE POLICY "deliveries_select_admin" ON events.deliveries FOR SELECT TO authenticated
     USING (public.is_tenant_admin(tenant_id));
 
