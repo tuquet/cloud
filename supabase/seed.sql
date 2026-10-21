@@ -427,9 +427,18 @@ BEGIN
         VALUES
             ('core-iam', 'Core IAM & Workspaces', 'Nền tảng xác thực, phân quyền và quản lý tổ chức đa người dùng', '1.0.0', true, 'installed', 'public'),
             ('workers', 'Workers & Fleet Engine', 'Hạ tầng quản lý thiết bị, trình duyệt đám mây và proxy mạng', '1.0.0', true, 'installed', 'workers'),
-            ('automa', 'Automation Workflow Engine', 'Bộ máy thực thi kịch bản tự động hóa đồ thị AST và chiến dịch', '1.0.0', true, 'installed', 'automation'),
+            ('automation', 'Automation Workflow Engine', 'Bộ máy thực thi kịch bản tự động hóa đồ thị AST và chiến dịch', '1.0.0', true, 'installed', 'automation'),
+            ('browsers', 'Anti-Detect Browser Profiles', 'Quản lý hạt giống vân tay trình duyệt, profile đám mây và phiên làm việc', '1.0.0', true, 'installed', 'workers'),
             ('subscriptions', 'Billing & Subscriptions', 'Cơ chế thanh toán, gói dịch vụ định kỳ và ví điểm tín dụng', '1.0.0', true, 'installed', 'billing'),
-            ('commerce', 'Digital Commerce Storefront', 'Sàn giao dịch tài nguyên số, key bản quyền và bảo hành tự động', '1.0.0', false, 'installed', 'commerce')
-        ON CONFLICT (id) DO UPDATE SET status = EXCLUDED.status, version = EXCLUDED.version;
+            ('commerce', 'Digital Commerce Storefront', 'Sàn giao dịch tài nguyên số, key bản quyền và bảo hành tự động', '1.0.0', false, 'installed', 'commerce'),
+            ('storage', 'Cloud Storage & Media Assets', 'Lưu trữ tài nguyên truyền thông, ảnh chụp màn hình và artifacts', '1.0.0', false, 'installed', 'media'),
+            ('webhooks', 'Events & Webhooks Outbox', 'Hệ thống hàng đợi sự kiện, outbox pattern và webhook dispatch', '1.0.0', false, 'installed', 'events')
+        ON CONFLICT (id) DO UPDATE SET 
+            name = EXCLUDED.name,
+            description = EXCLUDED.description,
+            is_system = EXCLUDED.is_system,
+            status = EXCLUDED.status,
+            schema_name = EXCLUDED.schema_name,
+            version = EXCLUDED.version;
     END IF;
 END $$;
