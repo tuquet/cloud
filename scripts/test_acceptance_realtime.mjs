@@ -76,7 +76,7 @@ async function main() {
     const startTime = Date.now();
     let runnerStdout = "";
 
-    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
+    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tq");
     const runnerArgs = ["runner", "exec", "-d", "agent", "-p", promptText];
     const runnerProcess = spawn(runnerBin, runnerArgs, {
         shell: false,

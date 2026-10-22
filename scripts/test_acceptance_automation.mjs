@@ -14,8 +14,8 @@ if (!SERVICE_KEY) {
     process.exit(1);
 }
 const TENANT_ID = process.env.SUPABASE_TENANT_ID || "b0000000-0000-0000-0000-000000000001";
-const WORKFLOW_PATH = process.env.WORKFLOW_PATH || join(homedir(), "tuquet", "runner", "fixtures", "test_browser_workflow.json");
-const JOB_FILE = process.env.JOB_FILE || join(homedir(), "tuquet", "runner", "fixtures", "job_browser_automation.json");
+const WORKFLOW_PATH = process.env.WORKFLOW_PATH || join(homedir(), "tq", "runner", "fixtures", "test_browser_workflow.json");
+const JOB_FILE = process.env.JOB_FILE || join(homedir(), "tq", "runner", "fixtures", "job_browser_automation.json");
 
 async function main() {
     console.log("================================================================================");
@@ -78,7 +78,7 @@ async function main() {
     const startTime = Date.now();
     let runnerStdout = "";
 
-    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tuquet");
+    const runnerBin = process.env.RUNNER_BIN || (process.platform === "win32" ? "tuquet.exe" : "tq");
     const runnerArgs = ["runner", "run", JOB_FILE];
     const runnerProcess = spawn(runnerBin, runnerArgs, {
         shell: false,
