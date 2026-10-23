@@ -372,6 +372,111 @@ CROSS JOIN (
 WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
+
+-- ============================================================================
+-- 7.5. Workflow RPCs — supported read/write path for the workstation CLI/console
+--      PostgREST only exposes the `public` schema, so these wrappers are the
+--      contract into `automation.workflows`. SECURITY INVOKER keeps RLS in force
+--      (`is_tenant_member(tenant_id)` for reads, `automation:workflows:manage`
+--      or tenant admin for writes).
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.workflow_list(p_search TEXT DEFAULT NULL)
+RETURNS SETOF automation.workflows
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = ''
+AS $$
+    SELECT w.*
+    FROM automation.workflows w
+    WHERE w.deleted_at IS NULL
+      AND (
+        p_search IS NULL OR btrim(p_search) = ''
+        OR w.name ILIKE '%' || p_search || '%'
+        OR coalesce(w.description, '') ILIKE '%' || p_search || '%'
+      )
+    ORDER BY w.updated_at DESC;
+$$;
+
+CREATE OR REPLACE FUNCTION public.workflow_get(p_target TEXT)
+RETURNS SETOF automation.workflows
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path = ''
+AS $$
+    SELECT w.*
+    FROM automation.workflows w
+    WHERE w.deleted_at IS NULL
+      AND (w.id::text = p_target OR w.name = p_target)
+    LIMIT 1;
+$$;
+
+CREATE OR REPLACE FUNCTION public.workflow_upsert(
+    p_tenant UUID,
+    p_target TEXT DEFAULT NULL,
+    p_name TEXT DEFAULT NULL,
+    p_description TEXT DEFAULT NULL,
+    p_version TEXT DEFAULT '1.0.0',
+    p_graph_data JSONB DEFAULT '{}'::jsonb,
+    p_settings JSONB DEFAULT '{}'::jsonb
+) RETURNS SETOF automation.workflows
+LANGUAGE plpgsql SECURITY INVOKER SET search_path = ''
+AS $$
+DECLARE
+    v_id UUID;
+BEGIN
+    IF p_target IS NOT NULL AND btrim(p_target) <> '' THEN
+        SELECT w.id INTO v_id FROM automation.workflows w
+        WHERE w.deleted_at IS NULL AND (w.id::text = p_target OR w.name = p_target)
+        LIMIT 1;
+    END IF;
+
+    IF v_id IS NULL AND p_name IS NOT NULL AND btrim(p_name) <> '' THEN
+        SELECT w.id INTO v_id FROM automation.workflows w
+        WHERE w.deleted_at IS NULL AND w.name = p_name
+        LIMIT 1;
+    END IF;
+
+    IF v_id IS NULL THEN
+        INSERT INTO automation.workflows (tenant_id, name, description, version, graph_data, settings, created_by)
+        VALUES (p_tenant, p_name, p_description, p_version, p_graph_data, p_settings, auth.uid())
+        RETURNING id INTO v_id;
+    ELSE
+        UPDATE automation.workflows
+        SET name = coalesce(p_name, name),
+            description = coalesce(p_description, description),
+            version = coalesce(p_version, version),
+            graph_data = coalesce(p_graph_data, graph_data),
+            settings = coalesce(p_settings, settings),
+            updated_at = timezone('utc', now())
+        WHERE id = v_id;
+    END IF;
+
+    RETURN QUERY SELECT w.* FROM automation.workflows w WHERE w.id = v_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.workflow_delete(p_target TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql SECURITY INVOKER SET search_path = ''
+AS $$
+DECLARE
+    v_id UUID;
+BEGIN
+    SELECT w.id INTO v_id FROM automation.workflows w
+    WHERE w.deleted_at IS NULL AND (w.id::text = p_target OR w.name = p_target)
+    LIMIT 1;
+
+    IF v_id IS NULL THEN
+        RETURN FALSE;
+    END IF;
+
+    UPDATE automation.workflows SET deleted_at = timezone('utc', now()) WHERE id = v_id;
+    RETURN TRUE;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.workflow_list(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.workflow_get(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.workflow_upsert(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.workflow_delete(TEXT) TO authenticated;
+
 -- 8. Register Plugin in Master Registry Table
 DELETE FROM public.system_plugins WHERE id IN ('automation', 'workflows');
 
