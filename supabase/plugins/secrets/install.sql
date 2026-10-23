@@ -321,6 +321,30 @@ GRANT EXECUTE ON FUNCTION public.secret_fetch(UUID, TEXT) TO anon, authenticated
 GRANT EXECUTE ON FUNCTION public.secret_rotate(UUID, TEXT) TO anon, authenticated, service_role;
 
 -- ---------------------------------------------------------------------------
+-- 7b. Register Permissions into the Base Core Dictionary
+-- ---------------------------------------------------------------------------
+INSERT INTO public.permissions (id, module, description)
+VALUES
+    ('secrets:credentials:read',   'secrets', 'Xem danh mục credential của tenant (tên/metadata; giá trị không bao giờ được trả về)'),
+    ('secrets:credentials:manage', 'secrets', 'Tạo, sửa, xoá credential và đồng bộ khoá với Cloud (push/pull)'),
+    ('secrets:store:rotate',       'secrets', 'Xoay DEK của tenant và tái bọc cho mọi thiết bị đã đăng ký')
+ON CONFLICT (id) DO UPDATE SET description = EXCLUDED.description;
+
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM public.roles r
+CROSS JOIN (VALUES
+    ('secrets:credentials:read'), ('secrets:credentials:manage'), ('secrets:store:rotate')
+) AS p(id)
+WHERE r.tenant_id IS NULL AND r.name IN ('owner', 'admin')
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+INSERT INTO public.role_permissions (role_id, permission_id)
+SELECT r.id, p.id FROM public.roles r
+CROSS JOIN (VALUES ('secrets:credentials:read')) AS p(id)
+WHERE r.tenant_id IS NULL AND r.name = 'member'
+ON CONFLICT (role_id, permission_id) DO NOTHING;
+
+-- ---------------------------------------------------------------------------
 -- 8. Plugin catalog
 -- ---------------------------------------------------------------------------
 INSERT INTO public.system_plugins (id, name, version, schema_name, is_system, dependencies, description)
