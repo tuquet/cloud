@@ -3,7 +3,7 @@
 -- Plugin ID: commerce
 -- Version: 1.0.0
 -- Architecture: PostgreSQL Dedicated Schema Isolation (schema: commerce)
--- Dependencies: ["subscriptions", "workers", "automa", "storage"]
+-- Dependencies: ["subscriptions", "workers", "automation", "storage"]
 -- ============================================================================
 
 -- 1. Create Dedicated Schema & Grants

@@ -56,7 +56,7 @@ BEGIN
         p_os_info => 'Linux x86_64',
         p_cpu_cores => 8,
         p_ram_mb => 16384,
-        p_capabilities => '["browser:automa", "stealth:cdp"]'::jsonb,
+        p_capabilities => '["browser:automation", "stealth:cdp"]'::jsonb,
         p_metadata => '{"env": "test"}'::jsonb,
         p_tenant_id => v_tenant_a_id
     );
@@ -79,7 +79,7 @@ BEGIN
         p_os_info => 'Linux x86_64 Updated',
         p_cpu_cores => 16,
         p_ram_mb => 32768,
-        p_capabilities => '["browser:automa"]'::jsonb,
+        p_capabilities => '["browser:automation"]'::jsonb,
         p_metadata => '{"env": "test-updated"}'::jsonb,
         p_tenant_id => v_tenant_a_id
     );
@@ -99,7 +99,7 @@ BEGIN
         p_os_info => 'Windows 11 x64',
         p_cpu_cores => 4,
         p_ram_mb => 8192,
-        p_capabilities => '["browser:automa"]'::jsonb,
+        p_capabilities => '["browser:automation"]'::jsonb,
         p_metadata => '{}'::jsonb,
         p_tenant_id => v_tenant_a_id
     );

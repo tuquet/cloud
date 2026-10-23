@@ -71,7 +71,7 @@ async function main() {
     const [createdRun] = await insertRes.json();
     console.log(`      Created Run ID: ${createdRun.id}`);
     console.log(`      Status:         ${createdRun.status.toUpperCase()}`);
-    console.log(`      Target Driver:  automa (Chromium CDP Sandbox)`);
+    console.log(`      Target Driver:  automation (Chromium CDP Sandbox)`);
 
     // 3. Execute via tuquet runner run
     console.log(`\n[3/5] Executing job via runner run with real-time log ingestion to Supabase...`);
@@ -99,7 +99,7 @@ async function main() {
                 body: JSON.stringify({
                     tenant_id: TENANT_ID,
                     campaign_run_id: createdRun.id,
-                    step_name: "driver:automa",
+                    step_name: "driver:automation",
                     level,
                     message: message.trim(),
                     payload: { timestamp: new Date().toISOString() }

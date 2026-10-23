@@ -373,7 +373,7 @@ WHERE r.tenant_id IS NULL AND r.name = 'member'
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- 8. Register Plugin in Master Registry Table
-DELETE FROM public.system_plugins WHERE id IN ('automa', 'workflows');
+DELETE FROM public.system_plugins WHERE id IN ('automation', 'workflows');
 
 SELECT public.register_plugin(
     'automation',
