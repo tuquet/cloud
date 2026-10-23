@@ -5,7 +5,7 @@
  * 2. `cloud/supabase/plugins/commerce/plugin.json` metadata & 7 tables
  * 3. `install.sql` DDL completeness: 7 tables, 7 RLS enablements, 6 SECURITY DEFINER functions with `SET search_path = ''`
  * 4. `stock_items` zero-leakage RLS isolation (only `is_platform_admin()`)
- * 5. `FOR UPDATE SKIP LOCKED` zero-double-selling locking and `trg_commerce_on_payment_intent_settled` trigger bridge
+ * 5. `FOR UPDATE SKIP LOCKED` zero-double-selling locking and `trg_commerce_on_payment_intent_settled` trigger gateway
  */
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -116,5 +116,5 @@ assert.match(
   /DROP SCHEMA IF EXISTS commerce CASCADE;/,
   'uninstall.sql must cleanly drop schema commerce',
 );
-console.log(' [PASS] 5. Zero-double-selling locking, payment_intents trigger bridge, and uninstall verified.');
+console.log(' [PASS] 5. Zero-double-selling locking, payment_intents trigger gateway, and uninstall verified.');
 console.log('>>> ALL 5/5 DIGITAL-COMMERCE PLUGIN CONTRACT TESTS PASSED!');

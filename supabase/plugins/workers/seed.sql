@@ -6,7 +6,7 @@
 --       or 'tuquet worker start' using the RPC function WORKERS.enroll_device().
 -- ============================================================================
 
--- Ensure a default local bridge proxy is available for testing
+-- Ensure a default local gateway proxy is available for testing
 INSERT INTO workers.proxies (
     id, tenant_id, host, port, protocol, country_code, city, status, latency_ms, tags
 ) VALUES (
