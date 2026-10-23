@@ -432,7 +432,8 @@ BEGIN
             ('subscriptions', 'Billing & Subscriptions', 'Cơ chế thanh toán, gói dịch vụ định kỳ và ví điểm tín dụng', '1.0.0', true, 'installed', 'billing'),
             ('commerce', 'Digital Commerce Storefront', 'Sàn giao dịch tài nguyên số, key bản quyền và bảo hành tự động', '1.0.0', false, 'installed', 'commerce'),
             ('storage', 'Cloud Storage & Media Assets', 'Lưu trữ tài nguyên truyền thông, ảnh chụp màn hình và artifacts', '1.0.0', false, 'installed', 'media'),
-            ('webhooks', 'Events & Webhooks Outbox', 'Hệ thống hàng đợi sự kiện, outbox pattern và webhook dispatch', '1.0.0', false, 'installed', 'events')
+            ('webhooks', 'Events & Webhooks Outbox', 'Hệ thống hàng đợi sự kiện, outbox pattern và webhook dispatch', '1.0.0', false, 'installed', 'events'),
+            ('secrets', 'Encrypted Tenant Secret Store', 'Kho credential mã hoá theo tenant (Vault KEK -> DEK -> device-sealed; value mã hoá phía client)', '2.0.0', false, 'installed', 'secrets')
         ON CONFLICT (id) DO UPDATE SET 
             name = EXCLUDED.name,
             description = EXCLUDED.description,
