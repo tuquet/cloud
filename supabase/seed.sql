@@ -317,7 +317,7 @@ DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'automation' AND table_name = 'workflows') THEN
         INSERT INTO automation.workflows (
-            id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
+            id, tenant_id, name, description, version, status, graph_data, settings, created_by
         ) VALUES 
             (
                 'fb000000-0000-0000-0000-000000000001',
@@ -337,7 +337,6 @@ BEGIN
                         jsonb_build_object('id', 'edge-2', 'source', 'node-new-tab', 'target', 'node-delay')
                     )
                 ),
-                '{}'::jsonb,
                 '{"timeout_sec": 30}'::jsonb,
                 'a0000000-0000-0000-0000-000000000001'
             ),
@@ -359,7 +358,6 @@ BEGIN
                         jsonb_build_object('id', 'edge-2', 'source', 'node-goto', 'target', 'node-extract')
                     )
                 ),
-                '{"currency": "VND"}'::jsonb,
                 '{"max_retries": 3}'::jsonb,
                 'a0000000-0000-0000-0000-000000000001'
             )

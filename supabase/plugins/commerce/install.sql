@@ -792,7 +792,6 @@ BEGIN
                         version,
                         status,
                         graph_data,
-                        variables,
                         settings,
                         created_by
                     )
@@ -803,7 +802,6 @@ BEGIN
                         COALESCE(v_template_wf.version, '1.0.0'),
                         'published',
                         COALESCE(v_template_wf.graph_data, COALESCE(v_variant.fulfillment_payload->'graph_data', '{"nodes": [], "edges": []}'::jsonb)),
-                        COALESCE(v_template_wf.variables, '{}'::jsonb),
                         COALESCE(v_template_wf.settings, '{}'::jsonb),
                         v_order.buyer_user_id
                     )

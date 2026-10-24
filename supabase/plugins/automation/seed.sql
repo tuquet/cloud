@@ -5,7 +5,7 @@
 
 -- 1. Sample Standalone Workflow
 INSERT INTO automation.workflows (
-    id, tenant_id, name, description, version, status, graph_data, variables, settings, created_by
+    id, tenant_id, name, description, version, status, graph_data, settings, created_by
 )
 VALUES
     (
@@ -16,7 +16,6 @@ VALUES
         '1.2.0',
         'published',
         '{"nodes": [], "edges": []}'::jsonb,
-        '{"max_retries": 3}'::jsonb,
         '{"concurrency": 2}'::jsonb,
         'a0000000-0000-0000-0000-000000000001'
     )
