@@ -44,7 +44,6 @@ CREATE TABLE IF NOT EXISTS automation.workflows (
     version VARCHAR(32) NOT NULL DEFAULT '1.0.0',
     status automation.workflow_status NOT NULL DEFAULT 'draft',
     graph_data JSONB NOT NULL DEFAULT '{"nodes": [], "edges": []}'::jsonb,
-    variables JSONB NOT NULL DEFAULT '{}'::jsonb,
     settings JSONB NOT NULL DEFAULT '{}'::jsonb,
     created_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
@@ -150,7 +149,10 @@ CREATE TABLE IF NOT EXISTS automation.schedules (
 -- 4. Composite & Specialized Indexes
 CREATE INDEX IF NOT EXISTS idx_automation_workflows_tenant ON automation.workflows (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_workflows_graph_gin ON automation.workflows USING gin (graph_data jsonb_path_ops);
-CREATE INDEX IF NOT EXISTS idx_automation_workflows_vars_gin ON automation.workflows USING gin (variables jsonb_path_ops);
+-- Doctrine (2026-10-24): `workflows.variables` was a dead duplicate of the trigger's declared
+-- parameters. Dropped — the workflow's input contract lives in graph_data.trigger.data.parameters.
+ALTER TABLE automation.workflows DROP COLUMN IF EXISTS variables;
+DROP INDEX IF EXISTS automation.idx_automation_workflows_vars_gin;
 
 CREATE INDEX IF NOT EXISTS idx_automation_packages_tenant ON automation.packages (tenant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_automation_packages_data_gin ON automation.packages USING gin (data jsonb_path_ops);
@@ -407,6 +409,71 @@ AS $$
     LIMIT 1;
 $$;
 
+-- Publish-time validation (Automa-schema doctrine): **declared => satisfied**.
+-- A workflow is only persisted when the contract the canvas declares can actually be
+-- honoured headlessly. See tasks/hrms-automation-workflow.md §0.3.
+CREATE OR REPLACE FUNCTION automation.validate_workflow_graph(p_graph JSONB)
+RETURNS void
+LANGUAGE plpgsql IMMUTABLE
+SET search_path = ''
+AS $$
+DECLARE
+    v_node  JSONB;
+    v_param JSONB;
+    v_name  TEXT;
+    v_seen  TEXT[] := ARRAY[]::TEXT[];
+    v_match TEXT[];
+BEGIN
+    IF p_graph IS NULL OR jsonb_typeof(p_graph) <> 'object' THEN
+        RETURN;
+    END IF;
+
+    -- (1)+(2) trigger.data.parameters[] = the declared input contract (authored on the canvas)
+    IF jsonb_typeof(p_graph -> 'nodes') = 'array' THEN
+        FOR v_node IN SELECT value FROM jsonb_array_elements(p_graph -> 'nodes')
+        LOOP
+            IF coalesce(v_node ->> 'label', v_node ->> 'type', '') <> 'trigger' THEN
+                CONTINUE;
+            END IF;
+            IF jsonb_typeof(v_node -> 'data' -> 'parameters') <> 'array' THEN
+                CONTINUE;
+            END IF;
+            FOR v_param IN SELECT value FROM jsonb_array_elements(v_node -> 'data' -> 'parameters')
+            LOOP
+                v_name := nullif(btrim(coalesce(v_param ->> 'name', '')), '');
+                IF v_name IS NULL THEN
+                    RAISE EXCEPTION 'workflow rejected: trigger parameter without a name';
+                END IF;
+                IF NOT (v_param ? 'defaultValue') OR v_param -> 'defaultValue' = 'null'::jsonb THEN
+                    RAISE EXCEPTION 'workflow rejected: trigger parameter "%" declares no defaultValue — a headless run would silently have no value (declared => satisfied)', v_name;
+                END IF;
+                IF v_name = ANY (v_seen) THEN
+                    RAISE EXCEPTION 'workflow rejected: duplicate trigger parameter "%"', v_name;
+                END IF;
+                v_seen := v_seen || v_name;
+            END LOOP;
+        END LOOP;
+    END IF;
+
+    -- (3) no plaintext credential parked under a credential-looking key.
+    -- Scanned on the serialized graph (PostgreSQL forbids the recursive self-reference
+    -- inside a LATERAL subquery, so a regex sweep is both simpler and sufficient).
+    FOR v_match IN
+        SELECT regexp_matches(
+            p_graph::text,
+            '"(password|passwd|pwd|secret|token|api_key|apikey)"\s*:\s*"([^"]+)"',
+            'gi'
+        )
+    LOOP
+        IF position('{{secrets@' IN v_match[2]) = 0 THEN
+            RAISE EXCEPTION
+                'workflow rejected: plaintext credential under key "%" — reference it as {{secrets@name}} instead',
+                v_match[1];
+        END IF;
+    END LOOP;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION public.workflow_upsert(
     p_tenant UUID,
     p_target TEXT DEFAULT NULL,
@@ -421,6 +488,11 @@ AS $$
 DECLARE
     v_id UUID;
 BEGIN
+    -- Publish-time validation: the canvas contract must be satisfiable headlessly.
+    IF p_graph_data IS NOT NULL THEN
+        PERFORM automation.validate_workflow_graph(p_graph_data);
+    END IF;
+
     IF p_target IS NOT NULL AND btrim(p_target) <> '' THEN
         SELECT w.id INTO v_id FROM automation.workflows w
         WHERE w.deleted_at IS NULL AND (w.id::text = p_target OR w.name = p_target)
@@ -475,6 +547,7 @@ $$;
 GRANT EXECUTE ON FUNCTION public.workflow_list(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.workflow_get(TEXT) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.workflow_upsert(UUID, TEXT, TEXT, TEXT, TEXT, JSONB, JSONB) TO authenticated;
+GRANT EXECUTE ON FUNCTION automation.validate_workflow_graph(JSONB) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.workflow_delete(TEXT) TO authenticated;
 
 -- 8. Register Plugin in Master Registry Table
